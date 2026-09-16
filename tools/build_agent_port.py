@@ -204,8 +204,22 @@ def transform_css():
         ' * 生成脚本: combination/tools/build_agent_port.py（勿手改，重跑脚本覆盖）\n'
         ' * 类名交集（UM↔agent）: %s\n'
         ' */\n\n'
-        '/* 嵌入容器：占满 .page-content 去内边距区域 */\n'
-        '.page-content > .agent-page { margin: -24px; height: calc(100%% + 48px); }\n\n'
+        '/* 全屏浮层：agent 视图覆盖整个视口（含 UM 头部与侧边栏），还原原独立页体验。\n'
+        '   v-show 关闭时 display:none，不参与布局；z-index 低于 UM 弹层(2000+)，\n'
+        '   agent 内部浮层（遮罩 1000/toast 2000）在本层叠上下文内不受影响 */\n'
+        '.agent-page {\n'
+        '    position: fixed; top: 0; left: 0; right: 0; bottom: 0;\n'
+        '    z-index: 1800;\n'
+        '    background: #f5f7fa;\n'
+        '    overflow: hidden;\n'
+        '}\n\n'
+        '/* 全屏模式返回按钮（agent 工具栏首项，随工具栏流动不遮挡既有按钮）*/\n'
+        '#agent-root .agent-back-btn {\n'
+        '    margin-right: 12px; padding: 6px 14px; flex-shrink: 0;\n'
+        '    background: #455a64; color: #fff; border: none; border-radius: 6px;\n'
+        '    font-size: 12px; cursor: pointer;\n'
+        '}\n'
+        '#agent-root .agent-back-btn:hover { background: #37474f; }\n\n'
         '/* Agent 服务不可用提示横幅 */\n'
         '#agent-root .agent-service-error {\n'
         '    margin: 16px auto; max-width: 560px; padding: 14px 18px;\n'
@@ -239,11 +253,18 @@ def transform_body():
         '            <button onclick="AgentChat.activate(true)">重试连接</button>\n'
         '        </div>\n'
     )
+    # 全屏模式返回 UM 系统的入口：插入为 agent 工具栏首项（随工具栏流动，不遮挡既有按钮）
+    assert BODY.count('<div class="main-header">') == 1, 'main-header anchor not unique'
+    body = BODY.replace(
+        '<div class="main-header">',
+        '<div class="main-header">\n'
+        '            <button class="agent-back-btn" onclick="AgentChat.backToSystem()"'
+        ' title="返回体系文档管理系统">⟵ 返回系统</button>', 1)
     # v-pre: Vue 编译器跳过整个子树 —— 内联 onclick 保持原生全局解析（window.fn 导出），
     # 原生 JS 的 DOM 修改不会被 Vue 补丁触碰
     return ('<div v-show="activeMenu === \'agent-chat\'" class="agent-page">\n'
             '<div id="agent-root" v-pre>\n'
-            + banner + BODY +
+            + banner + body +
             '\n</div>\n</div>\n')
 
 
@@ -607,6 +628,14 @@ def build_js(to_export):
             try { resetTypewriter(); } catch (e) { /* ignore */ }
             try { resetChatReasoning(); } catch (e) { /* ignore */ }
             isStreaming = false;
+        },
+        /** 全屏模式返回 UM 系统：点击 UM 侧边栏第一个非 agent 菜单项（触发 handleMenuSelect
+            切走 activeMenu，v-show 隐藏全屏层；进行中的流按设计继续在后台） */
+        backToSystem: function () {
+            const items = document.querySelectorAll('.el-menu-item');
+            for (const it of items) {
+                if (it.textContent.indexOf('AI 文档写作') === -1) { it.click(); return; }
+            }
         }
     };
 })();

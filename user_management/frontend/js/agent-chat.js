@@ -3502,6 +3502,14 @@ function editAndResume() {
             try { resetTypewriter(); } catch (e) { /* ignore */ }
             try { resetChatReasoning(); } catch (e) { /* ignore */ }
             isStreaming = false;
+        },
+        /** 全屏模式返回 UM 系统：点击 UM 侧边栏第一个非 agent 菜单项（触发 handleMenuSelect
+            切走 activeMenu，v-show 隐藏全屏层；进行中的流按设计继续在后台） */
+        backToSystem: function () {
+            const items = document.querySelectorAll('.el-menu-item');
+            for (const it of items) {
+                if (it.textContent.indexOf('AI 文档写作') === -1) { it.click(); return; }
+            }
         }
     };
 })();

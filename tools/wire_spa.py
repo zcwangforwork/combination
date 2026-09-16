@@ -42,6 +42,56 @@ def rw(path, edits):
         f.write(text)
 
 
+AGENT_MARK_START = '<!-- AGENT-VIEW-START -->'
+AGENT_MARK_END = '<!-- AGENT-VIEW-END -->'
+
+
+def wire_view(text, frag):
+    """插入或更新 agent 视图片段。返回 (新文本, 动作描述)。
+    三种情况: 带标记 → 原地替换; 旧版无标记接线 → 定位旧块替换; 未接线 → 锚点插入。"""
+    crlf = '\r\n' in text
+    block = AGENT_MARK_START + '\n' + frag + '\n' + AGENT_MARK_END
+    if crlf:
+        block = block.replace('\n', '\r\n')
+
+    # (a) 带标记的既有接线 → 原地替换（重建后片段变化时走此路径）
+    if AGENT_MARK_START in text:
+        i = text.index(AGENT_MARK_START)
+        j = text.index(AGENT_MARK_END) + len(AGENT_MARK_END)
+        assert 0 <= i < j, 'agent view markers malformed'
+        return text[:i] + block + text[j:], 'replaced-marked'
+
+    vshow = '<div v-show="activeMenu === \'agent-chat\'" class="agent-page">'
+    end_anchor = '<!-- Employee Add/Edit Dialog -->'
+
+    # (b) 旧版无标记接线 → 从 v-show 行起，到 Employee 锚点前最后一个 page-content 闭合止
+    if vshow in text:
+        p1 = text.index(vshow)
+        pa = text.index(end_anchor, p1)
+        tail = '\n            </div>\n        </div>'
+        if crlf:
+            tail = tail.replace('\n', '\r\n')
+        p2 = text.rindex(tail, p1, pa)
+        return text[:p1] + block + text[p2:], 'replaced-legacy'
+
+    # (c) 未接线 → commercial-records 视图闭合后、.page-content 闭合前插入
+    anchor = (
+        '                </div>\n'
+        '            </div>\n'
+        '        </div>\n'
+        '\n'
+        '        <!-- Employee Add/Edit Dialog -->'
+    )
+    if crlf:
+        anchor = anchor.replace('\n', '\r\n')
+    assert text.count(anchor) == 1, 'view anchor not unique'
+    repl = ('                </div>\n' + block + '\n            </div>\n        </div>\n'
+            '\n        <!-- Employee Add/Edit Dialog -->')
+    if crlf:
+        repl = repl.replace('\n', '\r\n')
+    return text.replace(anchor, repl), 'inserted'
+
+
 def wire_index():
     with io.open(FRAG, 'r', encoding='utf-8') as f:
         frag = f.read().rstrip('\n')
@@ -52,22 +102,14 @@ def wire_index():
         '                        <span>AI 文档写作</span>\n'
         '                    </el-menu-item>\n'
     )
-    # 视图片段插入点: commercial-records 视图闭合后、.page-content 闭合前
-    view_anchor = (
-        '                </div>\n'
-        '            </div>\n'
-        '        </div>\n'
-        '\n'
-        '        <!-- Employee Add/Edit Dialog -->'
-    )
-    view_repl = (
-        '                </div>\n'
-        + frag + '\n'
-        '            </div>\n'
-        '        </div>\n'
-        '\n'
-        '        <!-- Employee Add/Edit Dialog -->'
-    )
+
+    # 视图片段：独立处理（支持更新已有接线，其余编辑仍走幂等 rw）
+    with io.open(INDEX, 'r', encoding='utf-8', newline='') as f:
+        text = f.read()
+    text, action = wire_view(text, frag)
+    with io.open(INDEX, 'w', encoding='utf-8', newline='') as f:
+        f.write(text)
+    print('WIRED: index.html agent view fragment (%s)' % action)
 
     rw(INDEX, [
         ('    <link rel="stylesheet" href="css/style.css">',
@@ -78,8 +120,6 @@ def wire_index():
          menu_item
          + '                    <el-menu-item v-if="currentRole === \'ADMIN\'" index="departments">',
          'index="agent-chat"', 'index.html +menu-item'),
-        (view_anchor, view_repl,
-         "v-show=\"activeMenu === 'agent-chat'\"", 'index.html +agent view fragment'),
         ('    <script src="js/app.js"></script>',
          '    <script src="js/app.js"></script>\n'
          '    <script src="js/agent-chat.js"></script>',
@@ -121,10 +161,12 @@ def wire_mainpy():
          'from fastapi.middleware.cors import CORSMiddleware',
          'CORSMiddleware', 'main.py +cors import'),
     ])
-    # 中间件本体必须在 app 实例创建后添加 —— 单独处理
+    # 中间件本体必须在 app 实例创建后添加 —— 单独处理。
+    # 标记用块注释（插入形态为 app.add_middleware(\n    CORSMiddleware 跨行，
+    # 单行模式 'add_middleware(CORSMiddleware' 永远匹配不到 → 曾导致每次重跑重复插入）
     with io.open(MAINPY, 'r', encoding='utf-8', newline='') as f:
         text = f.read()
-    if 'add_middleware(CORSMiddleware' not in text:
+    if '# [COMBINATION-PORT] CORS' not in text:
         # 找 app = FastAPI(...) 的闭合括号后的第一个独立行
         anchor = 'app = FastAPI('
         i = text.index(anchor)

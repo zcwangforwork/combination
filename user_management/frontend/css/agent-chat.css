@@ -4,8 +4,23 @@
  * 类名交集（UM↔agent）: .sidebar, .sidebar-header
  */
 
-/* 嵌入容器：占满 .page-content 去内边距区域 */
-.page-content > .agent-page { margin: -24px; height: calc(100% + 48px); }
+/* 全屏浮层：agent 视图覆盖整个视口（含 UM 头部与侧边栏），还原原独立页体验。
+   v-show 关闭时 display:none，不参与布局；z-index 低于 UM 弹层(2000+)，
+   agent 内部浮层（遮罩 1000/toast 2000）在本层叠上下文内不受影响 */
+.agent-page {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1800;
+    background: #f5f7fa;
+    overflow: hidden;
+}
+
+/* 全屏模式返回按钮（agent 工具栏首项，随工具栏流动不遮挡既有按钮）*/
+#agent-root .agent-back-btn {
+    margin-right: 12px; padding: 6px 14px; flex-shrink: 0;
+    background: #455a64; color: #fff; border: none; border-radius: 6px;
+    font-size: 12px; cursor: pointer;
+}
+#agent-root .agent-back-btn:hover { background: #37474f; }
 
 /* Agent 服务不可用提示横幅 */
 #agent-root .agent-service-error {
