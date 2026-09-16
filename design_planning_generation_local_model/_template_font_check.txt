@@ -1,0 +1,5 @@
+Normal: eastAsia=宋体, font=Arial, size=133350
+Heading 1: eastAsia=黑体, font=Arial, size=203200
+Heading 2: eastAsia=黑体, font=Arial, size=177800
+Heading 3: eastAsia=黑体, font=Arial, size=152400
+DONE

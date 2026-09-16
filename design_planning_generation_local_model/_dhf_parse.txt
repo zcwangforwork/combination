@@ -1,0 +1,172 @@
+Sheet1 DHF文件清单: 100 rows
+Columns: ['设计开发阶段', '文件类型', '文件编号', '文件名称', '涵盖内容', '是否需要评审', '责任部门/人员', '计划完成时间', '任务进展']
+
+[  0] stage=设计策划         | type=内部文件     | DHF=     | owner=             | 市场调研(临床需求)和产品定义
+[  1] stage=             | type=内部文件     | DHF=     | owner=项目经理         | 项目可行性研究报告（技术、商业、合规、成本、医保政策等）
+[  2] stage=             | type=内部文件     | DHF=     | owner=             | 专利分析报告
+[  3] stage=             | type=内部文件     | DHF=     | owner=项目经理         | 立项及评审
+[  4] stage=             | type=内部文件     | DHF=     | owner=注册部          | 注册路径策略
+[  5] stage=             | type=DHF      | DHF=是    | owner=项目经理         | 项目开发计划书
+      desc: 阶段划分、里程碑节点、各阶段交付物清单/验收标准、明确部门职责和分工（研发、注册、质量、临床、生产、法规）、资源配置（人力、设备等）、风险应对预案
+[  6] stage=             | type=DHF      | DHF=是    | owner=龚明利          | 风险管理计划
+[  7] stage=设计输入         | type=DHF      | DHF=是    | owner=项目经理         | 用户需求
+      desc: 预期用途、临床需求、使用场景、用户群体、操作便捷性、维护保养等
+[  8] stage=             | type=DHF      | DHF=是    | owner=项目经理         | 设计输入
+      desc: 根据用户需求以及预期用途所确定，把临床需求、法规要求、强制标准（YY/IEC系列）转化为可测试的技术要求。
+1、功能性要求：输注精度、基础率/大剂量设置、报警逻
+[  9] stage=             | type=DHF      | DHF=     | owner=龚明利          | 初步风险分析
+      desc: 可参考YY/T 1437-2023附录A
+[ 10] stage=             | type=DHF      | DHF=     | owner=龚明利          | 产品风险分析和管理总表
+      desc: 设计阶段的风险分析，制定的控制措施是否完整可行且无新的风险引入，若有， 收益是否大于风险
+[ 11] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 网络安全风险分析和管理总表
+[ 12] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件开发计划
+      desc: 定义生命周期模型、角色、工具和安全等级
+[ 13] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件配置管理计划
+[ 14] stage=             | type=DHF      | DHF=     | owner=吴汉城、陈永亮      | 硬件设计需求
+      desc: 电路板、底软
+[ 15] stage=             | type=DHF      | DHF=     | owner=朱能革、黄灿景      | 结构设计需求
+      desc: 药囊组件、动力组件、输注组件、上壳、背胶、注射器
+[ 16] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件设计需求
+      desc: 移动端APP、后台
+[ 17] stage=             | type=DHF      | DHF=     | owner=朱能革、黄灿景      | 包装及标识设计需求
+      desc: 吸塑盒与Tyvek、包装盒、标签、灭菌包装、外包装等
+[ 18] stage=             | type=DHF      | DHF=     | owner=项目经理/龚明利     | 产品开发追溯表/产品需求追溯矩阵（RTM）
+      desc: 将用户需求、设计输入、系统需求进行关联，确保全流程可追溯
+[ 19] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件开发追溯表/软件需求追溯矩阵
+[ 20] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 网络安全追溯表
+[ 21] stage=             | type=注册文件     | DHF=     | owner=研发人员/注册人员    | 医疗器械安全和性能基本原则（EP）清单
+[ 22] stage=设计输出         | type=DHF      | DHF=是    | owner=吴汉城、陈永亮      | 硬件设计方案
+      desc: 电路板、底软
+[ 23] stage=             | type=DHF      | DHF=是    | owner=朱能革、黄灿景      | 结构设计方案
+      desc: 药囊组件、动力组件、输注组件、上壳、背胶、注射器
+[ 24] stage=             | type=DHF      | DHF=是    | owner=软件开发工程师      | 软件设计方案
+      desc: 移动端APP、后台
+[ 25] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件编码规范
+      desc: 移动端APP、后台
+[ 26] stage=             | type=DHF      | DHF=     | owner=朱能革、黄灿景      | 包装及标识设计方案
+      desc: 吸塑盒与Tyvek、包装盒、标签、灭菌包装、外包装等
+[ 27] stage=             | type=DHF      | DHF=     | owner=龚明利          | 产品风险分析和管理总表
+      desc: 生产工艺相关的风险分析，制定的控制措施是否完整可行且无新的风险引入，若有， 收益是否大于风险
+[ 28] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 网络安全风险分析和管理总表
+[ 29] stage=             | type=内部文件     | DHF=     | owner=项目经理/龚明利     | DFMEA
+[ 30] stage=             | type=DHF      | DHF=     | owner=项目经理/龚明利     | 产品开发追溯表/需求追溯矩阵（RTM）
+      desc: 将用户需求、设计输入、设计输出进行关联，确保全流程可追溯
+[ 31] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件开发追溯表/软件需求追溯矩阵
+[ 32] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 网络安全追溯表
+[ 33] stage=             | type=DHF      | DHF=     | owner=朱能革、黄灿景      | 初包装材料选择与确认报告
+      desc: 产品材料的灭菌适应性、无菌屏障能力
+[ 34] stage=             | type=内部文件     | DHF=     | owner=各版块研发人员      | 性能研究相关记录
+      desc: 包括硬件、结构件、电子、软件等的设计历史版本、打样研究数据。
+[ 35] stage=             | type=DHF      | DHF=     | owner=项目经理/注册人员    | 产品技术要求
+[ 36] stage=             | type=DHF      | DHF=     | owner=研发人员         | 检验方法学验证方案、报告
+      desc: 初始污染菌、无菌、细菌内毒素
+[ 37] stage=             | type=DMR      | DHF=     | owner=研发人员         | BOM表
+[ 38] stage=             | type=DMR      | DHF=     | owner=研发人员         | 物料规格书、图纸
+      desc: 原辅包材
+[ 39] stage=             | type=DMR      | DHF=     | owner=研发人员         | 产品图纸（爆炸图）、结构/零件/组件图纸
+      desc: 产品总装图、爆炸图、零部件图纸、电路原理图、PCB版图
+[ 40] stage=             | type=DMR      | DHF=     | owner=研发人员         | 工艺流程图
+      desc: 明确关键、特殊工序
+[ 41] stage=             | type=DMR      | DHF=     | owner=研发人员         | 标签、使用说明书
+[ 42] stage=             | type=DMR      | DHF=     | owner=研发人员         | 设备（生产、检验设备清单及相应验证、操作SOP）
+[ 43] stage=             | type=DMR      | DHF=     | owner=研发人员         | 工装图纸、工装验收记录
+[ 44] stage=             | type=DMR      | DHF=     | owner=研发人员         | 原材料进货检验规范、过程检验规范、成品出厂检验规范
+[ 45] stage=             | type=DMR      | DHF=     | owner=研发人员         | 生产工艺作业指导书
+[ 46] stage=             | type=DMR      | DHF=     | owner=研发人员         | 软件版本包
+[ 47] stage=             | type=第三方检测报告  | DHF=     | owner=/            | 供应商资质、原材料生物相容性报告等
+      desc: 核心零部件供应商资质证明、审核报告、质量协议
+[ 48] stage=             | type=内部文件     | DHF=     | owner=采购人员         | 合格供应商清单
+[ 49] stage=             | type=DHF      | DHF=是    | owner=             | 设计输出清单
+      desc: 设计开发输出至少应当包括采购、生产、检验、使用和服务所需的相关信息以及产品技术要求等
+[ 50] stage=设计验证         | type=DHF      | DHF=是    | owner=项目经理         | 设计验证计划
+[ 51] stage=             | type=DHF      | DHF=     | owner=研发人员         | 性能验证方案
+      desc: ￮胰岛素输注精度验证、输注速率稳定性验证、基础率/大剂量输注功能验证
+￮报警功能验证、电池续航验证、防水性能验证、粘附性验证
+￮环境适应性验证（高低温、湿热、振
+[ 52] stage=             | type=DHF      | DHF=     | owner=研发人员         | 性能验证报告
+      desc: 验证结果、结论以及验证过程相关记录
+[ 53] stage=             | type=DHF      | DHF=     | owner=研发人员         | 输注准确性性能验证
+      desc: 基础率、大剂量在内的输注调节范围和误差等输注参数（中速、调节范围两端值）
+[ 54] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件单元测试方案
+[ 55] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件单元测试报告
+[ 56] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件集成测试方案
+[ 57] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件集成测试报告
+[ 58] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件系统测试方案
+[ 59] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件系统测试报告
+[ 60] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件质量测试方案
+[ 61] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件质量测试报告
+[ 62] stage=             | type=DHF      | DHF=     | owner=研发人员         | 网络安全测试方案
+[ 63] stage=             | type=DHF      | DHF=     | owner=研发人员         | 网络安全测试报告
+[ 64] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件接口网络安全测试方案
+[ 65] stage=             | type=DHF      | DHF=     | owner=研发人员         | 软件接口网络安全测试报告
+[ 66] stage=             | type=DHF      | DHF=     | owner=研发人员         | 包装及标识验证方案
+[ 67] stage=             | type=DHF      | DHF=     | owner=研发人员         | 包装及标识验证报告
+[ 68] stage=             | type=DHF      | DHF=     | owner=研发人员         | 使用期限验证方案
+      desc: 使用3天的相关验证
+[ 69] stage=             | type=DHF      | DHF=     | owner=研发人员         | 使用期限验证报告
+[ 70] stage=             | type=DHF      | DHF=     | owner=研发人员         | 货架有效期验证方案（是否与使用期限合并）
+      desc: 加速老化、实时老化
+[ 71] stage=             | type=DHF      | DHF=     | owner=研发人员         | 货架有效期验证报告
+[ 72] stage=             | type=DHF      | DHF=     | owner=研发人员         | 包装运输验证方案
+[ 73] stage=             | type=DHF      | DHF=     | owner=研发人员         | 包装运输验证报告
+[ 74] stage=             | type=DHF      | DHF=     | owner=研发人员         | 可沥滤物测试方案
+      desc: 环氧乙烷、2-氯乙醇、乙二醇的残留标准，测试方法学验证，测试结果
+[ 75] stage=             | type=DHF      | DHF=     | owner=研发人员         | 可沥滤物测试报告
+[ 76] stage=             | type=DHF      | DHF=     | owner=龚明利          | 产品风险分析和管理总表
+[ 77] stage=             | type=DHF      | DHF=     | owner=龚明利          | 网络安全风险分析和管理总表
+[ 78] stage=             | type=DHF      | DHF=     | owner=研发人员         | 产品开发追溯表/产品需求追溯矩阵（RTM）
+[ 79] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 软件开发追溯表/软件需求追溯矩阵
+[ 80] stage=             | type=DHF      | DHF=     | owner=软件开发工程师      | 网络安全追溯表
+[ 81] stage=             | type=第三方检测报告  | DHF=     | owner=/            | 生物相容性试验报告、药液相容性试验报告
+      desc: ISO 10993系列标准
+输注针、与皮肤直接接触的胶布
+[ 82] stage=             | type=第三方检测报告  | DHF=     | owner=/            | 安规、EMC、环境可靠性等强制检测
+      desc: 1、医用电气设备安全指标测试（漏电流、绝缘电阻、接地电阻等）
+2、电磁兼容（EMC）测试报告，符合IEC 60601-1-2要求
+[ 83] stage=             | type=第三方检测报告  | DHF=     | owner=/            | 注册检验报告
+[ 84] stage=设计转换         | type=DHF      | DHF=     | owner=工艺           | 工艺验证计划
+[ 85] stage=             | type=DHF      | DHF=是    | owner=             | 设计转换计划
+[ 86] stage=             | type=DHF      | DHF=     | owner=             | 灭菌确认方案
+[ 87] stage=             | type=DHF      | DHF=     | owner=             | 灭菌确认报告
+[ 88] stage=             | type=DHF      | DHF=     | owner=             | 工艺验证方案
+[ 89] stage=             | type=DHF      | DHF=     | owner=             | 工艺验证报告
+[ 90] stage=             | type=DHF      | DHF=是    | owner=             | 设计转换报告
+[ 91] stage=             | type=DHF      | DHF=     | owner=工艺           | 生产/检验SOP
+[ 92] stage=设计确认         | type=DHF      | DHF=是    | owner=研发人员         | 设计确认方案
+[ 93] stage=             | type=DHF      | DHF=是    | owner=研发人员         | 设计确认报告
+[ 94] stage=             | type=DHF      | DHF=     | owner=/            | 临床试验方案
+[ 95] stage=             | type=DHF      | DHF=     | owner=/            | 临床试验报告
+[ 96] stage=             | type=DHF      | DHF=     | owner=研发人员         | 可用性测试方案
+[ 97] stage=             | type=DHF      | DHF=     | owner=研发人员         | 可用性测试报告
+[ 98] stage=             | type=DHF      | DHF=是    | owner=龚明利          | 产品风险分析和管理总表
+[ 99] stage=             | type=DHF      | DHF=是    | owner=龚明利          | 风险管理报告
+
+
+Sheet2 设计输入: 13 rows
+Columns: ['目标', '根据用户需求以及预期用途所确定，把临床需求、法规要求、强制标准（YY/IEC系列）转化为可测试的技术要求。', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5']
+  [0] 任务 | 模块 | 交付物
+  [1] 用户需求转化 | 系统 | 设计输入/产品技术规格
+  [2] nan | 各子模块 | 软件设计需求、软件配置管理计划（APP、后台）
+  [3] nan |  | 硬件设计需求（电子、底软）
+  [4] nan |  | 结构设计需求（药囊组件、动力组件、输注组件、上壳、背胶、注射器）
+  [5] nan |  | 包装及标识设计需求（无菌屏障、产品包装、灭菌包装等）
+  [6] 风险 | 系统 | 风险管理计划
+  [7] nan |  | 初步风险分析
+  [8] nan |  | 产品风险分析和管理总表
+  [9] nan | 软件 | 网络安全风险分析和管理总表
+  [10] 可追溯性 | 系统 | 产品开发追溯表/需求追溯矩阵（RTM）
+  [11] nan | 软件 | 软件开发追溯表/软件需求追溯矩阵
+  [12] nan |  | 网络安全追溯表
+
+
+Sheet3 设计输出: 9 rows
+Columns: ['贴片式一次性胰岛素泵', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5']
+  [0] 板块 | 任务矩阵 | 
+  [1] 电子 | 设计方案、物料规格书、图纸、底软固件开发、外发打样、测试方案 | 样品测试
+  [2] 结构 | 设计方案、物料规格书、图纸、外发打样、测试方案（包括包装） | 样品测试（组装和使用）
+  [3] 软件 | 编码、打包 | 测试
+  [4] 系统 | 整机测试方案 | 整机测试验证
+  [5] 工艺 | 可制造性评估 | 产线规划、关键工艺开发、设备开发
+  [6] 供应链 | 供应商评估、供应商导入、可采购性 | 合格供应商目录
+  [7] 风险 | DFEMA、PFEMA | 实时更新
+  [8] 质量 | 质量设计（可探测性）、合规性 | 实时更新

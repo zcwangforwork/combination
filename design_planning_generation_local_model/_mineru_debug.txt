@@ -1,0 +1,17 @@
+=== loading model ===
+=== model loaded ===
+=== page1 image size: (1654, 2339) ===
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:06<00:00,  6.03s/it]Predict: 100%|██████████| 1/1 [00:06<00:00,  6.03s/it]
+2026-08-17 15:39:31.489 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>108 091 896 673<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>099 695 910 840<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:19<00:19, 19.71s/it]Predict: 100%|██████████| 2/2 [00:24<00:00, 11.10s/it]Predict: 100%|██████████| 2/2 [00:24<00:00, 12.39s/it]
+=== two_step_extract done in 30.9s, result type=ExtractResult len=2 ===
+block[0]: type='table' content='<table><tr><td>文件类型Document Type</td><td>开发文档R&amp;D Document</td><td>保密密级Confidentiality</td><td>机密Confidential</td></tr><tr><td>文件编号Document No.</td><td colspan="3">KF-GS1 Plus-2-0007</td></tr><tr><td>文件版本Document Version</td><td colspan="3">A0</td></tr><tr><td>适用范围Applicable Scope</td><td colspan'
+block[1]: type='table' content='<table><tr><td>编制人员</td><td></td><td>日期</td><td>2022.01.26</td></tr><tr><td>审核人员</td><td>陈志</td><td>日期</td><td>2022.01.26</td></tr><tr><td>批准人员</td><td>陈志汉</td><td>日期</td><td>2022.01.26</td></tr></table>'
+=== json2md len=1102 ===
+--- markdown ---
+<table><tr><td>文件类型Document Type</td><td>开发文档R&amp;D Document</td><td>保密密级Confidentiality</td><td>机密Confidential</td></tr><tr><td>文件编号Document No.</td><td colspan="3">KF-GS1 Plus-2-0007</td></tr><tr><td>文件版本Document Version</td><td colspan="3">A0</td></tr><tr><td>适用范围Applicable Scope</td><td colspan="3">持续葡萄糖监测系统软件(GS1-P1、GS1-P2)</td></tr><tr><td colspan="4">软件配置管理计划</td></tr><tr><td colspan="4">相关文档Related Documents</td></tr><tr><td>文件编号Document No.</td><td colspan="2">文件名称Document Name</td><td>版本Version</td></tr><tr><td>KF-GS1 Plus-2-0006</td><td colspan="2">软件开发计划</td><td>A0</td></tr><tr><td>KF-GS1 Plus-2-0004</td><td colspan="2">设计输入</td><td>A0</td></tr><tr><td>KF-GS1 Plus-3-0007</td><td colspan="2">手机APP软件设计需求</td><td>A0</td></tr><tr><td></td><td colspan="2"></td><td></td></tr><tr><td></td><td colspan="2"></td><td></td></tr><tr><td></td><td colspan="2"></td><td></td></tr></table>
+
+<table><tr><td>编制人员</td><td></td><td>日期</td><td>2022.01.26</td></tr><tr><td>审核人员</td><td>陈志</td><td>日期</td><td>2022.01.26</td></tr><tr><td>批准人员</td><td>陈志汉</td><td>日期</td><td>2022.01.26</td></tr></table>
+=== DONE ===

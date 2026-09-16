@@ -1,0 +1,30 @@
+================================================================================
+Agent SDK 搜索性能 Benchmark
+================================================================================
+ANTHROPIC_API_KEY: 已设置
+Service available: True
+
+================================================================================
+用例 1: 单次搜索（1 个章节）
+================================================================================
+Fatal error in message reader: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+    [AGENT SEARCH] 研究失败: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+  章节: 概述
+  耗时: 179.35s
+  字符: 0
+  错误: 无
+
+================================================================================
+用例 2: 串行 5 次搜索
+================================================================================
+    [AGENT SEARCH] 研究超时 (180s): 概述
+  [1/5] 概述          185.07s  chars=0      err=-
+Fatal error in message reader: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+    [AGENT SEARCH] 研究失败: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+  [2/5] 风险分析        178.30s  chars=0      err=-
+    [AGENT SEARCH] 研究超时 (180s): 风险评估
+  [3/5] 风险评估        184.61s  chars=0      err=-

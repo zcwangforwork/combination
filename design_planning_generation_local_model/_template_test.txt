@@ -1,0 +1,19 @@
+SAVED _template_test.docx
+paragraphs: 17
+tables: 4
+--- table 0: 10x4 ---
+  row 0 ['文件类型/Document Type', '开发文档/R&D Document', '保密密级/Confidentiality', '机密/Confidential']
+  row 1 ['文件编号/Document No.', 'KF-CGM-2-0011', 'KF-CGM-2-0011', 'KF-CGM-2-0011']
+  row 2 ['文件版本/Document Version', 'V1.0', 'V1.0', 'V1.0']
+--- table 1: 3x4 ---
+  row 0 ['编制人员', '编制人', '日期', '2026.08.17']
+  row 1 ['审核人员', '审核人', '日期', '2026.08.17']
+  row 2 ['批准人员', '批准人', '日期', '2026.08.17']
+--- table 2: 17x5 ---
+  row 0 ['版本/Version', 'ECN/PCN/CR', '修订内容概述/Description', '修订人/Revised By', '生效日期/Effective Date']
+  row 1 ['V1.0', '/', '新增', '编制人', '2026.08.17']
+  row 2 ['', '', '', '', '']
+--- table 3: 2x2 ---
+  row 0 ['岗位', '职责']
+  row 1 ['配置管理员', '维护配置库']
+DONE

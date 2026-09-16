@@ -1,0 +1,2667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贴敷式胰岛素泵 - 体系文档管理系统</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/agent-chat.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Login View -->
+        <div v-if="!isLoggedIn" class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1>贴敷式胰岛素泵</h1>
+                    <p>体系文档管理系统</p>
+                </div>
+                <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" @keyup.enter="handleLogin">
+                    <el-form-item prop="username">
+                        <el-input v-model="loginForm.username" placeholder="用户名" size="large"
+                            prefix-icon="User" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item prop="password">
+                        <el-input v-model="loginForm.password" type="password" placeholder="密码" size="large"
+                            prefix-icon="Lock" show-password clearable></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" size="large" :loading="loginLoading"
+                            style="width:100%" @click="handleLogin">
+                            登 录
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+                <div v-if="loginError" class="login-error">{{ loginError }}</div>
+            </div>
+        </div>
+
+        <!-- Main Layout (after login) -->
+        <div v-else class="main-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>胰岛素泵</h2>
+                    <p>体系文档管理系统</p>
+                </div>
+                <el-menu :default-active="activeMenu" @select="handleMenuSelect"
+                    background-color="#304156" text-color="#bfcbd9" active-text-color="#409eff">
+                    <el-menu-item index="dashboard">
+                        <el-icon><DataAnalysis /></el-icon>
+                        <span>工作台</span>
+                    </el-menu-item>
+                    <el-menu-item index="employees">
+                        <el-icon><UserFilled /></el-icon>
+                        <span>体系管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="documents">
+                        <el-icon><Document /></el-icon>
+                        <span>体系文档</span>
+                    </el-menu-item>
+                    <el-menu-item index="research-materials">
+                        <el-icon><Files /></el-icon>
+                        <span>研发资料</span>
+                    </el-menu-item>
+                    <el-menu-item index="research-data">
+                        <el-icon><DataLine /></el-icon>
+                        <span>研发数据</span>
+                    </el-menu-item>
+                    <el-menu-item index="suppliers">
+                        <el-icon><Goods /></el-icon>
+                        <span>供应商</span>
+                    </el-menu-item>
+                    <el-menu-item index="commercial-records">
+                        <el-icon><Money /></el-icon>
+                        <span>商业成本</span>
+                    </el-menu-item>
+                    <el-menu-item index="agent-chat">
+                        <el-icon><magic-stick /></el-icon>
+                        <span>AI 文档写作</span>
+                    </el-menu-item>
+                    <el-menu-item v-if="currentRole === 'ADMIN'" index="departments">
+                        <el-icon><OfficeBuilding /></el-icon>
+                        <span>部门管理</span>
+                    </el-menu-item>
+                </el-menu>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <div class="topbar">
+                    <div class="topbar-left">
+                        <h3>{{ pageTitle }}</h3>
+                    </div>
+                    <div class="topbar-right">
+                        <el-tag type="success" effect="dark">{{ currentRoleName }}</el-tag>
+                        <span class="user-name">{{ currentUserName }}</span>
+                        <!-- 通知中心入口 -->
+                        <el-tooltip content="通知中心" placement="bottom">
+                            <el-badge :value="notifUnread" :hidden="notifUnread === 0" :max="99"
+                                      class="notif-badge">
+                                <el-button text circle @click="openNotificationDrawer">
+                                    <el-icon :size="20"><Bell /></el-icon>
+                                </el-button>
+                            </el-badge>
+                        </el-tooltip>
+                        <el-button type="danger" text @click="handleLogout">退出登录</el-button>
+                    </div>
+                </div>
+
+                <!-- Page Content -->
+                <div class="page-content">
+                    <!-- Dashboard -->
+                    <div v-show="activeMenu === 'dashboard'">
+                        <el-row :gutter="20">
+                            <el-col :span="6" v-for="card in statCards" :key="card.label">
+                                <el-card shadow="hover" class="stat-card" :body-style="{padding:'20px'}">
+                                    <div class="stat-card-inner">
+                                        <div class="stat-icon" :style="{backgroundColor: card.color}">
+                                            <el-icon size="28" color="#fff"><component :is="card.icon" /></el-icon>
+                                        </div>
+                                        <div class="stat-info">
+                                            <div class="stat-value">{{ card.value }}</div>
+                                            <div class="stat-label">{{ card.label }}</div>
+                                        </div>
+                                    </div>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+
+                        <el-row :gutter="20" style="margin-top:20px">
+                            <el-col :span="12">
+                                <el-card>
+                                    <template #header><span>各角色体系分布</span></template>
+                                    <div class="chart-container">
+                                        <div v-for="(count, role) in dashboardStats.employeesByRole" :key="role"
+                                            class="chart-bar-item">
+                                            <span class="chart-label">{{ role }}</span>
+                                            <el-progress :percentage="calcPercentage(count, dashboardStats.totalEmployees)"
+                                                :color="getBarColor()" :stroke-width="18">
+                                                <span class="chart-value">{{ count }}人</span>
+                                            </el-progress>
+                                        </div>
+                                    </div>
+                                </el-card>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-card>
+                                    <template #header><span>各部门体系分布</span></template>
+                                    <div class="chart-container">
+                                        <div v-for="(count, dept) in dashboardStats.employeesByDepartment" :key="dept"
+                                            class="chart-bar-item">
+                                            <span class="chart-label">{{ dept }}</span>
+                                            <el-progress :percentage="calcPercentage(count, dashboardStats.totalEmployees)"
+                                                :color="getBarColor()" :stroke-width="18">
+                                                <span class="chart-value">{{ count }}人</span>
+                                            </el-progress>
+                                        </div>
+                                    </div>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+                    </div>
+
+                    <!-- Employee List -->
+                    <div v-show="activeMenu === 'employees'">
+                        <div class="toolbar">
+                            <el-input v-model="searchKeyword" placeholder="搜索姓名/用户名/工号/电话" style="width:220px"
+                                clearable @input="loadEmployees"></el-input>
+                            <el-select v-model="filterDepartmentId" placeholder="全部部门" clearable style="width:150px"
+                                @change="applyEmployeeFilter">
+                                <el-option v-for="d in departments" :key="d.id" :label="d.name"
+                                    :value="d.id"></el-option>
+                            </el-select>
+                            <el-select v-model="filterRoleCode" placeholder="全部角色" clearable style="width:150px"
+                                @change="applyEmployeeFilter">
+                                <el-option v-for="r in roles" :key="r.code" :label="r.name"
+                                    :value="r.code"></el-option>
+                            </el-select>
+                            <el-select v-model="filterEnabled" placeholder="全部状态" clearable style="width:120px"
+                                @change="applyEmployeeFilter">
+                                <el-option label="在职" :value="true"></el-option>
+                                <el-option label="禁用" :value="false"></el-option>
+                            </el-select>
+                            <el-button type="primary" @click="showAddDialog" v-if="currentRole === 'ADMIN'">
+                                <el-icon><Plus /></el-icon> 添加体系
+                            </el-button>
+                        </div>
+                        <el-table :data="employeeList" border stripe v-loading="tableLoading" style="width:100%">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="employeeNo" label="工号" width="100"></el-table-column>
+                            <el-table-column prop="realName" label="姓名" width="100"></el-table-column>
+                            <el-table-column prop="username" label="用户名" width="120"></el-table-column>
+                            <el-table-column prop="roleName" label="角色" width="120"></el-table-column>
+                            <el-table-column prop="departmentName" label="部门" width="120"></el-table-column>
+                            <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
+                            <el-table-column prop="phone" label="电话" width="130"></el-table-column>
+                            <el-table-column label="状态" width="70">
+                                <template #default="{row}">
+                                    <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
+                                        {{ row.enabled ? '在职' : '禁用' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createTime" label="入职时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="400" fixed="right"
+                                v-if="currentRole === 'ADMIN'">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="showEditDialog(row)">
+                                        编辑</el-button>
+                                    <el-button type="warning" size="small" text @click="openConfAccessDialog(row)">
+                                        保密授权</el-button>
+                                    <el-button type="warning" size="small" text @click="openCategoryAccessDialog(row)">
+                                        分类授权</el-button>
+                                    <el-button type="warning" size="small" text @click="openDocumentAccessDialog(row)">
+                                        资料授权</el-button>
+                                    <el-popconfirm title="确定删除该体系？" @confirm="handleDelete(row.id)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>删除</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="currentPage" :page-size="pageSize"
+                                :total="totalEmployees" layout="total, prev, pager, next"
+                                @current-change="loadEmployees" background></el-pagination>
+                        </div>
+                    </div>
+
+                    <!-- Department View -->
+                    <div v-show="activeMenu === 'departments'" v-if="currentRole === 'ADMIN'">
+                        <el-button type="primary" @click="showDeptDialog = true">
+                            <el-icon><Plus /></el-icon> 添加部门
+                        </el-button>
+                        <el-table :data="departments" border style="width:100%; margin-top:15px">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="name" label="部门名称" min-width="200"></el-table-column>
+                            <el-table-column prop="description" label="描述" min-width="250"></el-table-column>
+                            <el-table-column label="负责人" width="140">
+                                <template #default="{row}">
+                                    <span v-if="row.leader">{{ row.leader.realName }}</span>
+                                    <el-tag v-else type="info" size="small">未设置</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createTime" label="创建时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="120">
+                                <template #default="{row}">
+                                    <el-button size="small" @click="openLeaderDialog(row)">设置负责人</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <!-- Document List -->
+                    <div v-show="activeMenu === 'documents'">
+                        <div class="toolbar">
+                            <el-select v-model="docCategoryFilter" placeholder="按分类筛选" clearable
+                                style="width:180px; margin-right:10px"
+                                @change="docCurrentPage = 1; loadDocuments()">
+                                <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                            </el-select>
+                            <el-input v-model="docSearchKeyword" placeholder="搜索文档标题..." style="width:250px"
+                                clearable @input="docCurrentPage = 1; loadDocuments()"></el-input>
+                            <el-button type="primary" @click="showUploadDialog" v-if="canUploadDoc"
+                                style="margin-left:10px">
+                                <el-icon><Upload /></el-icon> 上传文档
+                            </el-button>
+                        </div>
+                        <el-table :data="documentList" border stripe v-loading="docLoading" style="width:100%; margin-top:15px">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="categoryName" label="分类" width="120"></el-table-column>
+                            <el-table-column prop="fileName" label="文件名" min-width="180" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="大小" width="100">
+                                <template #default="{row}">{{ formatFileSize(row.fileSize) }}</template>
+                            </el-table-column>
+                            <el-table-column prop="fileExtension" label="类型" width="70"></el-table-column>
+                            <el-table-column label="可见性" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="visibilityTagType(row.visibility)" size="small">
+                                        {{ visibilityLabel(row.visibility) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="版本" width="80">
+                                <template #default="{row}">
+                                    <span v-if="row.version">{{ row.version }}</span>
+                                    <span v-else style="color:#909399">-</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="状态" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="statusTagType(row.status)" size="small">
+                                        {{ statusLabel(row.status) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="uploaderName" label="上传人" width="90"></el-table-column>
+                            <el-table-column prop="createdAt" label="上传时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="440" fixed="right">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="handlePreview(row)">
+                                        预览
+                                    </el-button>
+                                    <el-button type="success" size="small" text @click="handleDownload(row)">
+                                        下载
+                                    </el-button>
+                                    <el-button v-if="canPublishDoc && row.status === 'DRAFT'"
+                                        type="warning" size="small" text @click="showPublishDialog(row)">
+                                        发布
+                                    </el-button>
+                                    <el-button v-if="canPublishDoc && row.status === 'PUBLISHED'"
+                                        type="warning" size="small" text @click="showPublishDialog(row)">
+                                        新版本
+                                    </el-button>
+                                    <el-button v-if="canPublishDoc && row.status === 'DRAFT'"
+                                        type="info" size="small" text @click="submitForReview(row)">
+                                        提交评审
+                                    </el-button>
+                                    <el-button v-if="canApproveDoc && row.status === 'REVIEW'"
+                                        type="success" size="small" text @click="showReviewDialog(row, 'approve')">
+                                        审批通过
+                                    </el-button>
+                                    <el-button v-if="canApproveDoc && row.status === 'REVIEW'"
+                                        type="danger" size="small" text @click="showReviewDialog(row, 'reject')">
+                                        审批驳回
+                                    </el-button>
+                                    <el-popconfirm v-if="canApproveDoc && row.status === 'PUBLISHED'"
+                                        title="确定作废该文档？作废后不可再发布" @confirm="retireDoc(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>作废</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                    <el-button type="info" size="small" text @click="loadRevisions(row)">
+                                        修订
+                                    </el-button>
+                                    <el-popconfirm v-if="canDeleteDoc" title="确定删除该文档？" @confirm="handleDeleteDoc(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>删除</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="docCurrentPage" :page-size="docPageSize"
+                                :total="docTotal" layout="total, prev, pager, next"
+                                @current-change="loadDocuments" background></el-pagination>
+                        </div>
+                    </div>
+
+                    <!-- Research Materials List -->
+                    <div v-show="activeMenu === 'research-materials'">
+                        <div class="toolbar">
+                            <el-radio-group v-model="rmView" style="margin-right:10px"
+                                @change="rmCurrentPage = 1; loadResearchMaterials()">
+                                <el-radio-button label="mine">我的资料</el-radio-button>
+                                <el-radio-button label="shared">分享给我的</el-radio-button>
+                                <el-radio-button v-if="currentRole === 'ADMIN'" label="all">全部</el-radio-button>
+                            </el-radio-group>
+                            <el-select v-model="rmCategoryFilter" placeholder="按分类筛选" clearable
+                                style="width:180px; margin-right:10px"
+                                @change="rmCurrentPage = 1; loadResearchMaterials()">
+                                <el-option v-for="c in researchCategories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                            </el-select>
+                            <el-input v-model="rmSearchKeyword" placeholder="搜索资料标题..." style="width:250px"
+                                clearable @input="rmCurrentPage = 1; loadResearchMaterials()"></el-input>
+                            <el-button type="primary" @click="showRmUploadDialog" style="margin-left:10px">
+                                <el-icon><Upload /></el-icon> 上传资料
+                            </el-button>
+                        </div>
+                        <el-table :data="researchMaterialList" border stripe v-loading="rmLoading"
+                            style="width:100%; margin-top:15px">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="categoryName" label="分类" width="120"></el-table-column>
+                            <el-table-column prop="fileName" label="文件名" min-width="180" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="大小" width="100">
+                                <template #default="{row}">{{ formatFileSize(row.fileSize) }}</template>
+                            </el-table-column>
+                            <el-table-column prop="fileExtension" label="类型" width="70"></el-table-column>
+                            <el-table-column label="保密" width="80">
+                                <template #default="{row}">
+                                    <el-tag :type="confidentialityTagType(row.confidentialityLevel)" size="small">
+                                        {{ confidentialityLabel(row.confidentialityLevel) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="归属" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="accessRoleTagType(row.accessRole)" size="small">
+                                        {{ accessRoleLabel(row.accessRole) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="ownerName" label="所有者" width="90"></el-table-column>
+                            <el-table-column prop="ownerDepartmentName" label="部门" width="100"></el-table-column>
+                            <el-table-column label="版本" width="80">
+                                <template #default="{row}">
+                                    <span v-if="row.version">{{ row.version }}</span>
+                                    <span v-else style="color:#909399">-</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="状态" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="statusTagType(row.status)" size="small">
+                                        {{ statusLabel(row.status) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createdAt" label="上传时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="340" fixed="right">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="handleRmPreview(row)">
+                                        预览
+                                    </el-button>
+                                    <el-button type="success" size="small" text @click="handleRmDownload(row)">
+                                        下载
+                                    </el-button>
+                                    <el-button v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        type="warning" size="small" text @click="showShareDialog(row)">
+                                        分享
+                                    </el-button>
+                                    <el-button v-if="row.accessRole === 'owner'"
+                                        type="info" size="small" text @click="showRmEditDialog(row)">
+                                        编辑
+                                    </el-button>
+                                    <el-button v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        type="primary" size="small" text @click="showRmConfDialog(row)">
+                                        保密
+                                    </el-button>
+                                    <el-popconfirm v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        title="确定删除该研发资料？"
+                                        @confirm="handleRmDelete(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>删除</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="rmCurrentPage" :page-size="rmPageSize"
+                                :total="rmTotal" layout="total, prev, pager, next"
+                                @current-change="loadResearchMaterials" background></el-pagination>
+                        </div>
+                    </div>
+
+                    <!-- 研发数据页面 -->
+                    <div v-show="activeMenu === 'research-data'">
+                        <div class="toolbar">
+                            <el-radio-group v-model="rdView" style="margin-right:10px"
+                                @change="rdCurrentPage = 1; loadResearchData()">
+                                <el-radio-button label="mine">我的数据</el-radio-button>
+                                <el-radio-button label="public">全员可见</el-radio-button>
+                                <el-radio-button v-if="currentRole === 'ADMIN'" label="all">全部</el-radio-button>
+                            </el-radio-group>
+                            <el-select v-model="rdTypeFilter" placeholder="按类型筛选" clearable
+                                style="width:140px; margin-right:10px"
+                                @change="rdCurrentPage = 1; loadResearchData()">
+                                <el-option label="测试记录" value="TEST_RECORD"></el-option>
+                                <el-option label="设计参数" value="DESIGN_PARAM"></el-option>
+                                <el-option label="实验记录" value="EXPERIMENT"></el-option>
+                                <el-option label="故障记录" value="FAILURE"></el-option>
+                                <el-option label="风险管理" value="RISK"></el-option>
+                                <el-option label="生物相容性" value="BIOCOMPAT"></el-option>
+                                <el-option label="软件验证" value="SOFTWARE_VV"></el-option>
+                                <el-option label="EMC/电气安全" value="EMC_SAFETY"></el-option>
+                                <el-option label="临床评价" value="CLINICAL"></el-option>
+                                <el-option label="验证/确认" value="VALIDATION"></el-option>
+                                <el-option label="物料/来料检验" value="MATERIAL"></el-option>
+                                <el-option label="灭菌/包装/货架寿命" value="STERILIZATION"></el-option>
+                                <el-option label="变更/偏差/CAPA" value="CHANGE"></el-option>
+                                <el-option label="其他" value="OTHER"></el-option>
+                            </el-select>
+                            <el-select v-if="rdTypeFilter === 'DESIGN_PARAM'" v-model="rdParamCategoryFilter"
+                                placeholder="参数子分类" clearable
+                                style="width:160px; margin-right:10px"
+                                @change="rdCurrentPage = 1; loadResearchData()">
+                                <el-option label="工厂实测值" value="FACTORY_MEASURED"></el-option>
+                                <el-option label="对外技术参数" value="EXTERNAL_TECHNICAL"></el-option>
+                                <el-option label="常规常见参数" value="COMMON"></el-option>
+                            </el-select>
+                            <el-select v-model="rdCategoryFilter" placeholder="按分类筛选" clearable
+                                style="width:180px; margin-right:10px"
+                                @change="rdCurrentPage = 1; loadResearchData()">
+                                <el-option v-for="c in researchCategories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                            </el-select>
+                            <el-input v-model="rdSearchKeyword" placeholder="搜索标题/编号..." style="width:250px"
+                                clearable @input="rdCurrentPage = 1; loadResearchData()"></el-input>
+                            <el-button type="primary" @click="showRdCreateDialog" style="margin-left:10px">
+                                <el-icon><Plus /></el-icon> 录入数据
+                            </el-button>
+                        </div>
+                        <el-table :data="researchDataList" border stripe v-loading="rdLoading"
+                            style="width:100%; margin-top:15px">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="recordNo" label="编号" width="130" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="类型" width="100">
+                                <template #default="{row}">
+                                    <el-tag size="small">{{ rdTypeLabel(row.recordType) }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="recordDate" label="日期" width="110"></el-table-column>
+                            <el-table-column prop="operator" label="操作员" width="90"></el-table-column>
+                            <el-table-column prop="deviceModel" label="设备型号" width="110" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="batchNo" label="批次号" width="100" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="保密" width="80">
+                                <template #default="{row}">
+                                    <el-tag :type="confidentialityTagType(row.confidentialityLevel)" size="small">
+                                        {{ confidentialityLabel(row.confidentialityLevel) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="归属" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="rdAccessRoleTagType(row.accessRole)" size="small">
+                                        {{ rdAccessRoleLabel(row.accessRole) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="ownerName" label="所有者" width="90"></el-table-column>
+                            <el-table-column label="状态" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="rdStatusTagType(row.status)" size="small">
+                                        {{ rdStatusLabel(row.status) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createdAt" label="创建时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="280" fixed="right">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="showRdDetailDialog(row)">
+                                        查看
+                                    </el-button>
+                                    <el-button v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        type="warning" size="small" text @click="showRdEditDialog(row)">
+                                        编辑
+                                    </el-button>
+                                    <el-button v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        type="primary" size="small" text @click="showRdConfDialog(row)">
+                                        保密
+                                    </el-button>
+                                    <el-popconfirm v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        title="确定删除该研发数据？"
+                                        @confirm="handleRdDelete(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>删除</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="rdCurrentPage" :page-size="rdPageSize"
+                                :total="rdTotal" layout="total, prev, pager, next"
+                                @current-change="loadResearchData" background></el-pagination>
+                        </div>
+                    </div>
+
+                    <!-- Supplier Management -->
+                    <div v-show="activeMenu === 'suppliers'">
+                        <div class="toolbar">
+                            <el-input v-model="supplierSearchKeyword" placeholder="搜索编码/名称..." style="width:250px"
+                                clearable @input="supplierCurrentPage = 1; loadSuppliers()"></el-input>
+                            <el-select v-model="supplierCategoryFilter" placeholder="按分类筛选" clearable
+                                style="width:140px; margin-left:10px"
+                                @change="supplierCurrentPage = 1; loadSuppliers()">
+                                <el-option label="原材料" value="原材料"></el-option>
+                                <el-option label="零部件" value="零部件"></el-option>
+                                <el-option label="外协加工" value="外协加工"></el-option>
+                                <el-option label="服务" value="服务"></el-option>
+                            </el-select>
+                            <el-select v-model="supplierQualificationFilter" placeholder="合格状态" clearable
+                                style="width:140px; margin-left:10px"
+                                @change="supplierCurrentPage = 1; loadSuppliers()">
+                                <el-option label="合格" value="QUALIFIED"></el-option>
+                                <el-option label="待审核" value="PENDING"></el-option>
+                                <el-option label="已暂停" value="SUSPENDED"></el-option>
+                            </el-select>
+                            <el-button type="primary" @click="showSupplierCreateDialog" v-if="currentRole === 'ADMIN'"
+                                style="margin-left:10px">
+                                <el-icon><Plus /></el-icon> 新增供应商
+                            </el-button>
+                        </div>
+                        <el-table :data="supplierList" border stripe v-loading="supplierLoading"
+                            style="width:100%; margin-top:15px">
+                            <el-table-column prop="supplierCode" label="编码" width="110" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="name" label="名称" min-width="200" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="category" label="分类" width="100"></el-table-column>
+                            <el-table-column prop="contact" label="联系人" width="90"></el-table-column>
+                            <el-table-column prop="phone" label="电话" width="130"></el-table-column>
+                            <el-table-column label="合格状态" width="100">
+                                <template #default="{row}">
+                                    <el-tag :type="supplierQualificationTagType(row.qualificationStatus)" size="small">
+                                        {{ supplierQualificationLabel(row.qualificationStatus) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="qualityContactName" label="质量联系人" width="110"></el-table-column>
+                            <el-table-column label="启用" width="80">
+                                <template #default="{row}">
+                                    <el-tag :type="row.enabled ? 'success' : 'info'" size="small">
+                                        {{ row.enabled ? '启用' : '停用' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createdAt" label="创建时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="220" fixed="right">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="showSupplierDetailDialog(row)">查看</el-button>
+                                    <el-button v-if="currentRole === 'ADMIN'" type="warning" size="small" text
+                                        @click="showSupplierEditDialog(row)">编辑</el-button>
+                                    <el-popconfirm v-if="currentRole === 'ADMIN' && row.enabled"
+                                        :title="'确定停用该供应商？停用后可恢复。'"
+                                        @confirm="handleSupplierDisable(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>停用</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                    <el-button v-if="currentRole === 'ADMIN' && !row.enabled" type="success" size="small" text
+                                        @click="handleSupplierEnable(row)">启用</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="supplierCurrentPage" :page-size="supplierPageSize"
+                                :total="supplierTotal" layout="total, prev, pager, next"
+                                @current-change="loadSuppliers" background></el-pagination>
+                        </div>
+                    </div>
+
+                    <!-- Commercial Records Management -->
+                    <div v-show="activeMenu === 'commercial-records'">
+                        <div class="toolbar">
+                            <el-radio-group v-model="crView" style="margin-right:10px"
+                                @change="crCurrentPage = 1; loadCommercialRecords()">
+                                <el-radio-button label="mine">我的录入</el-radio-button>
+                                <el-radio-button label="public">全员可见</el-radio-button>
+                                <el-radio-button v-if="currentRole === 'ADMIN'" label="all">全部</el-radio-button>
+                            </el-radio-group>
+                            <el-select v-model="crSupplierFilter" placeholder="按供应商筛选" clearable filterable
+                                style="width:200px; margin-right:10px"
+                                @change="crCurrentPage = 1; loadCommercialRecords()">
+                                <el-option v-for="s in enabledSuppliers" :key="s.id"
+                                    :label="s.supplierCode + ' - ' + s.name" :value="s.id"></el-option>
+                            </el-select>
+                            <el-input v-model="crSearchKeyword" placeholder="搜索物料/描述..." style="width:250px"
+                                clearable @input="crCurrentPage = 1; loadCommercialRecords()"></el-input>
+                            <el-button type="primary" @click="showCrCreateDialog" style="margin-left:10px">
+                                <el-icon><Plus /></el-icon> 录入成本
+                            </el-button>
+                        </div>
+                        <el-table :data="commercialRecordList" border stripe v-loading="crLoading"
+                            style="width:100%; margin-top:15px">
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="itemName" label="物料/项目" min-width="200" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="成本价" width="130">
+                                <template #default="{row}">
+                                    <span style="font-weight:600; color:#f56c6c">
+                                        {{ row.costPrice }} {{ row.currency }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="effectiveDate" label="生效日期" width="120"></el-table-column>
+                            <el-table-column label="保密" width="80">
+                                <template #default="{row}">
+                                    <el-tag :type="confidentialityTagType(row.confidentialityLevel)" size="small">
+                                        {{ confidentialityLabel(row.confidentialityLevel) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="supplierCode" label="供应商编码" width="110" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="supplierName" label="供应商" min-width="180" show-overflow-tooltip></el-table-column>
+                            <el-table-column label="归属" width="90">
+                                <template #default="{row}">
+                                    <el-tag :type="rdAccessRoleTagType(row.accessRole)" size="small">
+                                        {{ rdAccessRoleLabel(row.accessRole) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="ownerName" label="录入人" width="90"></el-table-column>
+                            <el-table-column prop="createdAt" label="创建时间" width="170"></el-table-column>
+                            <el-table-column label="操作" width="220" fixed="right">
+                                <template #default="{row}">
+                                    <el-button type="primary" size="small" text @click="showCrDetailDialog(row)">查看</el-button>
+                                    <el-button v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        type="warning" size="small" text @click="showCrEditDialog(row)">编辑</el-button>
+                                    <el-popconfirm v-if="row.accessRole === 'owner' || currentRole === 'ADMIN'"
+                                        title="确定删除该成本记录？"
+                                        @confirm="handleCrDelete(row)">
+                                        <template #reference>
+                                            <el-button type="danger" size="small" text>删除</el-button>
+                                        </template>
+                                    </el-popconfirm>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div class="pagination-wrapper">
+                            <el-pagination v-model:current-page="crCurrentPage" :page-size="crPageSize"
+                                :total="crTotal" layout="total, prev, pager, next"
+                                @current-change="loadCommercialRecords" background></el-pagination>
+                        </div>
+                    </div>
+                </div>
+<div v-show="activeMenu === 'agent-chat'" class="agent-page">
+<div id="agent-root" v-pre>
+
+        <!-- Agent 服务不可用横幅（由 agent-chat.js 控制） -->
+        <div class="agent-service-error" id="agentServiceError" style="display:none">
+            <div>⚠ 无法连接设计开发文档写作 Agent 服务（已尝试端口 8002 / 8003 / 8004）。</div>
+            <div style="font-size:12px;color:#b71c1c;margin-top:4px">请确认 Agent 服务已启动（见 combination/README.md），然后重试。</div>
+            <button onclick="AgentChat.activate(true)">重试连接</button>
+        </div>
+    <!-- Toast notifications (knowledge base upload feedback) -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sidebar: Progress Panel -->
+    <aside class="sidebar">
+        <!-- 聊天任务列表：多任务切换 -->
+        <div class="chat-list-header">
+            <span>💬 聊天任务</span>
+            <button class="new-chat-btn" onclick="startNewChat()" title="开启一个新的聊天任务（不影响已有任务）">＋ 新聊天</button>
+        </div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="sidebar-header">📋 设计开发文档编写进度</div>
+        <div class="step-list" id="stepList"></div>
+        <div class="unresolved-box" id="unresolvedBox" style="display:none">
+            <h4>⚠ 待处理</h4>
+            <ul id="unresolvedList"></ul>
+        </div>
+    </aside>
+
+    <!-- Auto-generate dialog -->
+    <div class="dialog-overlay" id="autoGenDialog">
+        <div class="dialog-box">
+            <h3>⚡ 一键生成设计开发文档</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">Agent将按SOP全流程自动执行，无需逐步确认</p>
+            <label>文档类型</label>
+            <select id="agDocType">
+                <option value="design_development_plan">项目开发计划书</option>
+	                <option value="risk_management_plan">风险管理计划</option>
+	                <option value="market_research_product_definition">市场调研与产品定义报告</option>
+	                <option value="project_feasibility_study">项目可行性研究报告</option>
+	                <option value="patent_analysis_report">专利分析报告</option>
+	                <option value="project_approval_review">立项评审记录</option>
+	                <option value="regulatory_strategy_document">注册路径策略</option>
+            </select>
+            <label>产品名称</label>
+            <input id="agProductName" value="贴敷式胰岛素泵" placeholder="产品名称">
+            <label>医疗器械分类</label>
+            <input id="agClassification" value="III类有源医疗器械" placeholder="分类">
+            <label>预期用途</label>
+            <textarea id="agIntendedUse" rows="2" placeholder="预期用途">用于糖尿病患者持续皮下输注胰岛素</textarea>
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeAutoGenDialog()">取消</button>
+                <button class="btn-start" id="btnStartAutoGen" onclick="startAutoGenerate()">开始生成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summarize dialog -->
+    <div class="dialog-overlay" id="summarizeDialog">
+        <div class="dialog-box">
+            <h3>✂️ 精简文档内容</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">对已生成文档的每个 ### 小节由 LLM 精简，用精简后内容替换原小节。严格保留法规条款号、技术参数、表格数据和核心结论。</p>
+            <label>精简范围</label>
+            <select id="sumRange">
+                <option value="">全部章节</option>
+            </select>
+            <label>精简模式</label>
+            <select id="sumMode" onchange="onSumModeChange()">
+                <option value="ratio">比例模式（按压缩比例）</option>
+                <option value="words">字数模式（按目标字数）</option>
+            </select>
+            <label id="sumTargetLabel">压缩比例 (0.1-1.0，0.5 表示压缩到 50%)</label>
+            <input id="sumTarget" type="number" value="0.5" step="0.1" min="0.1" max="1.0">
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeSummarizeDialog()">取消</button>
+                <button class="btn-start" id="btnStartSummarize" onclick="startSummarize()">开始精简</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flowchart dialog -->
+    <div class="dialog-overlay" id="flowchartDialog">
+        <div class="dialog-box" style="width:860px;max-width:95vw">
+            <h3>🔀 流程图编辑器</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">用自然语言描述流程，AI 生成 mermaid 流程图；可在源码框手动微调，或用自然语言继续修改。生成后插入文档（后端渲染为图片）。</p>
+            <label>流程描述</label>
+            <div style="display:flex;gap:8px">
+                <textarea id="fcPrompt" rows="2" style="flex:1" placeholder="例如：贴敷式胰岛素泵风险管理流程，从风险分析到风险控制再到剩余风险评价"></textarea>
+                <button class="btn-start" id="btnGenerateFlowchart" onclick="generateFlowchart()" style="white-space:nowrap">生成流程图</button>
+            </div>
+            <div id="fcEditorWrap" style="display:none;margin-top:12px">
+                <label>预览</label>
+                <div id="fcPreview" style="min-height:120px;max-height:360px;overflow:auto;border:1px solid #e0e0e0;border-radius:8px;background:#fff;padding:12px;text-align:center"></div>
+                <label style="margin-top:12px">mermaid 源码（可手动微调）</label>
+                <textarea id="fcMermaid" rows="8" style="width:100%;font-family:monospace;font-size:12px" onchange="previewFlowchartMermaid(this.value)"></textarea>
+                <label style="margin-top:12px">修改指令（自然语言）</label>
+                <div style="display:flex;gap:8px">
+                    <input id="fcRevise" placeholder="例如：把「风险评价」改为判断分支，增加「上市后监测」节点" style="flex:1">
+                    <button class="btn-start" id="btnReviseFlowchart" onclick="reviseFlowchart()" style="white-space:nowrap">AI 修改</button>
+                </div>
+                <label style="margin-top:12px">插入到章节</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <select id="fcSection" style="flex:1"><option value="">（新增独立「流程图」章节）</option></select>
+                    <button class="btn-start" onclick="insertFlowchart()" style="background:#4caf50;white-space:nowrap">插入文档</button>
+                    <button class="btn-cancel" onclick="exportFlowchartPng()" style="white-space:nowrap">⬇ 导出 PNG</button>
+                </div>
+            </div>
+            <div class="dialog-btns" style="margin-top:12px">
+                <button class="btn-cancel" onclick="closeFlowchartDialog()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modify attachment dialog -->
+    <div class="dialog-overlay" id="modifyDialog">
+        <div class="dialog-box">
+            <h3>✏️ 修改上传文档</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">将用 Agent 根据指令修改文档副本，不影响原附件和已生成的目标文档。修改完成后可在聊天区下载修改版。</p>
+            <label>目标文档</label>
+            <input id="modFileName" readonly style="background:#f5f5f5">
+            <input type="hidden" id="modFileId">
+            <label>修改指令</label>
+            <textarea id="modInstruction" rows="3" placeholder="例如：把技术参数表中电池寿命改为3年，并更新相关描述"></textarea>
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeModifyDialog()">取消</button>
+                <button class="btn-start" onclick="submitModify()">提交修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrich (补全) attachment dialog -->
+    <div class="dialog-overlay" id="enrichDialog">
+        <div class="dialog-box">
+            <h3>📝 修改文档</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">上传或选择一篇文档，并描述处理需求（修改、精简、补全等），由 Agent 处理生成新文档供下载，不影响原文档和已生成的目标文档。</p>
+            <label>处理目标文档</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+                <button type="button" onclick="document.getElementById('enrichFileInput').click()"
+                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">📤 上传新文档</button>
+                <span id="enrichFileName" style="font-size:12px;color:#999">未选择文件</span>
+            </div>
+            <input type="file" id="enrichFileInput" style="display:none"
+                accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.md"
+                onchange="handleEnrichFileSelect(event)">
+            <label style="margin-top:10px;display:block">或选择已上传的附件</label>
+            <select id="enrichExistingSelect" onchange="onEnrichExistingChange(this.value)" style="width:100%;margin-top:4px">
+                <option value="">— 从已上传附件中选择（可选）—</option>
+            </select>
+            <label style="margin-top:10px;display:block">处理需求（可选）</label>
+            <textarea id="enrichInstruction" rows="2" placeholder="例如：精简冗长内容并保留所有表格 / 修改第3章的结构 / 补充测试方法和验收标准（留空则由 Agent 自行判断）"></textarea>
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeEnrichDialog()">取消</button>
+                <button class="btn-start" onclick="submitEnrich()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add template dialog -->
+    <div class="dialog-overlay" id="templateDialog">
+        <div class="dialog-box">
+            <h3>📄 添加模板</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">上传参考文档作为生成模板，支持一次选择多个文件，也可多次追加选择。Agent将参照模板的章节结构和写作风格生成你需要的文档。</p>
+            <label>模板名称（留空则使用文件名）</label>
+            <input id="tplName" placeholder="留空则使用文件名">
+            <label>目标文档类型（可选）</label>
+            <select id="tplDocType">
+                <option value="">不指定（通用模板）</option>
+                <option value="design_input">设计输入</option>
+                <option value="design_development_plan">项目开发计划书</option>
+                <option value="risk_management_plan">风险管理计划</option>
+                <option value="market_research_product_definition">市场调研与产品定义报告</option>
+                <option value="project_feasibility_study">项目可行性研究报告</option>
+                <option value="patent_analysis_report">专利分析报告</option>
+                <option value="project_approval_review">立项评审记录</option>
+                <option value="regulatory_strategy_document">注册路径策略</option>
+            </select>
+            <label>模板文件</label>
+            <input type="file" id="tplFileInput" style="display:none" multiple
+                accept=".pdf,.docx,.doc,.txt,.md"
+                onchange="handleTemplateFileSelect(event)">
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+                <button type="button" onclick="document.getElementById('tplFileInput').click()"
+                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">选择文件（可多选/可追加）</button>
+                <span id="tplFileName" style="font-size:12px;color:#999">未选择文件</span>
+            </div>
+            <div id="tplSelectedList" style="display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:160px;overflow-y:auto"></div>
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeTemplateDialog()">取消</button>
+                <button class="btn-start" onclick="submitTemplate()">添加模板</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="kbFilesDialog">
+        <div class="dialog-box" style="max-width:600px">
+            <h3>📋 知识库文件列表</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:12px">已上传到 upload 向量知识库的文件，供所有会话的 RAG 检索使用。</p>
+            <div id="kbFilesContent" style="max-height:400px;overflow-y:auto">
+                <p style="color:#999;text-align:center;padding:20px">加载中...</p>
+            </div>
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeKbFilesDialog()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main: Chat Area -->
+    <div class="main">
+        <div class="main-header">
+            <h2>✏️ 设计开发文档写作 Agent</h2>
+            <span class="badge" id="projectBadge">新项目</span>
+            <span style="flex:1"></span>
+            <button id="attHeaderBtn" onclick="document.getElementById('fileInput').click()" class="att-header-btn" title="上传附件供 Agent 在对话中检索（PDF/Word/Excel/Txt/MD/图片，≤20MB）">📎 添加附件</button>
+            <button id="enrichBtn" onclick="showEnrichDialog()" class="tpl-upload-btn" title="上传或选择一篇文档，由 Agent 自动识别简略内容并修改完善，生成修改版文档">📝 修改文档</button>
+            <button id="templateBtn" onclick="showTemplateDialog()" class="tpl-upload-btn" title="上传参考文档作为生成模板，Agent将参照其章节结构和写作风格生成文档">📄 添加模板</button>
+            <button id="kbUploadBtn" onclick="triggerKbUpload()" class="kb-upload-btn" title="上传文件到 upload 向量知识库，供所有会话的 RAG 检索使用">📚 上传知识库</button>
+            <button id="kbListBtn" onclick="gotoKbPage()" class="kb-list-btn" title="跳转到知识库页面：管理文件、对知识库提问">📋 查看知识库</button>
+            <select id="styleSelect" onchange="changeWritingStyle()" title="选择文档生成的语言风格（默认精炼简洁：约1万字、准确全面；仅影响文档内容，不影响聊天回复）">
+                <option value="concise">📄 精炼简洁（默认）</option>
+                <option value="detailed">📄 严谨详细</option>
+            </select>
+            <button id="flowchartBtn" onclick="showFlowchartDialog()" style="padding:6px 14px;background:#7c4dff;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="流程图编辑器：AI 生成初稿，画布拖拽微调，导出 PNG 或插入文档">🔀 流程图</button>
+            <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
+            <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
+            <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
+            <a href="#" id="reviewLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
+            <a href="#" id="downloadLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none" onclick="downloadDocument()">下载文档</a>
+            <a href="#" id="downloadExcelLink" style="font-size:12px;color:#388e3c;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
+            <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#7c4dff;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
+        </div>
+        <!-- 独立的知识库上传文件选择（不绑定项目，直接入库 uploads 向量库） -->
+        <input type="file" id="kbFileInput" style="display:none" multiple
+            accept=".docx,.pdf,.txt,.doc,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.bmp,.tiff,.tif,.html,.htm"
+            onchange="handleKbFileSelect(event)">
+        <div class="chat-area" id="chatArea">
+            <div class="empty-state">
+                <h3>👋 你好！我是设计开发文档写作助手</h3>
+                <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
+                <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+            </div>
+        </div>
+        <div class="attachment-area" id="attachmentArea">
+            <input type="file" id="fileInput" style="display:none"
+                accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.md,.png,.jpg,.jpeg,.bmp,.tiff,.tif"
+                onchange="handleFileSelect(event)" multiple>
+            <input type="file" id="folderInput" style="display:none"
+                webkitdirectory directory multiple
+                onchange="handleFolderSelect(event)">
+            <button class="att-upload-btn" id="attUploadBtn" onclick="document.getElementById('fileInput').click()" title="上传附件">📎</button>
+            <button class="att-upload-btn" id="folderUploadBtn" onclick="document.getElementById('folderInput').click()" title="上传文件夹（保留目录结构）">📁</button>
+        </div>
+        <div class="template-area" id="templateArea" style="display:none"></div>
+        <div class="input-area">
+            <textarea id="userInput" placeholder="输入消息..." rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+                oninput="updateClearBtn()"></textarea>
+            <button id="clearBtn" onclick="clearInput()" title="清空输入" style="display:none">×</button>
+            <button id="pauseBtn" onclick="pauseGeneration()" title="暂停当前生成（中止后台任务），之后可直接输入新消息" style="display:none;padding:6px 12px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">⏸ 暂停</button>
+            <button id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <!-- 对话思维链折叠块样式（渲染在对话区） -->
+
+</div>
+</div>
+            </div>
+        </div>
+
+        <!-- Employee Add/Edit Dialog -->
+        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" @closed="resetForm">
+            <el-form ref="empFormRef" :model="empForm" :rules="empRules" label-width="80px">
+                <el-form-item label="用户名" prop="username">
+                    <el-input v-model="empForm.username" :disabled="isEdit"></el-input>
+                </el-form-item>
+                <el-form-item label="姓名" prop="realName">
+                    <el-input v-model="empForm.realName"></el-input>
+                </el-form-item>
+                <el-form-item label="密码" prop="password">
+                    <el-input v-model="empForm.password" show-password
+                        :placeholder="isEdit ? '留空则不修改密码' : '留空则默认为123456'"></el-input>
+                </el-form-item>
+                <el-form-item label="工号" prop="employeeNo">
+                    <el-input v-model="empForm.employeeNo"></el-input>
+                </el-form-item>
+                <el-form-item label="角色" prop="roleCode">
+                    <el-select v-model="empForm.roleCode" placeholder="选择角色" style="width:100%">
+                        <el-option v-for="r in roles" :key="r.code" :label="r.name" :value="r.code"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="部门" prop="departmentName">
+                    <el-select v-model="empForm.departmentName" placeholder="选择部门" style="width:100%"
+                        filterable allow-create>
+                        <el-option v-for="d in departments" :key="d.name" :label="d.name" :value="d.name"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                    <el-input v-model="empForm.email"></el-input>
+                </el-form-item>
+                <el-form-item label="电话" prop="phone">
+                    <el-input v-model="empForm.phone"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-switch v-model="empForm.enabled" active-text="启用" inactive-text="禁用"
+                        :active-value="true" :inactive-value="false"></el-switch>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="dialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Department Add Dialog -->
+        <el-dialog v-model="showDeptDialog" title="添加部门" width="400px">
+            <el-form ref="deptFormRef" :model="deptForm" label-width="80px">
+                <el-form-item label="部门名称" prop="name">
+                    <el-input v-model="deptForm.name"></el-input>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="deptForm.description" type="textarea"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showDeptDialog = false">取消</el-button>
+                <el-button type="primary" @click="handleAddDept">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Set Leader Dialog -->
+        <el-dialog v-model="showLeaderDialog" :title="'设置部门负责人 - ' + (leaderDialogDept?.name || '')" width="450px">
+            <el-alert type="info" :closable="false" style="margin-bottom:15px">
+                部门负责人可查看本部门所有数据（含全部保密等级）。调岗时请同步更新。
+            </el-alert>
+            <el-form label-width="80px">
+                <el-form-item label="当前负责人">
+                    <span v-if="leaderDialogDept?.leader">{{ leaderDialogDept.leader.realName }}</span>
+                    <el-tag v-else type="info" size="small">未设置</el-tag>
+                </el-form-item>
+                <el-form-item label="新负责人">
+                    <el-select v-model="leaderForm.leaderId" placeholder="选择部门成员" clearable style="width:100%">
+                        <el-option
+                            v-for="u in deptMembersForLeader"
+                            :key="u.id"
+                            :label="u.realName + ' (' + u.username + ')'"
+                            :value="u.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showLeaderDialog = false">取消</el-button>
+                <el-button type="primary" @click="handleSetLeader">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Confidentiality Access Dialog -->
+        <el-dialog v-model="showConfAccessDialog" :title="'保密等级授权 - ' + (confAccessTargetUser?.realName || '')" width="550px">
+            <el-alert type="info" :closable="false" style="margin-bottom:15px">
+                授权后，该用户可查看对应保密等级的他人数据。默认无授权 = 仅看自己录入的数据。
+            </el-alert>
+            <el-table :data="confAccessList" border size="small" style="margin-bottom:15px">
+                <el-table-column prop="confidentialityLevel" label="保密等级" width="120">
+                    <template #default="{row}">
+                        <el-tag :type="confidentialityTagType(row.confidentialityLevel)" size="small">
+                            {{ confidentialityLabel(row.confidentialityLevel) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="grantedByName" label="授权人" width="100"></el-table-column>
+                <el-table-column prop="grantedAt" label="授权时间" min-width="160"></el-table-column>
+                <el-table-column label="授权类型" width="110">
+                    <template #default="{row}">
+                        <el-tag :type="row.accessMode === 'READ_WRITE' ? 'success' : 'info'" size="small">
+                            {{ accessModeLabel(row.accessMode) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="140">
+                    <template #default="{row}">
+                        <el-button v-if="row.accessMode === 'READ_ONLY'" size="small" type="primary" link
+                            @click="handleToggleConfAccessMode(row, 'READ_WRITE')">设为可读写</el-button>
+                        <el-button v-if="row.accessMode === 'READ_WRITE'" size="small" type="warning" link
+                            @click="handleToggleConfAccessMode(row, 'READ_ONLY')">设为只读</el-button>
+                        <el-popconfirm title="确认撤销？" @confirm="handleRevokeConfAccess(row.confidentialityLevel)">
+                            <template #reference>
+                                <el-button size="small" type="danger">撤销</el-button>
+                            </template>
+                        </el-popconfirm>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-form label-width="80px">
+                <el-form-item label="新授权">
+                    <div style="display:flex; gap:10px; width:100%">
+                        <el-select v-model="confAccessForm.level" placeholder="选择保密等级" style="flex:1">
+                            <el-option label="公开 (PUBLIC)" value="PUBLIC"></el-option>
+                            <el-option label="内部 (INTERNAL)" value="INTERNAL"></el-option>
+                            <el-option label="机密 (CONFIDENTIAL)" value="CONFIDENTIAL"></el-option>
+                            <el-option label="绝密 (TOP_SECRET)" value="TOP_SECRET"></el-option>
+                        </el-select>
+                        <el-select v-model="confAccessForm.mode" placeholder="访问模式" style="width:120px">
+                            <el-option label="只读" value="READ_ONLY"></el-option>
+                            <el-option label="可读写" value="READ_WRITE"></el-option>
+                        </el-select>
+                        <el-button type="primary" @click="handleGrantConfAccess">授权</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+        <!-- Category Access Dialog (RESEARCH 资料分类授权) -->
+        <el-dialog v-model="showCategoryAccessDialog" :title="'资料分类授权 - ' + (categoryAccessTargetUser?.realName || '')" width="650px">
+            <el-alert type="info" :closable="false" style="margin-bottom:15px">
+                授权后，该用户可查看对应分类的他人研发资料（不含绝密）。与保密等级授权 OR 组合：任一命中即可见。
+            </el-alert>
+            <el-table :data="categoryAccessList" border size="small" style="margin-bottom:15px" empty-text="暂无授权">
+                <el-table-column prop="categoryName" label="已授权分类" min-width="180">
+                    <template #default="{row}">
+                        <el-tag size="small">{{ row.categoryName }} ({{ row.categoryCode }})</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="grantedByName" label="授权人" width="100"></el-table-column>
+                <el-table-column prop="grantedAt" label="授权时间" min-width="160"></el-table-column>
+                <el-table-column label="授权类型" width="110">
+                    <template #default="{row}">
+                        <el-tag :type="row.accessMode === 'READ_WRITE' ? 'success' : 'info'" size="small">
+                            {{ accessModeLabel(row.accessMode) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="140">
+                    <template #default="{row}">
+                        <el-button v-if="row.accessMode === 'READ_ONLY'" size="small" type="primary" link
+                            @click="handleToggleCategoryAccessMode(row, 'READ_WRITE')">设为可读写</el-button>
+                        <el-button v-if="row.accessMode === 'READ_WRITE'" size="small" type="warning" link
+                            @click="handleToggleCategoryAccessMode(row, 'READ_ONLY')">设为只读</el-button>
+                        <el-popconfirm title="确认撤销？" @confirm="handleRevokeCategoryAccess(row.categoryId)">
+                            <template #reference>
+                                <el-button size="small" type="danger">撤销</el-button>
+                            </template>
+                        </el-popconfirm>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-form label-width="80px">
+                <el-form-item label="新授权">
+                    <div style="width:100%">
+                        <div style="margin-bottom:8px; color:#606266; font-size:13px">
+                            勾选要授权的 RESEARCH 分类（SYSTEM 分类不可授权），点击"批量授权"：
+                        </div>
+                        <el-checkbox-group v-model="categoryAccessSelectedIds"
+                            style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px">
+                            <el-checkbox v-for="cat in researchCategories" :key="cat.id" :label="cat.id">
+                                {{ cat.name }}
+                            </el-checkbox>
+                        </el-checkbox-group>
+                        <div style="display:flex; gap:10px; align-items:center">
+                            <el-select v-model="categoryAccessMode" placeholder="访问模式" style="width:140px">
+                                <el-option label="只读" value="READ_ONLY"></el-option>
+                                <el-option label="可读写" value="READ_WRITE"></el-option>
+                            </el-select>
+                            <el-button type="primary" @click="handleGrantCategoryAccess"
+                                :disabled="categoryAccessSelectedIds.length === 0">
+                                批量授权
+                            </el-button>
+                        </div>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+        <!-- Document Access Dialog (按资料授权：ADMIN 授权某员工查看某份具体研发资料) -->
+        <el-dialog v-model="showDocumentAccessDialog" :title="'资料授权 - ' + (documentAccessTargetUser?.realName || '')" width="700px">
+            <el-alert type="info" :closable="false" style="margin-bottom:15px">
+                授权后，该用户可直接查看对应研发资料（会出现在其"分享给我的"与默认列表中）。
+                与保密等级/分类授权 OR 组合；绝密资料需改用保密等级授权开放。
+            </el-alert>
+            <el-table :data="documentAccessList" border size="small" style="margin-bottom:15px" empty-text="暂无资料授权">
+                <el-table-column prop="documentTitle" label="资料标题" min-width="180" show-overflow-tooltip></el-table-column>
+                <el-table-column label="分类" width="110">
+                    <template #default="{row}">
+                        <el-tag size="small">{{ row.categoryName || '-' }}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="保密等级" width="90">
+                    <template #default="{row}">
+                        <el-tag :type="confidentialityTagType(row.confidentialityLevel)" size="small">
+                            {{ confidentialityLabel(row.confidentialityLevel) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="grantedByName" label="授权人" width="90"></el-table-column>
+                <el-table-column prop="grantedAt" label="授权时间" min-width="160"></el-table-column>
+                <el-table-column label="操作" width="70">
+                    <template #default="{row}">
+                        <el-popconfirm title="确认撤销？" @confirm="handleRevokeDocumentAccess(row.documentId)">
+                            <template #reference>
+                                <el-button size="small" type="danger">撤销</el-button>
+                            </template>
+                        </el-popconfirm>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-form label-width="80px">
+                <el-form-item label="新授权">
+                    <div style="display:flex; gap:10px; width:100%">
+                        <el-select v-model="documentAccessForm.documentId"
+                            placeholder="选择研发资料（SYSTEM/绝密不可授权）" filterable style="flex:1">
+                            <el-option v-for="d in allResearchMaterials" :key="d.id"
+                                :label="`${d.title}（${d.categoryName || '未分类'} / ${confidentialityLabel(d.confidentialityLevel)}）`"
+                                :value="d.id"></el-option>
+                        </el-select>
+                        <el-button type="primary" @click="handleGrantDocumentAccess">授权</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+        <!-- Document Upload Dialog -->
+        <el-dialog v-model="uploadDialogVisible" title="上传文档" width="520px" @closed="resetUploadForm">
+            <el-form :model="uploadForm" label-width="80px">
+                <el-form-item label="文件" required>
+                    <el-upload
+                        :auto-upload="false"
+                        :limit="1"
+                        :on-change="handleFileChange"
+                        :on-exceed="() => ElementPlus.ElMessage.warning('只能上传一个文件')"
+                        drag>
+                        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+                        <div class="el-upload__text">拖拽文件到此处或<em>点击上传</em></div>
+                        <template #tip>
+                            <div class="el-upload__tip">
+                                支持 PDF / 图片 / Word / Excel，单个文件不超过 50 MB
+                            </div>
+                        </template>
+                    </el-upload>
+                </el-form-item>
+                <el-form-item label="标题" required>
+                    <el-input v-model="uploadForm.title" placeholder="请输入文档标题"></el-input>
+                </el-form-item>
+                <el-form-item label="分类" required>
+                    <el-select v-model="uploadForm.categoryId" placeholder="选择分类" style="width:100%">
+                        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="可见性">
+                    <el-select v-model="uploadForm.visibility" style="width:100%">
+                        <el-option label="公开（全员可见）" value="PUBLIC"></el-option>
+                        <el-option label="部门内可见" value="DEPARTMENT"></el-option>
+                        <el-option label="指定人员（仅自己）" value="ASSIGNEES"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="uploadForm.description" type="textarea" :rows="3"
+                        placeholder="可选，文档描述"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="uploadDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="uploadLoading" @click="handleUpload">上传</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Document Preview Dialog -->
+        <el-dialog v-model="previewDialogVisible" :title="previewTitle" width="80%"
+            top="5vh" @close="closePreview" destroy-on-close>
+            <div v-if="previewIsImage" style="text-align:center">
+                <img :src="previewUrl" alt="预览" style="max-width:100%; max-height:75vh" />
+            </div>
+            <iframe v-else-if="previewIsPdf" :src="previewUrl"
+                style="width:100%; height:75vh; border:none"></iframe>
+            <div v-else style="text-align:center; padding:40px">
+                <el-icon size="48" color="#909399"><Document /></el-icon>
+                <p style="margin-top:15px">该文件类型不支持在线预览</p>
+                <el-button type="primary" @click="handleDownload({id: null})">下载查看</el-button>
+            </div>
+        </el-dialog>
+
+        <!-- Document Publish Dialog -->
+        <el-dialog v-model="publishDialogVisible" title="发布文档" width="560px">
+            <el-form label-width="100px" v-if="currentDocForPublish">
+                <el-form-item label="文档标题">
+                    <span>{{ currentDocForPublish.title }}</span>
+                </el-form-item>
+                <el-form-item label="当前版本">
+                    <span>{{ currentDocForPublish.version || '-' }}
+                        ({{ statusLabel(currentDocForPublish.status) }})</span>
+                </el-form-item>
+                <el-form-item label="变更说明">
+                    <el-input v-model="publishForm.changeLog" type="textarea" :rows="3"
+                        placeholder="可选，本次发布的变更说明，将记录在修订历史中"></el-input>
+                </el-form-item>
+                <el-divider content-position="left">
+                    <span style="color:#e6a23c; font-weight:bold">
+                        <el-icon><Warning /></el-icon> 电子签名（FDA Part 11 合规）
+                    </span>
+                </el-divider>
+                <el-form-item label="签名密码" required>
+                    <el-input v-model="publishForm.password" type="password" show-password
+                        placeholder="请输入您的登录密码进行电子签名"></el-input>
+                </el-form-item>
+                <el-form-item label="签名含义" required>
+                    <el-input v-model="publishForm.meaning" type="textarea" :rows="2"
+                        placeholder="必填，如：我批准此文档版本发布生效"></el-input>
+                </el-form-item>
+                <el-alert type="warning" :closable="false" show-icon style="margin-top:10px">
+                    电子签名与手写签名具有同等法律效力。签名记录将永久保存以备审计追溯。
+                </el-alert>
+                <el-alert v-if="currentDocForPublish && currentDocForPublish.status === 'PUBLISHED'"
+                    title="该文档已发布，本次发布将创建新版本（v1.x 自增）"
+                    type="info" :closable="false" show-icon style="margin-top:10px">
+                </el-alert>
+                <el-alert v-else-if="currentDocForPublish && currentDocForPublish.status === 'DRAFT'"
+                    title="该文档为草稿，首次发布后将变为已发布状态"
+                    type="success" :closable="false" show-icon style="margin-top:10px">
+                </el-alert>
+            </el-form>
+            <template #footer>
+                <el-button @click="publishDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="publishLoading" @click="submitPublish">
+                    确认发布
+                </el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Document Review Decision Dialog (approve / reject) -->
+        <el-dialog v-model="reviewDialogVisible"
+            :title="reviewForm.action === 'approve' ? '审批通过' : '审批驳回'" width="560px">
+            <div v-if="currentDocForReview" style="margin-bottom:15px">
+                <strong>{{ currentDocForReview.title }}</strong>
+                <span style="color:#909399; margin-left:10px">
+                    当前版本：{{ currentDocForReview.version || '草稿' }}
+                </span>
+            </div>
+            <el-form label-position="top">
+                <el-form-item :label="reviewForm.action === 'approve' ? '审批意见（可选）' : '驳回理由（必填）'">
+                    <el-input v-model="reviewForm.comment" type="textarea" :rows="3"
+                        :placeholder="reviewForm.action === 'approve'
+                            ? '可填写审批意见，将记录在审批历史中'
+                            : '请详细说明驳回理由，提交者将根据此意见修订'"></el-input>
+                </el-form-item>
+                <el-divider content-position="left">
+                    <span style="color:#e6a23c; font-weight:bold">
+                        <el-icon><Warning /></el-icon> 电子签名（FDA Part 11 合规）
+                    </span>
+                </el-divider>
+                <el-form-item label="签名密码" required>
+                    <el-input v-model="reviewForm.password" type="password" show-password
+                        placeholder="请输入您的登录密码进行电子签名"></el-input>
+                </el-form-item>
+                <el-form-item label="签名含义" required>
+                    <el-input v-model="reviewForm.meaning" type="textarea" :rows="2"
+                        :placeholder="reviewForm.action === 'approve'
+                            ? '必填，如：我审批通过此文档，同意发布生效'
+                            : '必填，如：我驳回此文档的审批申请'"></el-input>
+                </el-form-item>
+                <el-alert type="warning" :closable="false" show-icon>
+                    电子签名与手写签名具有同等法律效力。签名记录将永久保存以备审计追溯。
+                </el-alert>
+                <el-alert v-if="reviewForm.action === 'approve'" type="info" :closable="false">
+                    审批通过后，文档将进入「已发布」状态，版本号自动递增为 {{ currentDocForReview?.version ? '新版本' : 'v1.0' }}。
+                </el-alert>
+                <el-alert v-else type="warning" :closable="false">
+                    驳回后文档将退回「草稿」状态，提交者可修订后重新提交评审。
+                </el-alert>
+            </el-form>
+            <template #footer>
+                <el-button @click="reviewDialogVisible = false">取消</el-button>
+                <el-button :type="reviewForm.action === 'approve' ? 'success' : 'danger'"
+                    :loading="reviewLoading" @click="submitReviewDecision">
+                    确认{{ reviewForm.action === 'approve' ? '通过' : '驳回' }}
+                </el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Document Revision History Dialog -->
+        <el-dialog v-model="revisionDialogVisible" title="修订历史" width="900px" top="5vh">
+            <div v-if="currentDocForRevision" style="margin-bottom:15px">
+                <strong>{{ currentDocForRevision.title }}</strong>
+                <span style="color:#909399; margin-left:10px">
+                    当前版本: {{ currentDocForRevision.version || '-' }}
+                </span>
+            </div>
+            <el-table :data="revisionList" border stripe v-loading="revisionLoading"
+                style="width:100%" empty-text="暂无修订历史">
+                <el-table-column prop="version" label="版本" width="80"></el-table-column>
+                <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="changeLog" label="变更说明" min-width="200" show-overflow-tooltip>
+                    <template #default="{row}">
+                        <span v-if="row.changeLog">{{ row.changeLog }}</span>
+                        <span v-else style="color:#909399">-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="publishedByName" label="发布人" width="100"></el-table-column>
+                <el-table-column prop="publishedAt" label="发布时间" width="170"></el-table-column>
+                <el-table-column label="操作" width="200" fixed="right">
+                    <template #default="{row}">
+                        <el-button type="success" size="small" text @click="handleDownloadRevision(row)">
+                            下载
+                        </el-button>
+                        <el-popconfirm v-if="canRollbackDoc"
+                            :title="`确定回滚到版本 ${row.version}？将创建新版本，原版本保留。`"
+                            @confirm="handleRollback(row)">
+                            <template #reference>
+                                <el-button type="warning" size="small" text>回滚</el-button>
+                            </template>
+                        </el-popconfirm>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <template #footer>
+                <el-button @click="revisionDialogVisible = false">关闭</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Research Material Upload/Edit Dialog -->
+        <el-dialog v-model="rmUploadDialogVisible" :title="rmIsEdit ? '编辑研发资料' : '上传研发资料'"
+            width="520px" @closed="resetRmUploadForm">
+            <el-form :model="rmUploadForm" label-width="80px">
+                <el-form-item v-if="!rmIsEdit" label="文件" required>
+                    <el-upload
+                        :auto-upload="false"
+                        :limit="1"
+                        :on-change="handleRmFileChange"
+                        :on-exceed="() => ElementPlus.ElMessage.warning('只能上传一个文件')"
+                        drag>
+                        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+                        <div class="el-upload__text">拖拽文件到此处或<em>点击上传</em></div>
+                        <template #tip>
+                            <div class="el-upload__tip">
+                                支持 PDF / 图片 / Word / Excel / PPT / TXT / CSV / MD / 压缩包，单个文件不超过 50 MB
+                            </div>
+                        </template>
+                    </el-upload>
+                </el-form-item>
+                <el-form-item label="标题" required>
+                    <el-input v-model="rmUploadForm.title" placeholder="请输入资料标题"></el-input>
+                </el-form-item>
+                <el-form-item label="分类" required>
+                    <el-select v-model="rmUploadForm.categoryId" placeholder="选择分类" style="width:100%">
+                        <el-option v-for="c in researchCategories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="保密等级" required>
+                    <el-select v-model="rmUploadForm.confidentialityLevel" style="width:100%">
+                        <el-option label="公开（全员可见）" value="PUBLIC"></el-option>
+                        <el-option label="内部（默认）" value="INTERNAL"></el-option>
+                        <el-option label="机密（仅同部门可分享）" value="CONFIDENTIAL"></el-option>
+                        <el-option label="绝密（不可分享）" value="TOP_SECRET"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="rmUploadForm.description" type="textarea" :rows="3"
+                        placeholder="可选，资料描述"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="rmUploadDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="rmUploadLoading" @click="handleRmUpload">
+                    {{ rmIsEdit ? '保存' : '上传' }}
+                </el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Research Material Share Dialog -->
+        <el-dialog v-model="shareDialogVisible" title="分享研发资料" width="600px">
+            <div v-if="currentRmForShare" style="margin-bottom:15px">
+                <strong>{{ currentRmForShare.title }}</strong>
+                <span style="color:#909399; margin-left:10px">
+                    所有者: {{ currentRmForShare.ownerName }}
+                </span>
+                <el-tag :type="confidentialityTagType(currentRmForShare.confidentialityLevel)" size="small"
+                    style="margin-left:10px">
+                    {{ confidentialityLabel(currentRmForShare.confidentialityLevel) }}
+                </el-tag>
+            </div>
+            <el-alert v-if="currentRmForShare && currentRmForShare.confidentialityLevel === 'TOP_SECRET'"
+                title="该资料为绝密等级，不可分享"
+                type="error" :closable="false" show-icon style="margin-bottom:15px">
+            </el-alert>
+            <el-alert v-else-if="currentRmForShare && currentRmForShare.confidentialityLevel === 'CONFIDENTIAL'"
+                title="该资料为机密等级，仅可分享给同部门同事"
+                type="warning" :closable="false" show-icon style="margin-bottom:15px">
+            </el-alert>
+            <el-form label-width="80px" v-if="currentRmForShare && currentRmForShare.confidentialityLevel !== 'TOP_SECRET'">
+                <el-form-item label="分享给">
+                    <el-select v-model="shareForm.userIds" multiple filterable
+                        placeholder="选择要分享的同事（可多选）" style="width:100%">
+                        <el-option v-for="u in shareableUsers" :key="u.id"
+                            :label="u.realName + (u.departmentName ? ' - ' + u.departmentName : '')"
+                            :value="u.id"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <!-- 已分享列表 -->
+            <div v-if="shareList.length > 0" style="margin-top:15px">
+                <div style="margin-bottom:8px; color:#606266; font-size:14px">已分享给：</div>
+                <el-table :data="shareList" border size="small" style="width:100%">
+                    <el-table-column prop="sharedWithUserName" label="姓名" width="120"></el-table-column>
+                    <el-table-column prop="sharedWithUserDepartment" label="部门" width="150"></el-table-column>
+                    <el-table-column prop="sharedByUserName" label="分享人" width="100"></el-table-column>
+                    <el-table-column prop="createdAt" label="分享时间" width="170"></el-table-column>
+                    <el-table-column label="操作" width="80">
+                        <template #default="{row}">
+                            <el-popconfirm :title="`确定取消分享给 ${row.sharedWithUserName}？`"
+                                @confirm="handleUnshare(row)">
+                                <template #reference>
+                                    <el-button type="danger" size="small" text>取消</el-button>
+                                </template>
+                            </el-popconfirm>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+            <template #footer>
+                <el-button @click="shareDialogVisible = false">关闭</el-button>
+                <el-button v-if="currentRmForShare && currentRmForShare.confidentialityLevel !== 'TOP_SECRET'"
+                    type="primary" :loading="shareLoading" @click="handleShare">确认分享</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 修改保密等级对话框 -->
+        <el-dialog v-model="rmConfDialogVisible" title="修改保密等级" width="440px">
+            <div v-if="currentRmForConf" style="margin-bottom:12px;line-height:1.6">
+                <div>
+                    <span style="color:#606266">资料：</span>
+                    <strong>{{ currentRmForConf.title }}</strong>
+                </div>
+                <div style="margin-top:4px">
+                    <span style="color:#606266">当前等级：</span>
+                    <el-tag :type="confidentialityTagType(currentRmForConf.confidentialityLevel)" size="small">
+                        {{ confidentialityLabel(currentRmForConf.confidentialityLevel) }}
+                    </el-tag>
+                </div>
+            </div>
+            <el-alert v-if="currentRmForConf && rmConfForm.confidentialityLevel === 'TOP_SECRET' && currentRmForConf.confidentialityLevel !== 'TOP_SECRET'"
+                type="warning" :closable="false" style="margin-bottom:12px">
+                升级为“绝密”将自动清除所有现有分享记录，且后续不可再分享。
+            </el-alert>
+            <el-alert v-else-if="currentRmForConf && rmConfForm.confidentialityLevel === 'CONFIDENTIAL' && currentRmForConf.confidentialityLevel !== 'CONFIDENTIAL'"
+                type="info" :closable="false" style="margin-bottom:12px">
+                “机密”等级仅允许分享给同部门成员。
+            </el-alert>
+            <el-form label-width="80px">
+                <el-form-item label="保密等级" required>
+                    <el-select v-model="rmConfForm.confidentialityLevel" style="width:100%">
+                        <el-option label="公开（全员可见）" value="PUBLIC"></el-option>
+                        <el-option label="内部（默认）" value="INTERNAL"></el-option>
+                        <el-option label="机密（仅同部门可分享）" value="CONFIDENTIAL"></el-option>
+                        <el-option label="绝密（不可分享）" value="TOP_SECRET"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="rmConfDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="rmConfLoading" @click="handleRmConfUpdate">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 研发数据 录入/编辑对话框 -->
+        <el-dialog v-model="rdEditDialogVisible" :title="rdIsEdit ? '编辑研发数据' : '录入研发数据'"
+            width="720px" :close-on-click-modal="false">
+            <el-form :model="rdForm" label-width="100px">
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="记录类型" required>
+                            <el-select v-model="rdForm.recordType" style="width:100%" :disabled="rdIsEdit">
+                                <el-option label="测试记录" value="TEST_RECORD"></el-option>
+                                <el-option label="设计参数" value="DESIGN_PARAM"></el-option>
+                                <el-option label="实验记录" value="EXPERIMENT"></el-option>
+                                <el-option label="故障记录" value="FAILURE"></el-option>
+                                <el-option label="风险管理" value="RISK"></el-option>
+                                <el-option label="生物相容性" value="BIOCOMPAT"></el-option>
+                                <el-option label="软件验证" value="SOFTWARE_VV"></el-option>
+                                <el-option label="EMC/电气安全" value="EMC_SAFETY"></el-option>
+                                <el-option label="临床评价" value="CLINICAL"></el-option>
+                                <el-option label="验证/确认" value="VALIDATION"></el-option>
+                                <el-option label="物料/来料检验" value="MATERIAL"></el-option>
+                                <el-option label="灭菌/包装/货架寿命" value="STERILIZATION"></el-option>
+                                <el-option label="变更/偏差/CAPA" value="CHANGE"></el-option>
+                                <el-option label="其他" value="OTHER"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="记录编号">
+                            <el-input v-model="rdForm.recordNo" placeholder="如 TEST-2026-001"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="标题" required>
+                    <el-input v-model="rdForm.title" placeholder="请输入标题/摘要"></el-input>
+                </el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="8">
+                        <el-form-item label="记录日期">
+                            <el-date-picker v-model="rdForm.recordDate" type="date" value-format="YYYY-MM-DD"
+                                style="width:100%"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="操作员">
+                            <el-input v-model="rdForm.operator"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="状态">
+                            <el-select v-model="rdForm.status" style="width:100%">
+                                <el-option label="草稿" value="DRAFT"></el-option>
+                                <el-option label="进行中" value="IN_PROGRESS"></el-option>
+                                <el-option label="已完成" value="COMPLETED"></el-option>
+                                <el-option label="已归档" value="ARCHIVED"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8">
+                        <el-form-item label="设备型号">
+                            <el-input v-model="rdForm.deviceModel" placeholder="如 IP-2026-A"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="批次号">
+                            <el-input v-model="rdForm.batchNo"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="保密等级">
+                            <el-select v-model="rdForm.confidentialityLevel" style="width:100%">
+                                <el-option label="公开（全员可见）" value="PUBLIC"></el-option>
+                                <el-option label="内部（默认）" value="INTERNAL"></el-option>
+                                <el-option label="机密" value="CONFIDENTIAL"></el-option>
+                                <el-option label="绝密" value="TOP_SECRET"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="分类">
+                    <el-select v-model="rdForm.categoryId" placeholder="选择分类" clearable style="width:100%">
+                        <el-option v-for="c in researchCategories" :key="c.id" :label="c.name" :value="c.id"></el-option>
+                    </el-select>
+                </el-form-item>
+
+                <!-- 扩展字段：测试记录 -->
+                <div v-if="rdForm.recordType === 'TEST_RECORD'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">测试记录字段</div>
+                    <el-form-item label="测试项">
+                        <el-input v-model="rdForm.testItem" placeholder="如 输注精度测试"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="6">
+                            <el-form-item label="流速">
+                                <el-input v-model="rdForm.flowRate" placeholder="0.05 U/h"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item label="介质">
+                                <el-input v-model="rdForm.medium" placeholder="生理盐水"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item label="温度">
+                                <el-input v-model="rdForm.temperature" placeholder="25°C"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item label="持续时间">
+                                <el-input v-model="rdForm.duration" placeholder="24h"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="实测结果">
+                                <el-input v-model="rdForm.measuredResult" placeholder="±3.2%"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="规格要求">
+                                <el-input v-model="rdForm.testSpec" placeholder="±5%"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="合格判定">
+                                <el-select v-model="rdForm.passFail" style="width:100%" clearable>
+                                    <el-option label="PASS" value="PASS"></el-option>
+                                    <el-option label="FAIL" value="FAIL"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="测试设备">
+                        <el-input v-model="rdForm.testEquipment"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：设计参数 -->
+                <div v-if="rdForm.recordType === 'DESIGN_PARAM'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">设计参数字段</div>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="参数名">
+                                <el-input v-model="rdForm.paramName" placeholder="如 基础率范围"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="参数值">
+                                <el-input v-model="rdForm.paramValue" placeholder="0.05-30"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="单位">
+                                <el-input v-model="rdForm.unit" placeholder="U/h"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="依据标准">
+                                <el-input v-model="rdForm.dpSpec" placeholder="GB 9706.224-2021"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="版本">
+                                <el-input v-model="rdForm.dpVersion" placeholder="v1.0"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="变更原因">
+                                <el-input v-model="rdForm.changeReason"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：实验记录 -->
+                <div v-if="rdForm.recordType === 'EXPERIMENT'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">实验记录字段</div>
+                    <el-form-item label="目的">
+                        <el-input v-model="rdForm.objective"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="方法">
+                                <el-input v-model="rdForm.method"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="参数">
+                                <el-input v-model="rdForm.expParams"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="观察现象">
+                        <el-input v-model="rdForm.observation" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-form-item label="结论">
+                        <el-input v-model="rdForm.conclusion"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：故障记录 -->
+                <div v-if="rdForm.recordType === 'FAILURE'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">故障记录字段</div>
+                    <el-form-item label="故障现象">
+                        <el-input v-model="rdForm.phenomenon" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-form-item label="根本原因">
+                        <el-input v-model="rdForm.rootCause" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-form-item label="处理措施">
+                        <el-input v-model="rdForm.failAction" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="跟踪号">
+                                <el-input v-model="rdForm.trackingNo"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="解决日期">
+                                <el-date-picker v-model="rdForm.resolvedAt" type="date" value-format="YYYY-MM-DD"
+                                    style="width:100%"></el-date-picker>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：风险管理 (ISO 14971 FMEA) -->
+                <div v-if="rdForm.recordType === 'RISK'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">风险管理字段（ISO 14971 / YY/T 0316）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="危害类型">
+                                <el-select v-model="rdForm.hazardType" style="width:100%" clearable>
+                                    <el-option label="输注异常" value="输注异常"></el-option>
+                                    <el-option label="堵管" value="堵管"></el-option>
+                                    <el-option label="用药错误" value="用药错误"></el-option>
+                                    <el-option label="用户误操作" value="用户误操作"></el-option>
+                                    <el-option label="通信威胁" value="通信威胁"></el-option>
+                                    <el-option label="贴敷脱落" value="贴敷脱落"></el-option>
+                                    <el-option label="电池耗尽" value="电池耗尽"></el-option>
+                                    <el-option label="EMI" value="EMI"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="故障模式">
+                                <el-input v-model="rdForm.failureMode"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="严重度S">
+                                <el-input-number v-model="rdForm.severity" :min="1" :max="5" controls-position="right" style="width:100%"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="发生度O">
+                                <el-input-number v-model="rdForm.occurrence" :min="1" :max="5" controls-position="right" style="width:100%"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="可探测度D">
+                                <el-input-number v-model="rdForm.detection" :min="1" :max="5" controls-position="right" style="width:100%"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="控制措施">
+                        <el-input v-model="rdForm.controlMeasure" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="剩余风险">
+                                <el-input v-model="rdForm.residualRisk"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="追溯需求">
+                                <el-input v-model="rdForm.traceToDesign" placeholder="如 REQ-001"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：生物相容性 (GB/T 16886) -->
+                <div v-if="rdForm.recordType === 'BIOCOMPAT'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">生物相容性字段（GB/T 16886 系列）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="试验项目">
+                                <el-select v-model="rdForm.bioTestItem" style="width:100%" clearable>
+                                    <el-option label="细胞毒性" value="细胞毒性"></el-option>
+                                    <el-option label="致敏" value="致敏"></el-option>
+                                    <el-option label="刺激" value="刺激"></el-option>
+                                    <el-option label="全身毒性" value="全身毒性"></el-option>
+                                    <el-option label="植入" value="植入"></el-option>
+                                    <el-option label="血液相容" value="血液相容"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="材料">
+                                <el-input v-model="rdForm.material" placeholder="如 聚碳酸酯/硅胶"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="浸提条件">
+                        <el-input v-model="rdForm.extractCondition" placeholder="如 37°C 72h"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="试验机构">
+                                <el-input v-model="rdForm.bioTestOrg"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="报告编号">
+                                <el-input v-model="rdForm.bioReportNo"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="试验结果">
+                                <el-input v-model="rdForm.bioTestResult"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="结论">
+                                <el-input v-model="rdForm.bioConclusion"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：软件验证 (IEC 62304 / YY/T 0664) -->
+                <div v-if="rdForm.recordType === 'SOFTWARE_VV'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">软件验证字段（IEC 62304 / YY/T 0664）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="软件版本">
+                                <el-input v-model="rdForm.swVersion" placeholder="如 v1.2.0"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="安全等级">
+                                <el-select v-model="rdForm.safetyClass" style="width:100%" clearable>
+                                    <el-option label="A级" value="A"></el-option>
+                                    <el-option label="B级" value="B"></el-option>
+                                    <el-option label="C级" value="C"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="测试层级">
+                                <el-select v-model="rdForm.testLevel" style="width:100%" clearable>
+                                    <el-option label="单元测试" value="单元测试"></el-option>
+                                    <el-option label="集成测试" value="集成测试"></el-option>
+                                    <el-option label="系统测试" value="系统测试"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="缺陷数">
+                                <el-input-number v-model="rdForm.defectCount" :min="0" controls-position="right" style="width:100%"></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="16">
+                            <el-form-item label="测试报告">
+                                <el-input v-model="rdForm.swTestReport" placeholder="报告编号"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="需求追溯">
+                        <el-input v-model="rdForm.traceMatrix" type="textarea" :rows="2" placeholder="如 REQ-001 -> TC-001"></el-input>
+                    </el-form-item>
+                    <el-form-item label="测试结果">
+                        <el-input v-model="rdForm.swTestResult" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：EMC/电气安全 (GB 9706 / YY 9706) -->
+                <div v-if="rdForm.recordType === 'EMC_SAFETY'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">EMC/电气安全字段（GB 9706 / YY 9706）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="测试项">
+                                <el-select v-model="rdForm.emcTestItem" style="width:100%" clearable>
+                                    <el-option label="漏电流" value="漏电流"></el-option>
+                                    <el-option label="介电强度" value="介电强度"></el-option>
+                                    <el-option label="接地阻抗" value="接地阻抗"></el-option>
+                                    <el-option label="辐射发射" value="辐射发射"></el-option>
+                                    <el-option label="传导发射" value="传导发射"></el-option>
+                                    <el-option label="辐射抗扰度" value="辐射抗扰度"></el-option>
+                                    <el-option label="静电放电ESD" value="ESD"></el-option>
+                                    <el-option label="电快瞬变脉冲EFT" value="EFT"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="依据标准">
+                                <el-input v-model="rdForm.emcStandard" placeholder="如 GB 9706.1-2020"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="实测值">
+                                <el-input v-model="rdForm.emcMeasured"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="限值">
+                                <el-input v-model="rdForm.emcLimit"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="判定">
+                                <el-select v-model="rdForm.emcPassFail" style="width:100%" clearable>
+                                    <el-option label="PASS" value="PASS"></el-option>
+                                    <el-option label="FAIL" value="FAIL"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="测试设备">
+                                <el-input v-model="rdForm.emcEquipment"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="检测机构">
+                                <el-input v-model="rdForm.emcTestOrg"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：临床评价 -->
+                <div v-if="rdForm.recordType === 'CLINICAL'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">临床评价字段</div>
+                    <el-form-item label="评价路径">
+                        <el-select v-model="rdForm.evalPath" style="width:100%" clearable>
+                            <el-option label="等同性比对" value="等同性比对"></el-option>
+                            <el-option label="临床试验" value="临床试验"></el-option>
+                            <el-option label="文献综述" value="文献综述"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="对比器械">
+                        <el-input v-model="rdForm.compareDevice" placeholder="等同器械名称/型号"></el-input>
+                    </el-form-item>
+                    <el-form-item label="差异分析">
+                        <el-input v-model="rdForm.differenceAnalysis" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-form-item label="文献综述">
+                        <el-input v-model="rdForm.literatureSummary" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="评价报告">
+                                <el-input v-model="rdForm.evalReportNo"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="结论">
+                                <el-input v-model="rdForm.clinicalConclusion"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：验证/确认 -->
+                <div v-if="rdForm.recordType === 'VALIDATION'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">验证/确认字段（DV/IQ/OQ/PQ）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="验证/确认类型">
+                                <el-select v-model="rdForm.validationType" style="width:100%" clearable>
+                                    <el-option label="设计验证 DV" value="DV"></el-option>
+                                    <el-option label="安装确认 IQ" value="IQ"></el-option>
+                                    <el-option label="运行确认 OQ" value="OQ"></el-option>
+                                    <el-option label="性能确认 PQ" value="PQ"></el-option>
+                                    <el-option label="软件确认" value="软件确认"></el-option>
+                                    <el-option label="其他" value="其他"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="依据标准">
+                                <el-input v-model="rdForm.vStandard" placeholder="如 ISO 13485 / 21 CFR 820"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="验证范围/对象">
+                        <el-input v-model="rdForm.vScope" placeholder="如 输注精度-基础率/大剂量"></el-input>
+                    </el-form-item>
+                    <el-form-item label="接收准则">
+                        <el-input v-model="rdForm.acceptanceCriteria" type="textarea" :rows="2" placeholder="如 精度±5%以内，30/30 样本通过"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="样本/批次">
+                                <el-input v-model="rdForm.vSamples" placeholder="如 30pcs/3批"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="方案编号">
+                                <el-input v-model="rdForm.vProtocolNo" placeholder="如 VP-001"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="报告编号">
+                                <el-input v-model="rdForm.vReportNo" placeholder="如 VR-001"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="6">
+                            <el-form-item label="验证结果">
+                                <el-select v-model="rdForm.vResult" style="width:100%" clearable>
+                                    <el-option label="PASS" value="PASS"></el-option>
+                                    <el-option label="FAIL" value="FAIL"></el-option>
+                                    <el-option label="N/A" value="N/A"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="9">
+                            <el-form-item label="审核人">
+                                <el-input v-model="rdForm.vReviewer"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="9">
+                            <el-form-item label="批准人">
+                                <el-input v-model="rdForm.vApprover"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="结论">
+                        <el-input v-model="rdForm.vConclusion" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：物料/来料检验 -->
+                <div v-if="rdForm.recordType === 'MATERIAL'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">物料/来料检验字段（IQC）</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="物料名称">
+                                <el-input v-model="rdForm.materialName" placeholder="如 储药器"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="物料编码">
+                                <el-input v-model="rdForm.materialCode" placeholder="如 MAT-001"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="供应商">
+                                <el-input v-model="rdForm.materialSupplier"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="物料规格">
+                                <el-input v-model="rdForm.materialSpec"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="检验项目">
+                                <el-input v-model="rdForm.iqcItem" placeholder="如 外观/尺寸/功能"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="检验标准">
+                                <el-input v-model="rdForm.iqcStandard" placeholder="如 AQL 1.0"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="抽样数量">
+                                <el-input v-model="rdForm.sampleQty" placeholder="如 20/批"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="检验结果">
+                                <el-select v-model="rdForm.iqcResult" style="width:100%" clearable>
+                                    <el-option label="合格" value="合格"></el-option>
+                                    <el-option label="不合格" value="不合格"></el-option>
+                                    <el-option label="让步接收" value="让步接收"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="有无COA">
+                                <el-select v-model="rdForm.coaAvailable" style="width:100%" clearable>
+                                    <el-option label="有" value="有"></el-option>
+                                    <el-option label="无" value="无"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="检验报告编号">
+                                <el-input v-model="rdForm.iqcReportNo"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="有效期">
+                                <el-date-picker v-model="rdForm.materialExpiry" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="储存条件">
+                        <el-input v-model="rdForm.storageCondition" placeholder="如 常温干燥，避光"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：灭菌/包装/货架寿命 -->
+                <div v-if="rdForm.recordType === 'STERILIZATION'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">灭菌/包装/货架寿命字段</div>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="灭菌方式">
+                                <el-select v-model="rdForm.sterMethod" style="width:100%" clearable>
+                                    <el-option label="环氧乙烷 EO" value="EO"></el-option>
+                                    <el-option label="辐照" value="辐照"></el-option>
+                                    <el-option label="蒸汽" value="蒸汽"></el-option>
+                                    <el-option label="干热" value="干热"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="灭菌参数">
+                                <el-input v-model="rdForm.sterParameter" placeholder="如 剂量 25kGy"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="装载方式">
+                                <el-input v-model="rdForm.sterLoad"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="验证类型">
+                                <el-select v-model="rdForm.sterVerification" style="width:100%" clearable>
+                                    <el-option label="IQ" value="IQ"></el-option>
+                                    <el-option label="OQ" value="OQ"></el-option>
+                                    <el-option label="PQ" value="PQ"></el-option>
+                                    <el-option label="再确认" value="再确认"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="灭菌验证结果">
+                                <el-input v-model="rdForm.sterResult"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="包装试验项目">
+                                <el-input v-model="rdForm.packTestItem" placeholder="如 密封强度/完整性/跌落"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="包装试验结果">
+                                <el-input v-model="rdForm.packTestResult"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="16">
+                        <el-col :span="6">
+                            <el-form-item label="货架寿命(月)">
+                                <el-input v-model="rdForm.shelfLife" placeholder="如 24"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="9">
+                            <el-form-item label="老化试验类型">
+                                <el-select v-model="rdForm.agingType" style="width:100%" clearable>
+                                    <el-option label="加速老化" value="加速老化"></el-option>
+                                    <el-option label="实时老化" value="实时老化"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="9">
+                            <el-form-item label="老化周期">
+                                <el-input v-model="rdForm.agingPeriod" placeholder="如 6个月"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="报告编号">
+                        <el-input v-model="rdForm.sterReportNo"></el-input>
+                    </el-form-item>
+                </div>
+
+                <!-- 扩展字段：变更/偏差/CAPA -->
+                <div v-if="rdForm.recordType === 'CHANGE'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">变更/偏差/CAPA字段</div>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="变更类型">
+                                <el-select v-model="rdForm.changeType" style="width:100%" clearable>
+                                    <el-option label="工程变更请求 ECR" value="ECR"></el-option>
+                                    <el-option label="工程变更通知 ECN" value="ECN"></el-option>
+                                    <el-option label="偏差 DEVIATION" value="DEVIATION"></el-option>
+                                    <el-option label="纠正预防 CAPA" value="CAPA"></el-option>
+                                    <el-option label="其他" value="其他"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="变更/偏差/CAPA编号">
+                                <el-input v-model="rdForm.changeNo" placeholder="如 ECN-2026-001"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="变更原因/偏差描述">
+                        <el-input v-model="rdForm.changeReason" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="12">
+                            <el-form-item label="风险评估">
+                                <el-input v-model="rdForm.riskAssessment" placeholder="如 风险分析结论"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="影响范围">
+                                <el-input v-model="rdForm.impactScope" placeholder="如 设计文件/工艺/验证"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="处理措施/CAPA">
+                        <el-input v-model="rdForm.actionPlan" type="textarea" :rows="2"></el-input>
+                    </el-form-item>
+                    <el-row :gutter="16">
+                        <el-col :span="8">
+                            <el-form-item label="实施日期">
+                                <el-date-picker v-model="rdForm.changeDate" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="效果验证">
+                                <el-input v-model="rdForm.effectVerify"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="批准人">
+                                <el-input v-model="rdForm.changeApprover"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <!-- 扩展字段：其他（动态自定义） -->
+                <div v-if="rdForm.recordType === 'OTHER'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">自定义字段（可自由添加键值对）</div>
+                    <div v-for="(f, idx) in rdForm.dynamicFields" :key="idx"
+                        style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+                        <el-input v-model="f.key" placeholder="字段名" style="width:44%"></el-input>
+                        <el-input v-model="f.value" placeholder="值" style="width:44%"></el-input>
+                        <el-button type="danger" size="small" text @click="rdForm.dynamicFields.splice(idx, 1)">删除</el-button>
+                    </div>
+                    <el-button type="primary" size="small" plain
+                        @click="rdForm.dynamicFields.push({ key: '', value: '' })">
+                        + 添加字段
+                    </el-button>
+                </div>
+
+                <el-form-item label="描述/备注">
+                    <el-input v-model="rdForm.description" type="textarea" :rows="2"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="rdEditDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="rdEditLoading" @click="handleRdSave">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 研发数据 修改保密等级对话框 -->
+        <el-dialog v-model="rdConfDialogVisible" title="修改保密等级" width="440px">
+            <div v-if="currentRdForConf" style="margin-bottom:12px;line-height:1.6">
+                <div>
+                    <span style="color:#606266">记录：</span>
+                    <strong>{{ currentRdForConf.title }}</strong>
+                </div>
+                <div style="margin-top:4px">
+                    <span style="color:#606266">当前等级：</span>
+                    <el-tag :type="confidentialityTagType(currentRdForConf.confidentialityLevel)" size="small">
+                        {{ confidentialityLabel(currentRdForConf.confidentialityLevel) }}
+                    </el-tag>
+                </div>
+            </div>
+            <el-form label-width="80px">
+                <el-form-item label="保密等级" required>
+                    <el-select v-model="rdConfForm.confidentialityLevel" style="width:100%">
+                        <el-option label="公开（全员可见）" value="PUBLIC"></el-option>
+                        <el-option label="内部（默认）" value="INTERNAL"></el-option>
+                        <el-option label="机密" value="CONFIDENTIAL"></el-option>
+                        <el-option label="绝密" value="TOP_SECRET"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="rdConfDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="rdConfLoading" @click="handleRdConfUpdate">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 研发数据 详情对话框 -->
+        <el-dialog v-model="rdDetailDialogVisible" title="研发数据详情" width="720px">
+            <div v-if="currentRdDetail" style="line-height:1.8">
+                <el-descriptions :column="2" border>
+                    <el-descriptions-item label="记录类型">
+                        <el-tag size="small">{{ rdTypeLabel(currentRdDetail.recordType) }}</el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="记录编号">{{ currentRdDetail.recordNo || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="标题" :span="2">{{ currentRdDetail.title }}</el-descriptions-item>
+                    <el-descriptions-item label="记录日期">{{ currentRdDetail.recordDate || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="操作员">{{ currentRdDetail.operator || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="设备型号">{{ currentRdDetail.deviceModel || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="批次号">{{ currentRdDetail.batchNo || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="状态">
+                        <el-tag :type="rdStatusTagType(currentRdDetail.status)" size="small">{{ rdStatusLabel(currentRdDetail.status) }}</el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="保密等级">
+                        <el-tag :type="confidentialityTagType(currentRdDetail.confidentialityLevel)" size="small">
+                            {{ confidentialityLabel(currentRdDetail.confidentialityLevel) }}
+                        </el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="分类">{{ currentRdDetail.categoryName || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="所有者">{{ currentRdDetail.ownerName || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="创建时间" :span="2">{{ currentRdDetail.createdAt }}</el-descriptions-item>
+                    <el-descriptions-item label="描述/备注" :span="2">{{ currentRdDetail.description || '-' }}</el-descriptions-item>
+                </el-descriptions>
+
+                <div v-if="currentRdDetail.extraData && Object.keys(currentRdDetail.extraData).length > 0"
+                    style="margin-top:16px">
+                    <div style="margin-bottom:8px; color:#409eff; font-weight:bold">扩展字段</div>
+                    <el-descriptions :column="2" border>
+                        <template v-for="(val, key) in currentRdDetail.extraData" :key="key">
+                            <el-descriptions-item v-if="typeof val !== 'object'" :label="rdExtraLabel(key)">
+                                {{ val }}
+                            </el-descriptions-item>
+                            <template v-else>
+                                <el-descriptions-item v-for="(v, k) in val" :key="k" :label="rdExtraLabel(k)">
+                                    {{ v }}
+                                </el-descriptions-item>
+                            </template>
+                        </template>
+                    </el-descriptions>
+                </div>
+            </div>
+            <template #footer>
+                <el-button @click="rdDetailDialogVisible = false">关闭</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Supplier Create/Edit Dialog -->
+        <el-dialog v-model="supplierEditDialogVisible" :title="supplierIsEdit ? '编辑供应商' : '新增供应商'"
+            width="640px" @closed="resetSupplierForm">
+            <el-form ref="supplierFormRef" :model="supplierForm" :rules="supplierRules" label-width="100px">
+                <el-form-item label="供应商编码" prop="supplierCode">
+                    <el-input v-model="supplierForm.supplierCode" placeholder="如 SUP-001"></el-input>
+                </el-form-item>
+                <el-form-item label="供应商名称" prop="name">
+                    <el-input v-model="supplierForm.name"></el-input>
+                </el-form-item>
+                <el-form-item label="分类" prop="category">
+                    <el-select v-model="supplierForm.category" placeholder="选择分类" style="width:100%" allow-create filterable>
+                        <el-option label="原材料" value="原材料"></el-option>
+                        <el-option label="零部件" value="零部件"></el-option>
+                        <el-option label="外协加工" value="外协加工"></el-option>
+                        <el-option label="服务" value="服务"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="联系人" prop="contact">
+                    <el-input v-model="supplierForm.contact"></el-input>
+                </el-form-item>
+                <el-form-item label="电话" prop="phone">
+                    <el-input v-model="supplierForm.phone"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                    <el-input v-model="supplierForm.email"></el-input>
+                </el-form-item>
+                <el-form-item label="合格状态" prop="qualificationStatus">
+                    <el-select v-model="supplierForm.qualificationStatus" style="width:100%">
+                        <el-option label="合格" value="QUALIFIED"></el-option>
+                        <el-option label="待审核" value="PENDING"></el-option>
+                        <el-option label="已暂停" value="SUSPENDED"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="质量联系人" prop="qualityContactName">
+                    <el-input v-model="supplierForm.qualityContactName" placeholder="NMPA 法规要求"></el-input>
+                </el-form-item>
+                <el-form-item label="质量电话" prop="qualityContactPhone">
+                    <el-input v-model="supplierForm.qualityContactPhone"></el-input>
+                </el-form-item>
+                <el-form-item label="启用状态" prop="enabled">
+                    <el-switch v-model="supplierForm.enabled"></el-switch>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="supplierEditDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="supplierSubmitting" @click="handleSupplierSubmit">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Supplier Detail Dialog -->
+        <el-dialog v-model="supplierDetailDialogVisible" title="供应商详情" width="640px">
+            <el-descriptions :column="2" border>
+                <el-descriptions-item label="编码">{{ supplierDetail.supplierCode }}</el-descriptions-item>
+                <el-descriptions-item label="名称">{{ supplierDetail.name }}</el-descriptions-item>
+                <el-descriptions-item label="分类">{{ supplierDetail.category }}</el-descriptions-item>
+                <el-descriptions-item label="合格状态">
+                    <el-tag :type="supplierQualificationTagType(supplierDetail.qualificationStatus)" size="small">
+                        {{ supplierQualificationLabel(supplierDetail.qualificationStatus) }}
+                    </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="联系人">{{ supplierDetail.contact }}</el-descriptions-item>
+                <el-descriptions-item label="电话">{{ supplierDetail.phone }}</el-descriptions-item>
+                <el-descriptions-item label="邮箱">{{ supplierDetail.email }}</el-descriptions-item>
+                <el-descriptions-item label="启用">
+                    <el-tag :type="supplierDetail.enabled ? 'success' : 'info'" size="small">
+                        {{ supplierDetail.enabled ? '启用' : '停用' }}
+                    </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="质量联系人">{{ supplierDetail.qualityContactName }}</el-descriptions-item>
+                <el-descriptions-item label="质量电话">{{ supplierDetail.qualityContactPhone }}</el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ supplierDetail.createdAt }}</el-descriptions-item>
+                <el-descriptions-item label="更新时间">{{ supplierDetail.updatedAt }}</el-descriptions-item>
+            </el-descriptions>
+            <template #footer>
+                <el-button @click="supplierDetailDialogVisible = false">关闭</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Commercial Record Create/Edit Dialog -->
+        <el-dialog v-model="crEditDialogVisible" :title="crIsEdit ? '编辑成本记录' : '录入成本记录'"
+            width="640px" @closed="resetCrForm">
+            <el-form ref="crFormRef" :model="crForm" :rules="crRules" label-width="100px">
+                <el-form-item label="供应商" prop="supplierId">
+                    <el-select v-model="crForm.supplierId" placeholder="选择供应商" style="width:100%" filterable>
+                        <el-option v-for="s in enabledSuppliers" :key="s.id"
+                            :label="s.supplierCode + ' - ' + s.name" :value="s.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="物料/项目" prop="itemName">
+                    <el-input v-model="crForm.itemName"></el-input>
+                </el-form-item>
+                <el-form-item label="成本价" prop="costPrice">
+                    <el-input-number v-model="crForm.costPrice" :precision="2" :min="0" style="width:200px"></el-input-number>
+                </el-form-item>
+                <el-form-item label="货币" prop="currency">
+                    <el-select v-model="crForm.currency" style="width:200px">
+                        <el-option label="人民币 CNY" value="CNY"></el-option>
+                        <el-option label="美元 USD" value="USD"></el-option>
+                        <el-option label="欧元 EUR" value="EUR"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="生效日期" prop="effectiveDate">
+                    <el-date-picker v-model="crForm.effectiveDate" type="date" value-format="YYYY-MM-DD"
+                        style="width:200px"></el-date-picker>
+                </el-form-item>
+                <el-form-item label="保密等级" prop="confidentialityLevel">
+                    <el-select v-model="crForm.confidentialityLevel" style="width:200px">
+                        <el-option label="公开" value="PUBLIC"></el-option>
+                        <el-option label="内部" value="INTERNAL"></el-option>
+                        <el-option label="机密" value="CONFIDENTIAL"></el-option>
+                        <el-option label="绝密" value="TOP_SECRET"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="描述" prop="description">
+                    <el-input v-model="crForm.description" type="textarea" :rows="3"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="crEditDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="crSubmitting" @click="handleCrSubmit">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Commercial Record Detail Dialog -->
+        <el-dialog v-model="crDetailDialogVisible" title="成本记录详情" width="720px">
+            <el-descriptions :column="2" border>
+                <el-descriptions-item label="物料/项目">{{ crDetail.itemName }}</el-descriptions-item>
+                <el-descriptions-item label="成本价">
+                    <span style="color:#f56c6c; font-weight:600">
+                        {{ crDetail.costPrice }} {{ crDetail.currency }}
+                    </span>
+                </el-descriptions-item>
+                <el-descriptions-item label="生效日期">{{ crDetail.effectiveDate }}</el-descriptions-item>
+                <el-descriptions-item label="保密等级">
+                    <el-tag :type="confidentialityTagType(crDetail.confidentialityLevel)" size="small">
+                        {{ confidentialityLabel(crDetail.confidentialityLevel) }}
+                    </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="供应商">{{ crDetail.supplierCode }} - {{ crDetail.supplierName }}</el-descriptions-item>
+                <el-descriptions-item label="录入人">{{ crDetail.ownerName }}</el-descriptions-item>
+                <el-descriptions-item label="描述" :span="2">{{ crDetail.description }}</el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ crDetail.createdAt }}</el-descriptions-item>
+                <el-descriptions-item label="更新时间">{{ crDetail.updatedAt }}</el-descriptions-item>
+            </el-descriptions>
+            <template #footer>
+                <el-button @click="crDetailDialogVisible = false">关闭</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- Notification Center Drawer -->
+        <el-drawer v-model="notifDrawerVisible" title="通知中心" size="480px">
+            <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <el-button v-if="currentRole === 'ADMIN'" type="primary" size="small"
+                           @click="openAnnounceDialog">
+                    <el-icon style="margin-right:4px"><Bell /></el-icon>发布公告
+                </el-button>
+                <el-button size="small" type="primary" text
+                           :disabled="notifUnread === 0" @click="handleMarkAllRead">全部已读</el-button>
+            </div>
+
+            <el-tabs v-model="notifTab" @tab-change="handleNotifTabChange">
+                <!-- 审批待办 -->
+                <el-tab-pane :label="'待办审批' + (notifTodoCount ? '(' + notifTodoCount + ')' : '')" name="todos">
+                    <el-empty v-if="notifTodos.length === 0" description="暂无待办审批"></el-empty>
+                    <div v-for="n in notifTodos" :key="n.id"
+                         @click="handleNotificationClick(n)"
+                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #ebeef5;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <el-tag :type="notifTypeTag(n.type)" size="small">{{ n.typeLabel }}</el-tag>
+                            <span style="font-weight:600;">{{ n.title }}</span>
+                            <span style="margin-left:auto; color:#909399; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
+                        </div>
+                        <div style="color:#606266; margin-top:4px; font-size:13px;">{{ n.content }}</div>
+                    </div>
+                </el-tab-pane>
+                <!-- 全部通知 -->
+                <el-tab-pane :label="'全部通知' + (notifUnread ? '(' + notifUnread + ')' : '')" name="all">
+                    <el-empty v-if="notifList.length === 0" description="暂无通知"></el-empty>
+                    <div v-for="n in notifList" :key="n.id"
+                         @click="handleNotificationClick(n)"
+                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #ebeef5;"
+                         :style="n.read ? '' : 'background:#f5f7fa;'">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <el-tag :type="notifTypeTag(n.type)" size="small">{{ n.typeLabel }}</el-tag>
+                            <span style="font-weight:600;">{{ n.title }}</span>
+                            <span v-if="!n.read" style="width:8px;height:8px;border-radius:50%;background:#f56c6c;display:inline-block;"></span>
+                            <span style="margin-left:auto; color:#909399; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
+                        </div>
+                        <div style="color:#606266; margin-top:4px; font-size:13px;">{{ n.content }}</div>
+                    </div>
+                    <div v-if="notifTotal > 0" style="display:flex; justify-content:center; margin-top:12px;">
+                        <el-pagination background layout="prev, pager, next"
+                                       :total="notifTotal" :page-size="notifPageSize"
+                                       :current-page="notifPage"
+                                       @current-change="handleNotifPageChange"></el-pagination>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </el-drawer>
+
+        <!-- Publish Announcement Dialog -->
+        <el-dialog v-model="announceDialogVisible" title="发布系统公告" width="480px">
+            <el-form label-width="60px">
+                <el-form-item label="标题" required>
+                    <el-input v-model="announceForm.title" maxlength="200" show-word-limit></el-input>
+                </el-form-item>
+                <el-form-item label="内容" required>
+                    <el-input v-model="announceForm.content" type="textarea" :rows="4"
+                              maxlength="1000" show-word-limit></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="announceDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="announceSubmitting"
+                           @click="handlePublishAnnouncement">发布</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <!-- Vue 3 + Element Plus CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/agent-chat.js"></script>
+</body>
+</html>

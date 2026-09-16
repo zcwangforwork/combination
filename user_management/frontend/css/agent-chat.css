@@ -1,0 +1,564 @@
+/*
+ * agent-chat.css — 由 agent.html 提取并命名空间化（#agent-root）
+ * 生成脚本: combination/tools/build_agent_port.py（勿手改，重跑脚本覆盖）
+ * 类名交集（UM↔agent）: .sidebar, .sidebar-header
+ */
+
+/* 嵌入容器：占满 .page-content 去内边距区域 */
+.page-content > .agent-page { margin: -24px; height: calc(100% + 48px); }
+
+/* Agent 服务不可用提示横幅 */
+#agent-root .agent-service-error {
+    margin: 16px auto; max-width: 560px; padding: 14px 18px;
+    background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;
+    border-radius: 8px; font-size: 13px; line-height: 1.7; text-align: center;
+}
+#agent-root .agent-service-error button {
+    margin-top: 8px; padding: 4px 14px; background: #c62828; color: #fff;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+
+        #agent-root, #agent-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        #agent-root {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            height: 100%;
+            min-height: 0;
+            display: flex;
+        }
+        /* Sidebar */
+        #agent-root .sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        #agent-root .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+        /* 聊天任务列表（多任务切换） */
+        #agent-root .chat-list-header {
+            padding: 14px 16px 10px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 600; font-size: 14px; color: #333;
+            border-bottom: 1px solid #eee;
+        }
+        #agent-root .new-chat-btn {
+            padding: 4px 10px; font-size: 12px; cursor: pointer;
+            background: #1976d2; color: #fff; border: none;
+            border-radius: 6px; transition: background .2s;
+        }
+        #agent-root .new-chat-btn:hover { background: #1565c0; }
+        #agent-root .chat-list {
+            max-height: 220px; overflow-y: auto;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 4px 0;
+        }
+        #agent-root .chat-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px 8px 16px; cursor: pointer;
+            font-size: 13px; color: #555;
+            transition: background 0.15s;
+        }
+        #agent-root .chat-item:hover { background: #f0f4f8; }
+        #agent-root .chat-item.active {
+            background: #e3f2fd; color: #1976d2; font-weight: 500;
+        }
+        #agent-root .chat-item-title {
+            flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        #agent-root .chat-item-del {
+            border: none; background: none; color: #bbb; cursor: pointer;
+            font-size: 14px; padding: 0 4px; border-radius: 4px; flex-shrink: 0;
+        }
+        #agent-root .chat-item-del:hover { color: #e53935; background: #ffebee; }
+        #agent-root .step-list { padding: 8px 0; }
+        #agent-root .step-item {
+            padding: 10px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: #666;
+            transition: background 0.2s;
+        }
+        #agent-root .step-item:hover { background: #f5f7fa; }
+        #agent-root .step-icon {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; flex-shrink: 0;
+        }
+        #agent-root .step-icon.done { background: #e8f5e9; color: #4caf50; }
+        #agent-root .step-icon.in_progress { background: #fff3e0; color: #ff9800; }
+        #agent-root .step-icon.pending { background: #f5f5f5; color: #bbb; }
+        #agent-root .step-icon.skipped { background: #fce4ec; color: #e91e63; }
+        #agent-root .step-text { line-height: 1.5; }
+        #agent-root .step-label { font-weight: 500; color: #333; }
+        #agent-root .step-detail { font-size: 11px; color: #999; margin-top: 2px; }
+        #agent-root .unresolved-box {
+            margin: 12px 16px; padding: 12px;
+            background: #fff8e1; border-radius: 8px;
+            font-size: 12px; color: #795548;
+        }
+        #agent-root .unresolved-box h4 { font-size: 12px; margin-bottom: 6px; }
+        #agent-root .unresolved-box li { margin-left: 16px; margin-bottom: 2px; }
+
+        /* Main chat area */
+        #agent-root .main {
+            flex: 1; display: flex; flex-direction: column;
+            min-width: 0;
+        }
+        #agent-root .main-header {
+            padding: 12px 20px;
+            background: #fff; border-bottom: 1px solid #e0e0e0;
+            display: flex; align-items: center; gap: 10px;
+        }
+        #agent-root .main-header h2 { font-size: 16px; color: #333; }
+        #agent-root #styleSelect {
+            padding: 6px 10px; background: #fff; color: #555;
+            border: 1px solid #ccc; border-radius: 6px; font-size: 12px;
+            cursor: pointer; margin-right: 12px; transition: all .2s;
+        }
+        #agent-root #styleSelect:focus { outline: none; border-color: #8e24aa; box-shadow: 0 0 0 2px rgba(142,36,170,.15); }
+        #agent-root .badge {
+            font-size: 11px; padding: 2px 8px;
+            background: #e3f2fd; color: #1976d2;
+            border-radius: 10px;
+        }
+        #agent-root .chat-area {
+            flex: 1; overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        #agent-root .msg {
+            max-width: 80%; padding: 12px 16px;
+            border-radius: 12px; font-size: 14px;
+            line-height: 1.6; word-wrap: break-word;
+        }
+        #agent-root .msg.agent {
+            background: #fff; border: 1px solid #e0e0e0;
+            align-self: flex-start;
+        }
+        #agent-root .msg.user {
+            background: #1976d2; color: #fff;
+            align-self: flex-end;
+        }
+        /* 消息时间戳：气泡内顶部小字 */
+        #agent-root .msg-time {
+            font-size: 11px; margin-bottom: 4px; line-height: 1;
+        }
+        #agent-root .msg.agent .msg-time { color: #999; }
+        #agent-root .msg.user .msg-time { color: rgba(255,255,255,.75); }
+        /* 撤回按钮：仅出现在用户消息上，右下角 */
+        #agent-root .recall-bar {
+            text-align: right;
+            margin-top: 8px;
+        }
+        #agent-root .recall-btn {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 2px 10px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        #agent-root .recall-btn:hover { background: rgba(255,255,255,0.35); }
+        #agent-root .recall-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #agent-root .msg pre { background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+        #agent-root .msg code { font-family: monospace; font-size: 13px; }
+        /* Collapsible long messages */
+        #agent-root .msg.agent.collapsed {
+            max-height: 280px;
+            overflow: hidden;
+            position: relative;
+        }
+        #agent-root .msg.agent.collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60px;
+            background: linear-gradient(transparent, #fff);
+            pointer-events: none;
+        }
+        #agent-root .msg-toggle {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #1976d2;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 2px 0;
+            text-align: left;
+        }
+        #agent-root .msg-toggle:hover { text-decoration: underline; }
+        #agent-root .tool-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px; font-size: 12px; color: #666;
+            background: #f5f5f5; border-radius: 8px;
+            align-self: flex-start; max-width: 80%;
+        }
+        #agent-root .tool-indicator .icon { font-size: 16px; }
+        #agent-root .tool-indicator .spinner {
+            width: 14px; height: 14px; border: 2px solid #ddd;
+            border-top-color: #1976d2; border-radius: 50%;
+            animation: ag-spin 0.6s linear infinite;
+        }
+        @keyframes ag-spin { to { transform: rotate(360deg); } }
+        /* OpenViking 记忆活动指示器：紫色系与普通工具区分 */
+        #agent-root .tool-indicator.ov-indicator {
+            background: #f3e5f5; color: #6a1b9a;
+        }
+        #agent-root .tool-indicator.ov-indicator .spinner {
+            border-color: #e1bee7; border-top-color: #8e24aa;
+        }
+        /* OpenViking 召回内容展示框（可折叠，复用 rag-results-box 结构） */
+        #agent-root .ov-recall-box {
+            align-self: flex-start; max-width: 85%;
+            margin: 4px 0; border: 1px solid #e1bee7;
+            border-radius: 8px; overflow: hidden;
+            font-size: 12px; background: #faf5fc;
+            color: #6a1b9a;
+        }
+        #agent-root .ov-recall-box .rag-header {
+            background: #f3e5f5; color: #6a1b9a;
+        }
+        #agent-root .ov-recall-box .rag-header:hover { background: #e1bee7; }
+        #agent-root .ov-recall-box.collapsed .rag-body { display: none; }
+        #agent-root .ov-recall-box.collapsed .rag-toggle { transform: rotate(-90deg); }
+        /* PostgreSQL 长期记忆活动指示器：青色系与 OpenViking 紫色区分 */
+        #agent-root .tool-indicator.ltm-indicator {
+            background: #e0f2f1; color: #00695c;
+        }
+        #agent-root .tool-indicator.ltm-indicator .spinner {
+            border-color: #b2dfdb; border-top-color: #00897b;
+        }
+        /* 长期记忆召回内容展示框（可折叠，复用 rag-results-box 结构） */
+        #agent-root .ltm-recall-box {
+            align-self: flex-start; max-width: 85%;
+            margin: 4px 0; border: 1px solid #b2dfdb;
+            border-radius: 8px; overflow: hidden;
+            font-size: 12px; background: #f1f9f8;
+            color: #00695c;
+        }
+        #agent-root .ltm-recall-box .rag-header {
+            background: #e0f2f1; color: #00695c;
+        }
+        #agent-root .ltm-recall-box .rag-header:hover { background: #b2dfdb; }
+        #agent-root .ltm-recall-box.collapsed .rag-body { display: none; }
+        #agent-root .ltm-recall-box.collapsed .rag-toggle { transform: rotate(-90deg); }
+        /* RAG search results box */
+        #agent-root .rag-results-box {
+            align-self: flex-start; max-width: 85%;
+            margin: 4px 0; border: 1px solid #e0e0e0;
+            border-radius: 8px; overflow: hidden;
+            font-size: 12px; background: #fafafa;
+        }
+        #agent-root .rag-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; cursor: pointer; user-select: none;
+            background: #e8eaf6; color: #283593; font-weight: 500;
+        }
+        #agent-root .rag-header:hover { background: #c5cae9; }
+        #agent-root .rag-toggle { font-size: 10px; transition: transform 0.2s; }
+        #agent-root .rag-results-box.collapsed .rag-toggle { transform: rotate(-90deg); }
+        #agent-root .rag-results-box.collapsed .rag-body { display: none; }
+        #agent-root .rag-body { padding: 8px 12px; max-height: 400px; overflow-y: auto; }
+        #agent-root .rag-item {
+            padding: 6px 0; border-bottom: 1px solid #eee;
+        }
+        #agent-root .rag-item:last-child { border-bottom: none; }
+        #agent-root .rag-item-header {
+            color: #888; font-size: 11px; margin-bottom: 3px;
+        }
+        #agent-root .rag-item-content {
+            color: #333; line-height: 1.5; white-space: pre-wrap;
+        }
+        #agent-root .approval-bar {
+            display: flex; gap: 8px; padding: 8px 0;
+            align-self: flex-start;
+        }
+        #agent-root .approval-bar button {
+            padding: 6px 16px; border-radius: 6px; border: none;
+            font-size: 13px; cursor: pointer; transition: opacity 0.2s;
+        }
+        #agent-root .approval-bar button:hover { opacity: 0.8; }
+        #agent-root .btn-approve { background: #4caf50; color: #fff; }
+        #agent-root .btn-reject { background: #f44336; color: #fff; }
+        #agent-root .btn-edit { background: #ff9800; color: #fff; }
+        #agent-root .download-box {
+            align-self: flex-start;
+            padding: 12px 16px;
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        #agent-root .download-box .dl-icon { font-size: 24px; }
+        #agent-root .download-box .dl-info { flex: 1; font-size: 13px; color: #333; }
+        #agent-root .download-box .dl-size { font-size: 11px; color: #999; }
+        #agent-root .download-box .dl-summary {
+            font-size: 12px; color: #555; margin-top: 4px;
+            max-height: 80px; overflow-y: auto;
+        }
+        #agent-root .download-box button {
+            padding: 8px 16px;
+            background: #4caf50; color: #fff;
+            border: none; border-radius: 6px;
+            font-size: 13px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        #agent-root .download-box button:hover { background: #388e3c; }
+        #agent-root .input-area {
+            padding: 12px 20px; background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex; gap: 10px;
+        }
+        #agent-root .input-area textarea {
+            flex: 1; padding: 10px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 14px; resize: none;
+            font-family: inherit; min-height: 44px; max-height: 120px;
+        }
+        #agent-root .input-area textarea:focus { outline: none; border-color: #1976d2; }
+        #agent-root .input-area button {
+            padding: 10px 24px; background: #1976d2; color: #fff;
+            border: none; border-radius: 8px; font-size: 14px;
+            cursor: pointer; transition: background 0.2s;
+        }
+        #agent-root .input-area button:hover { background: #1565c0; }
+        #agent-root .input-area button:disabled { background: #bdbdbd; cursor: not-allowed; }
+        #agent-root .input-area.drag-over {
+            background: #e3f2fd; outline: 2px dashed #1976d2; outline-offset: -4px;
+            border-radius: 8px;
+        }
+        /* 清空输入按钮：淡色小圆点，仅在有文字时显示 */
+        #agent-root .input-area #clearBtn {
+            background: #eee; color: #888; border: none;
+            border-radius: 50%; width: 26px; height: 26px;
+            font-size: 16px; line-height: 1; padding: 0;
+            cursor: pointer; align-self: center; flex-shrink: 0;
+        }
+        #agent-root .input-area #clearBtn:hover { background: #e0e0e0; color: #333; }
+        /* Attachment area */
+        #agent-root .attachment-area {
+            padding: 4px 20px 0;
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+        }
+        #agent-root .attachment-area.drag-over {
+            background: #e3f2fd; padding-top: 12px; padding-bottom: 8px;
+        }
+        #agent-root .att-upload-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%; border: 2px solid #1976d2;
+            background: #e3f2fd; color: #1976d2;
+            font-size: 17px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(25, 118, 210, 0.2);
+        }
+        #agent-root .att-upload-btn:hover { background: #1976d2; color: #fff; box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4); }
+        #agent-root .att-chip {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 8px 4px 10px;
+            background: #e3f2fd; border: 1px solid #bbdefb;
+            border-radius: 16px; font-size: 12px; color: #1565c0;
+            max-width: 220px;
+        }
+        #agent-root .att-chip .att-name {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            max-width: 120px;
+        }
+        #agent-root .att-chip .att-size { color: #90a4ae; font-size: 10px; flex-shrink: 0; }
+        #agent-root .att-chip .att-remove {
+            cursor: pointer; color: #999; font-size: 14px; line-height: 1;
+            flex-shrink: 0;
+        }
+        #agent-root .att-chip .att-remove:hover { color: #f44336; }
+        #agent-root .att-chip .att-modify {
+            cursor: pointer; color: #ff9800; font-size: 13px; line-height: 1;
+            flex-shrink: 0;
+        }
+        #agent-root .att-chip .att-modify:hover { color: #e65100; }
+        #agent-root .att-chip.uploading { opacity: 0.6; background: #f5f5f5; border-color: #e0e0e0; color: #999; }
+        #agent-root .att-chip.uploading .att-spinner {
+            width: 10px; height: 10px; border: 2px solid #ddd;
+            border-top-color: #1976d2; border-radius: 50%;
+            animation: ag-spin 0.6s linear infinite; flex-shrink: 0;
+        }
+        /* 可拖拽到输入框引用的 chip（附件/模板） */
+        #agent-root .att-chip[draggable="true"], #agent-root .tpl-chip[draggable="true"] { cursor: grab; }
+        #agent-root .att-chip[draggable="true"]:active, #agent-root .tpl-chip[draggable="true"]:active { cursor: grabbing; }
+        /* Folder upload progress */
+        #agent-root .folder-progress {
+            width: 100%; height: 4px; background: #e0e0e0;
+            border-radius: 2px; margin: 4px 0; overflow: hidden;
+        }
+        #agent-root .folder-progress-fill {
+            height: 100%; background: #5e35b1;
+            transition: width 0.3s ease;
+        }
+        #agent-root .folder-progress-text {
+            font-size: 11px; color: #888; margin: 2px 0;
+        }
+        /* Knowledge base upload button (prominent entry) */
+        #agent-root .kb-upload-btn {
+            padding: 6px 14px; background: #5e35b1; color: #fff;
+            border: none; border-radius: 6px; font-size: 12px;
+            cursor: pointer; margin-right: 12px; transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        #agent-root .kb-upload-btn:hover { background: #4527a0; }
+        #agent-root .kb-upload-btn:disabled { background: #b39ddb; cursor: not-allowed; }
+        #agent-root .kb-list-btn {
+            padding: 6px 14px; background: #7e57c2; color: #fff;
+            border: none; border-radius: 6px; font-size: 12px;
+            cursor: pointer; margin-right: 12px; transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        #agent-root .kb-list-btn:hover { background: #5e35b1; }
+        /* 添加模板按钮（独立入口，青绿色区分） */
+        #agent-root .tpl-upload-btn {
+            padding: 6px 14px; background: #00897b; color: #fff;
+            border: none; border-radius: 6px; font-size: 12px;
+            cursor: pointer; margin-right: 12px; transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        #agent-root .tpl-upload-btn:hover { background: #00695c; }
+        /* 添加附件按钮（顶部入口，蓝色主色，与模板/知识库按钮并列） */
+        #agent-root .att-header-btn {
+            padding: 6px 14px; background: #1976d2; color: #fff;
+            border: none; border-radius: 6px; font-size: 12px;
+            cursor: pointer; margin-right: 12px; transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        #agent-root .att-header-btn:hover { background: #1565c0; }
+        /* 模板 chips 区（区别于附件 chips，青绿色主题） */
+        #agent-root .template-area {
+            padding: 4px 20px 0;
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+        }
+        #agent-root .tpl-chip {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 8px 4px 10px;
+            background: #e0f2f1; border: 1px solid #b2dfdb;
+            border-radius: 16px; font-size: 12px; color: #00695c;
+            max-width: 260px;
+        }
+        #agent-root .tpl-chip.uploading { opacity: 0.6; background: #f5f5f5; border-color: #e0e0e0; color: #999; }
+        #agent-root .tpl-chip .tpl-name {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            max-width: 110px;
+        }
+        #agent-root .tpl-chip .tpl-type {
+            background: #80cbc4; color: #004d40; font-size: 10px;
+            border-radius: 8px; padding: 1px 6px; flex-shrink: 0;
+        }
+        #agent-root .tpl-chip .tpl-remove {
+            cursor: pointer; color: #999; font-size: 14px; line-height: 1;
+            flex-shrink: 0;
+        }
+        #agent-root .tpl-chip .tpl-remove:hover { color: #f44336; }
+        /* Toast notifications */
+        #agent-root .toast-container {
+            position: fixed; top: 76px; right: 16px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 8px;
+            max-width: 380px;
+        }
+        #agent-root .toast {
+            background: #fff; border-radius: 8px; padding: 10px 14px;
+            border-left: 4px solid #1976d2; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            font-size: 13px; color: #333; animation: ag-toastIn 0.25s ease;
+            display: flex; align-items: center; gap: 8px; word-break: break-word;
+        }
+        #agent-root .toast-success { border-left-color: #43a047; }
+        #agent-root .toast-error { border-left-color: #e53935; }
+        #agent-root .toast-info { border-left-color: #1976d2; }
+        #agent-root .toast-uploading { border-left-color: #5e35b1; }
+        #agent-root .toast .toast-spinner {
+            width: 12px; height: 12px; border: 2px solid #ddd;
+            border-top-color: #5e35b1; border-radius: 50%;
+            animation: ag-spin 0.6s linear infinite; flex-shrink: 0;
+        }
+        @keyframes ag-toastIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #agent-root .empty-state {
+            text-align: center; color: #999; padding: 60px 20px;
+        }
+        #agent-root .empty-state h3 { font-size: 18px; margin-bottom: 8px; }
+        #agent-root .error-msg {
+            background: #ffebee; color: #c62828;
+            padding: 8px 12px; border-radius: 6px;
+            font-size: 12px; align-self: flex-start;
+        }
+        #agent-root .retry-btn {
+            margin-left: 8px; padding: 3px 12px;
+            border: 1px solid #c62828; border-radius: 4px;
+            background: #c62828; color: #fff;
+            font-size: 12px; cursor: pointer;
+        }
+        #agent-root .retry-btn:hover { background: #b71c1c; }
+        /* Auto-gen dialog */
+        #agent-root .dialog-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        #agent-root .dialog-overlay.active { display: flex; }
+        #agent-root .dialog-box {
+            background: #fff; border-radius: 12px; padding: 24px;
+            width: 420px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        #agent-root .dialog-box h3 { font-size: 16px; margin-bottom: 16px; color: #333; }
+        #agent-root .dialog-box label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; margin-top: 12px; }
+        #agent-root .dialog-box input, #agent-root .dialog-box textarea, #agent-root .dialog-box select {
+            width: 100%; padding: 8px 12px; border: 1px solid #ddd;
+            border-radius: 6px; font-size: 13px; font-family: inherit;
+        }
+        #agent-root .dialog-box input:focus, #agent-root .dialog-box textarea:focus, #agent-root .dialog-box select:focus { outline: none; border-color: #4caf50; }
+        #agent-root .dialog-btns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+        #agent-root .dialog-btns button { padding: 8px 20px; border-radius: 6px; border: none; font-size: 13px; cursor: pointer; }
+        #agent-root .dialog-btns .btn-cancel { background: #f5f5f5; color: #666; }
+        #agent-root .dialog-btns .btn-start { background: #4caf50; color: #fff; }
+        #agent-root .dialog-btns .btn-start:disabled { background: #bdbdbd; cursor: not-allowed; }
+        /* Responsive: hide sidebar on narrow screens */
+        @media (max-width: 768px){
+            #agent-root .sidebar { display: none; }
+        }
+
+        #agent-root .chat-reasoning {
+            margin: 8px 0; border: 1px solid #e0e0e0; border-radius: 8px;
+            background: #f7f7f8; overflow: hidden;
+        }
+        #agent-root .chat-reasoning-header {
+            padding: 6px 12px; font-size: 12px; color: #666; cursor: pointer;
+            user-select: none; display: flex; justify-content: space-between;
+            background: #f0f0f1;
+        }
+        #agent-root .chat-reasoning-body {
+            padding: 8px 12px; font-size: 12px; color: #888; line-height: 1.6;
+            white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow-y: auto;
+        }
+
+/* ══ SPA 样式泄漏防护（自动生成，误删会导致 UM 属性渗入 agent 视图）══ */
+#agent-root .sidebar {
+    /* UM-only-props guard */
+    flex-shrink: unset;
+}
+
+#agent-root .sidebar-header {
+    /* UM-only-props guard */
+    margin-top: unset;
+    text-align: unset;
+}

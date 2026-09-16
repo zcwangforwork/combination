@@ -1,0 +1,1305 @@
+=== loading model ===
+=== model loaded ===
+=== START 软件配置管理计划: KF-GS1 Plus-2-0007 软件配置管理计划 A0.pdf ===
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:06<00:00,  6.14s/it]Predict: 100%|██████████| 1/1 [00:06<00:00,  6.14s/it]
+2026-08-17 15:40:56.213 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>108 091 896 673<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>099 695 910 840<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:19<00:19, 19.52s/it]Predict: 100%|██████████| 2/2 [00:24<00:00, 11.03s/it]Predict: 100%|██████████| 2/2 [00:24<00:00, 12.30s/it]
+  page 1/8 done in 30.8s, 1102 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.35s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.35s/it]
+2026-08-17 15:41:29.306 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>410 091 566 109<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>416 120 584 137<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>097 139 908 835<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>452 934 560 948<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:00,  7.66it/s]Predict:  50%|█████     | 2/4 [00:00<00:00,  8.15it/s]Predict:  75%|███████▌  | 3/4 [00:16<00:07,  7.54s/it]Predict: 100%|██████████| 4/4 [00:18<00:00,  5.34s/it]Predict: 100%|██████████| 4/4 [00:18<00:00,  4.64s/it]
+  page 2/8 done in 27.0s, 1050 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.62s/it]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.62s/it]
+2026-08-17 15:42:14.660 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>488 090 548 115<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>187 127 848 144<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>186 155 848 171<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 183 847 199<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 211 847 226<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 239 847 254<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 267 847 282<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 295 847 310<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 322 847 337<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 350 847 365<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 378 847 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 406 847 421<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 434 847 449<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 461 847 476<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 489 847 505<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 518 847 533<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 155 848 533<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>445 931 554 945<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/17 [00:00<?, ?it/s]Predict:  12%|█▏        | 2/17 [00:00<00:01,  7.59it/s]Predict:  18%|█▊        | 3/17 [00:00<00:02,  5.97it/s]Predict:  24%|██▎       | 4/17 [00:02<00:10,  1.19it/s]Predict:  29%|██▉       | 5/17 [00:02<00:07,  1.53it/s]Predict:  35%|███▌      | 6/17 [00:03<00:05,  1.85it/s]Predict:  41%|████      | 7/17 [00:03<00:04,  2.08it/s]Predict:  47%|████▋     | 8/17 [00:05<00:08,  1.05it/s]Predict:  53%|█████▎    | 9/17 [00:05<00:06,  1.30it/s]Predict:  59%|█████▉    | 10/17 [00:06<00:04,  1.58it/s]Predict:  65%|██████▍   | 11/17 [00:08<00:06,  1.08s/it]Predict:  71%|███████   | 12/17 [00:08<00:04,  1.20it/s]Predict:  76%|███████▋  | 13/17 [00:08<00:02,  1.44it/s]Predict:  82%|████████▏ | 14/17 [00:10<00:03,  1.09s/it]Predict:  88%|████████▊ | 15/17 [00:11<00:01,  1.16it/s]Predict:  94%|█████████▍| 16/17 [00:11<00:00,  1.45it/s]Predict: 100%|██████████| 17/17 [00:13<00:00,  1.07s/it]Predict: 100%|██████████| 17/17 [00:13<00:00,  1.27it/s]
+  page 3/8 done in 40.1s, 258 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:24<00:00, 24.74s/it]Predict: 100%|██████████| 1/1 [00:24<00:00, 24.74s/it]
+2026-08-17 15:42:52.970 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>155 092 239 112<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>154 125 846 168<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>153 180 238 201<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>188 214 549 232<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>186 241 354 256<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 267 424 283<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 293 301 309<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 319 301 335<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 345 301 361<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 371 336 387<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>153 400 331 420<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>151 433 813 476<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>151 489 449 510<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>200 516 859 913<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>446 931 553 945<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/15 [00:00<?, ?it/s]Predict:   7%|▋         | 1/15 [00:00<00:02,  5.31it/s]Predict:  13%|█▎        | 2/15 [00:02<00:20,  1.55s/it]Predict:  20%|██        | 3/15 [00:02<00:11,  1.07it/s]Predict:  27%|██▋       | 4/15 [00:03<00:07,  1.39it/s]Predict:  33%|███▎      | 5/15 [00:05<00:11,  1.14s/it]Predict:  40%|████      | 6/15 [00:05<00:07,  1.19it/s]Predict:  47%|████▋     | 7/15 [00:05<00:04,  1.60it/s]Predict:  53%|█████▎    | 8/15 [00:05<00:03,  2.04it/s]Predict:  60%|██████    | 9/15 [00:06<00:02,  2.48it/s]Predict:  67%|██████▋   | 10/15 [00:07<00:04,  1.15it/s]Predict:  73%|███████▎  | 11/15 [00:08<00:02,  1.49it/s]Predict:  80%|████████  | 12/15 [00:10<00:03,  1.26s/it]Predict:  87%|████████▋ | 13/15 [00:11<00:01,  1.03it/s]Predict:  93%|█████████▎| 14/15 [00:24<00:04,  4.74s/it]Predict: 100%|██████████| 15/15 [00:24<00:00,  3.38s/it]Predict: 100%|██████████| 15/15 [00:24<00:00,  1.65s/it]
+  page 4/8 done in 49.5s, 688 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.44s/it]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.44s/it]
+2026-08-17 15:43:36.360 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>204 083 859 191<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>154 198 403 218<|box_end|><|ref_start|>image_caption<|ref_end|><|rotate_up|>
+<|box_start|>186 251 837 699<|box_end|><|ref_start|>image<|ref_end|><|rotate_up|>
+<|box_start|>151 718 263 738<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>186 751 359 768<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>186 778 303 794<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>220 804 848 846<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 856 457 872<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>220 804 848 872<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>446 932 554 945<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/8 [00:00<?, ?it/s]Predict:  12%|█▎        | 1/8 [00:02<00:20,  2.86s/it]Predict:  25%|██▌       | 2/8 [00:03<00:08,  1.34s/it]Predict:  38%|███▊      | 3/8 [00:03<00:04,  1.22it/s]Predict:  50%|█████     | 4/8 [00:05<00:05,  1.28s/it]Predict:  62%|██████▎   | 5/8 [00:05<00:02,  1.10it/s]Predict:  75%|███████▌  | 6/8 [00:08<00:02,  1.49s/it]Predict:  88%|████████▊ | 7/8 [00:08<00:01,  1.14s/it]Predict: 100%|██████████| 8/8 [00:08<00:00,  1.18it/s]Predict: 100%|██████████| 8/8 [00:08<00:00,  1.10s/it]
+  page 5/8 done in 27.3s, 273 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.73s/it]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.73s/it]
+2026-08-17 15:44:04.110 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>188 086 359 104<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>221 112 845 181<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>268 190 847 311<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>268 190 847 232<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>268 242 842 311<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 320 746 337<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>268 346 841 389<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>187 397 460 416<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>186 424 851 493<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 496 911 900<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>447 929 556 944<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/10 [00:00<?, ?it/s]Predict:  10%|█         | 1/10 [00:01<00:17,  1.98s/it]Predict:  20%|██        | 2/10 [00:05<00:21,  2.68s/it]Predict:  30%|███       | 3/10 [00:07<00:19,  2.72s/it]Predict:  40%|████      | 4/10 [00:11<00:17,  2.87s/it]Predict:  50%|█████     | 5/10 [00:13<00:13,  2.68s/it]Predict:  60%|██████    | 6/10 [00:16<00:10,  2.70s/it]Predict:  70%|███████   | 7/10 [00:16<00:05,  1.93s/it]Predict:  80%|████████  | 8/10 [00:21<00:05,  2.88s/it]Predict:  90%|█████████ | 9/10 [00:38<00:07,  7.19s/it]Predict: 100%|██████████| 10/10 [00:38<00:00,  5.03s/it]Predict: 100%|██████████| 10/10 [00:38<00:00,  3.82s/it]
+  page 6/8 done in 57.0s, 1047 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:35<00:00, 35.24s/it]Predict: 100%|██████████| 1/1 [00:35<00:00, 35.24s/it]
+2026-08-17 15:45:17.722 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>200 081 910 351<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>151 359 333 379<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>186 391 460 409<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>185 418 707 435<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>185 445 373 460<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 470 561 487<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 496 851 539<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 548 851 591<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 470 851 591<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>268 600 851 643<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>186 652 752 669<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>151 678 851 721<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>151 734 380 755<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>186 767 402 785<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>221 793 800 810<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>222 820 581 835<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>222 846 381 861<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>222 872 458 887<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>222 897 845 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>221 793 845 913<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>448 932 558 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/19 [00:00<?, ?it/s]Predict:   5%|▌         | 1/19 [00:05<01:41,  5.63s/it]Predict:  11%|█         | 2/19 [00:07<00:58,  3.46s/it]Predict:  16%|█▌        | 3/19 [00:07<00:32,  2.03s/it]Predict:  21%|██        | 4/19 [00:08<00:21,  1.42s/it]Predict:  26%|██▋       | 5/19 [00:10<00:22,  1.62s/it]Predict:  32%|███▏      | 6/19 [00:10<00:15,  1.21s/it]Predict:  37%|███▋      | 7/19 [00:13<00:19,  1.67s/it]Predict:  42%|████▏     | 8/19 [00:15<00:21,  1.96s/it]Predict:  47%|████▋     | 9/19 [00:18<00:20,  2.10s/it]Predict:  53%|█████▎    | 10/19 [00:18<00:14,  1.63s/it]Predict:  58%|█████▊    | 11/19 [00:21<00:15,  1.95s/it]Predict:  63%|██████▎   | 12/19 [00:21<00:10,  1.44s/it]Predict:  68%|██████▊   | 13/19 [00:23<00:09,  1.61s/it]Predict:  74%|███████▎  | 14/19 [00:24<00:06,  1.31s/it]Predict:  79%|███████▉  | 15/19 [00:26<00:06,  1.55s/it]Predict:  84%|████████▍ | 16/19 [00:26<00:03,  1.17s/it]Predict:  89%|████████▉ | 17/19 [00:27<00:01,  1.08it/s]Predict:  95%|█████████▍| 18/19 [00:29<00:01,  1.36s/it]Predict: 100%|██████████| 19/19 [00:29<00:00,  1.01s/it]Predict: 100%|██████████| 19/19 [00:29<00:00,  1.57s/it]
+  page 7/8 done in 65.1s, 761 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.02s/it]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.02s/it]
+2026-08-17 15:46:03.702 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>270 099 352 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>223 125 446 218<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>223 125 438 140<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>223 151 446 165<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>223 177 351 192<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>223 203 351 217<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>152 232 334 251<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>187 265 839 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>446 940 556 954<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/8 [00:00<?, ?it/s]Predict:  12%|█▎        | 1/8 [00:00<00:01,  5.74it/s]Predict:  25%|██▌       | 2/8 [00:02<00:07,  1.30s/it]Predict:  38%|███▊      | 3/8 [00:02<00:04,  1.14it/s]Predict:  50%|█████     | 4/8 [00:02<00:02,  1.54it/s]Predict:  62%|██████▎   | 5/8 [00:03<00:01,  1.94it/s]Predict:  75%|███████▌  | 6/8 [00:05<00:01,  1.01it/s]Predict:  88%|████████▊ | 7/8 [00:05<00:00,  1.13it/s]Predict: 100%|██████████| 8/8 [00:07<00:00,  1.21s/it]Predict: 100%|██████████| 8/8 [00:07<00:00,  1.04it/s]
+  page 8/8 done in 23.7s, 127 chars
+=== DONE 软件配置管理计划 -> E:\A_nrf_sample_codes\working_team_work\public\project\git_project\design_plan_generation_local_model\design_planning_generation_local_model\_mineru_软件配置管理计划.md (5554 chars) ===
+=== START 用户需求: KF-GS1 Plus-1-0001 用户需求 V1.2.pdf ===
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.40s/it]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.40s/it]
+2026-08-17 15:46:16.934 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>102 088 904 721<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>108 750 907 895<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:16<00:16, 16.48s/it]Predict: 100%|██████████| 2/2 [00:21<00:00,  9.82s/it]Predict: 100%|██████████| 2/2 [00:21<00:00, 10.82s/it]
+  page 1/15 done in 27.1s, 983 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.24s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.24s/it]
+2026-08-17 15:46:46.960 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>465 065 551 082<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>434 094 581 110<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>073 111 923 882<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>459 934 581 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:00,  8.95it/s]Predict:  50%|█████     | 2/4 [00:00<00:00,  7.87it/s]Predict:  75%|███████▌  | 3/4 [00:21<00:09,  9.95s/it]Predict: 100%|██████████| 4/4 [00:22<00:00,  6.12s/it]Predict: 100%|██████████| 4/4 [00:22<00:00,  5.54s/it]
+  page 2/15 done in 30.4s, 1191 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:45<00:00, 45.77s/it]Predict: 100%|██████████| 1/1 [00:45<00:00, 45.77s/it]
+2026-08-17 15:47:55.046 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>493 078 554 103<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>101 122 938 141<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>099 153 937 172<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 185 936 266<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>140 185 936 203<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 217 936 235<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 248 936 266<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>099 279 938 298<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>139 311 938 392<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>139 311 938 330<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>180 342 938 392<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>180 342 938 361<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>180 374 938 392<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 405 938 455<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>140 405 938 424<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 437 938 455<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>101 468 940 487<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 499 940 550<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>140 499 940 518<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 531 940 550<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>101 562 940 581<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 594 940 738<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>140 594 940 613<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 625 940 644<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 656 940 675<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 688 940 707<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>140 720 940 738<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>500 932 624 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/22 [00:00<?, ?it/s]Predict:   9%|▉         | 2/22 [00:00<00:02,  8.41it/s]Predict:  14%|█▎        | 3/22 [00:00<00:03,  5.54it/s]Predict:  18%|█▊        | 4/22 [00:02<00:15,  1.15it/s]Predict:  23%|██▎       | 5/22 [00:02<00:11,  1.52it/s]Predict:  27%|██▋       | 6/22 [00:03<00:08,  1.90it/s]Predict:  32%|███▏      | 7/22 [00:03<00:06,  2.23it/s]Predict:  36%|███▋      | 8/22 [00:05<00:12,  1.08it/s]Predict:  41%|████      | 9/22 [00:05<00:09,  1.34it/s]Predict:  45%|████▌     | 10/22 [00:06<00:07,  1.60it/s]Predict:  50%|█████     | 11/22 [00:07<00:11,  1.03s/it]Predict:  55%|█████▍    | 12/22 [00:08<00:08,  1.24it/s]Predict:  59%|█████▉    | 13/22 [00:08<00:05,  1.57it/s]Predict:  64%|██████▎   | 14/22 [00:08<00:04,  1.85it/s]Predict:  68%|██████▊   | 15/22 [00:10<00:06,  1.02it/s]Predict:  73%|███████▎  | 16/22 [00:11<00:04,  1.33it/s]Predict:  77%|███████▋  | 17/22 [00:11<00:03,  1.61it/s]Predict:  82%|████████▏ | 18/22 [00:13<00:04,  1.05s/it]Predict:  86%|████████▋ | 19/22 [00:13<00:02,  1.18it/s]Predict:  91%|█████████ | 20/22 [00:14<00:01,  1.45it/s]Predict:  95%|█████████▌| 21/22 [00:16<00:01,  1.10s/it]Predict: 100%|██████████| 22/22 [00:16<00:00,  1.18it/s]Predict: 100%|██████████| 22/22 [00:16<00:00,  1.34it/s]
+  page 3/15 done in 62.2s, 335 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.88s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.88s/it]
+2026-08-17 15:48:25.466 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>436 078 609 104<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>113 126 304 148<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>088 158 926 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>113 222 279 244<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 258 156 274<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>114 291 279 313<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 326 157 343<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>501 932 626 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/8 [00:00<?, ?it/s]Predict:  12%|█▎        | 1/8 [00:01<00:13,  1.90s/it]Predict:  25%|██▌       | 2/8 [00:02<00:05,  1.06it/s]Predict:  38%|███▊      | 3/8 [00:02<00:04,  1.22it/s]Predict:  50%|█████     | 4/8 [00:04<00:04,  1.25s/it]Predict:  75%|███████▌  | 6/8 [00:05<00:01,  1.47it/s]Predict: 100%|██████████| 8/8 [00:05<00:00,  2.18it/s]Predict: 100%|██████████| 8/8 [00:05<00:00,  1.47it/s]
+  page 4/15 done in 19.3s, 102 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.80s/it]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.80s/it]
+2026-08-17 15:48:57.939 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>405 077 638 103<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>110 125 277 147<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>105 167 264 188<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>097 203 642 221<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>058 234 926 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>059 293 926 341<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>106 389 267 409<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>059 424 929 500<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>059 511 931 672<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>102 685 235 702<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>060 714 931 790<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>101 801 867 821<|box_end|><|ref_start|>equation<|ref_end|><|rotate_up|>
+<|box_start|>101 833 841 852<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>101 865 836 884<|box_end|><|ref_start|>equation<|ref_end|><|rotate_up|>
+<|box_start|>101 895 931 915<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>499 932 624 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/16 [00:00<?, ?it/s]Predict:   6%|▋         | 1/16 [00:00<00:03,  4.35it/s]Predict:  12%|█▎        | 2/16 [00:02<00:17,  1.22s/it]Predict:  19%|█▉        | 3/16 [00:02<00:10,  1.29it/s]Predict:  25%|██▌       | 4/16 [00:02<00:08,  1.44it/s]Predict:  31%|███▏      | 5/16 [00:05<00:15,  1.39s/it]Predict:  38%|███▊      | 6/16 [00:08<00:17,  1.79s/it]Predict:  44%|████▍     | 7/16 [00:08<00:11,  1.29s/it]Predict:  50%|█████     | 8/16 [00:13<00:19,  2.47s/it]Predict:  56%|█████▋    | 9/16 [00:24<00:36,  5.15s/it]Predict:  62%|██████▎   | 10/16 [00:24<00:21,  3.62s/it]Predict:  69%|██████▉   | 11/16 [00:30<00:21,  4.20s/it]Predict:  75%|███████▌  | 12/16 [00:34<00:17,  4.36s/it]Predict:  81%|████████▏ | 13/16 [00:40<00:13,  4.66s/it]Predict:  88%|████████▊ | 14/16 [00:48<00:11,  5.80s/it]Predict:  94%|█████████▍| 15/16 [00:53<00:05,  5.58s/it]Predict: 100%|██████████| 16/16 [00:53<00:00,  3.97s/it]Predict: 100%|██████████| 16/16 [00:53<00:00,  3.37s/it]
+  page 5/15 done in 80.8s, 1065 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:21<00:00, 21.83s/it]Predict: 100%|██████████| 1/1 [00:21<00:00, 21.83s/it]
+2026-08-17 15:50:13.931 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>060 063 482 081<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>097 096 825 112<|box_end|><|ref_start|>equation<|ref_end|><|rotate_up|>
+<|box_start|>058 125 927 284<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>111 299 279 321<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>099 334 620 352<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>098 363 444 463<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>099 363 223 379<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>098 390 303 407<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>098 418 322 435<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>098 446 443 463<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>111 507 279 530<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>094 541 929 645<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>495 932 620 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/12 [00:00<?, ?it/s]Predict:   8%|▊         | 1/12 [00:02<00:24,  2.20s/it]Predict:  17%|█▋        | 2/12 [00:04<00:24,  2.46s/it]Predict:  25%|██▌       | 3/12 [00:13<00:49,  5.50s/it]Predict:  33%|███▎      | 4/12 [00:15<00:32,  4.09s/it]Predict:  42%|████▏     | 5/12 [00:16<00:19,  2.80s/it]Predict:  50%|█████     | 6/12 [00:16<00:11,  1.91s/it]Predict:  58%|█████▊    | 7/12 [00:18<00:09,  1.93s/it]Predict:  67%|██████▋   | 8/12 [00:18<00:05,  1.41s/it]Predict:  75%|███████▌  | 9/12 [00:19<00:03,  1.07s/it]Predict:  83%|████████▎ | 10/12 [00:19<00:01,  1.24it/s]Predict:  92%|█████████▏| 11/12 [00:26<00:02,  2.87s/it]Predict: 100%|██████████| 12/12 [00:27<00:00,  2.07s/it]Predict: 100%|██████████| 12/12 [00:27<00:00,  2.27s/it]
+  page 6/15 done in 49.0s, 671 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.34s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.34s/it]
+2026-08-17 15:50:54.583 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>403 077 636 102<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>108 124 300 145<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>095 158 751 175<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>095 186 366 203<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>108 221 222 242<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>098 255 222 273<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>495 932 620 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/7 [00:00<?, ?it/s]Predict:  14%|█▍        | 1/7 [00:00<00:01,  5.12it/s]Predict:  29%|██▊       | 2/7 [00:00<00:01,  4.27it/s]Predict:  43%|████▎     | 3/7 [00:02<00:04,  1.12s/it]Predict:  57%|█████▋    | 4/7 [00:02<00:02,  1.29it/s]Predict:  71%|███████▏  | 5/7 [00:03<00:01,  1.72it/s]Predict:  86%|████████▌ | 6/7 [00:03<00:00,  2.35it/s]Predict: 100%|██████████| 7/7 [00:05<00:00,  1.09it/s]Predict: 100%|██████████| 7/7 [00:05<00:00,  1.36it/s]
+  page 7/15 done in 18.5s, 95 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.23s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.23s/it]
+2026-08-17 15:51:08.168 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>405 076 636 101<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>110 122 356 145<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>087 150 909 912<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>493 930 618 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:00,  3.79it/s]Predict:  50%|█████     | 2/4 [00:00<00:00,  3.86it/s]Predict:  75%|███████▌  | 3/4 [00:37<00:17, 17.22s/it]Predict: 100%|██████████| 4/4 [00:38<00:00, 10.52s/it]Predict: 100%|██████████| 4/4 [00:38<00:00,  9.54s/it]
+  page 8/15 done in 46.4s, 1223 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.44s/it]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.45s/it]
+2026-08-17 15:51:51.960 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>087 055 910 925<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>495 932 619 945<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:45<00:45, 45.86s/it]Predict: 100%|██████████| 2/2 [00:46<00:00, 19.04s/it]Predict: 100%|██████████| 2/2 [00:46<00:00, 23.06s/it]
+  page 9/15 done in 51.6s, 1176 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.89s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.89s/it]
+2026-08-17 15:52:47.183 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>087 056 910 566<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>111 607 411 629<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>097 634 905 920<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>496 932 620 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:29<01:28, 29.55s/it]Predict:  50%|█████     | 2/4 [00:31<00:26, 13.46s/it]Predict:  75%|███████▌  | 3/4 [00:43<00:12, 12.74s/it]Predict: 100%|██████████| 4/4 [00:43<00:00,  7.80s/it]Predict: 100%|██████████| 4/4 [00:43<00:00, 10.96s/it]
+  page 10/15 done in 52.8s, 1290 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.81s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.81s/it]
+2026-08-17 15:53:40.051 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>093 057 902 398<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>111 469 411 492<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>101 497 900 922<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>497 933 626 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:17<00:52, 17.48s/it]Predict:  50%|█████     | 2/4 [00:17<00:14,  7.37s/it]Predict:  75%|███████▌  | 3/4 [00:38<00:13, 13.48s/it]Predict: 100%|██████████| 4/4 [00:40<00:00,  9.02s/it]Predict: 100%|██████████| 4/4 [00:40<00:00, 10.17s/it]
+  page 11/15 done in 49.5s, 1207 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.85s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.85s/it]
+2026-08-17 15:54:29.798 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>098 056 898 761<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>110 801 356 823<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>093 829 903 922<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>493 933 623 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:31<01:35, 31.85s/it]Predict:  50%|█████     | 2/4 [00:32<00:26, 13.27s/it]Predict:  75%|███████▌  | 3/4 [00:35<00:08,  8.70s/it]Predict: 100%|██████████| 4/4 [00:35<00:00,  5.36s/it]Predict: 100%|██████████| 4/4 [00:35<00:00,  8.90s/it]
+  page 12/15 done in 44.5s, 1110 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:07<00:00,  7.78s/it]Predict: 100%|██████████| 1/1 [00:07<00:00,  7.78s/it]
+2026-08-17 15:55:13.431 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>090 056 902 819<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>491 933 623 947<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:41<00:41, 41.77s/it]Predict: 100%|██████████| 2/2 [00:42<00:00, 17.36s/it]Predict: 100%|██████████| 2/2 [00:42<00:00, 21.02s/it]
+  page 13/15 done in 49.9s, 1174 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.55s/it]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.55s/it]
+2026-08-17 15:56:07.230 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>111 065 439 087<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>101 094 898 713<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>114 723 388 746<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>097 750 909 923<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>498 932 629 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/5 [00:00<?, ?it/s]Predict:  20%|██        | 1/5 [00:00<00:01,  3.34it/s]Predict:  40%|████      | 2/5 [00:36<01:03, 21.23s/it]Predict:  60%|██████    | 3/5 [00:38<00:25, 12.53s/it]Predict:  80%|████████  | 4/5 [00:44<00:09,  9.85s/it]Predict: 100%|██████████| 5/5 [00:44<00:00,  6.39s/it]Predict: 100%|██████████| 5/5 [00:44<00:00,  8.87s/it]
+  page 14/15 done in 55.9s, 1205 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.82s/it]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.82s/it]
+2026-08-17 15:56:57.555 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>092 056 904 478<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>499 932 630 946<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:08<00:08,  8.97s/it]Predict: 100%|██████████| 2/2 [00:09<00:00,  3.85s/it]Predict: 100%|██████████| 2/2 [00:09<00:00,  4.61s/it]
+  page 15/15 done in 15.1s, 193 chars
+=== DONE 用户需求 -> E:\A_nrf_sample_codes\working_team_work\public\project\git_project\design_plan_generation_local_model\design_planning_generation_local_model\_mineru_用户需求.md (13491 chars) ===
+=== START 项目计划书: KF-GS1 Plus-1-0002 项目计划书 A1.pdf ===
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.34s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.34s/it]
+2026-08-17 15:57:15.272 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>116 091 917 731<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>108 745 915 890<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>508 939 515 949<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/3 [00:00<?, ?it/s]Predict:  33%|███▎      | 1/3 [00:18<00:36, 18.11s/it]Predict:  67%|██████▋   | 2/3 [00:23<00:10, 10.71s/it]Predict: 100%|██████████| 3/3 [00:23<00:00,  7.91s/it]
+  page 1/15 done in 32.1s, 1010 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.98s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.98s/it]
+2026-08-17 15:57:48.131 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>431 079 589 097<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>432 100 578 116<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>119 115 925 695<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>507 921 515 932<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:00,  8.64it/s]Predict:  50%|█████     | 2/4 [00:02<00:02,  1.26s/it]Predict:  75%|███████▌  | 3/4 [00:20<00:09,  9.01s/it]Predict: 100%|██████████| 4/4 [00:20<00:00,  5.49s/it]Predict: 100%|██████████| 4/4 [00:20<00:00,  5.13s/it]
+  page 2/15 done in 29.5s, 1032 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [01:01<00:00, 61.59s/it]Predict: 100%|██████████| 1/1 [01:01<00:00, 61.59s/it]
+2026-08-17 15:59:10.424 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>486 083 542 105<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 118 876 135<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 140 876 201<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>169 140 874 156<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 163 874 178<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 185 875 200<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 207 876 223<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>168 229 877 334<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>168 229 876 245<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 252 877 267<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 274 877 289<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 296 878 311<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 318 878 334<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 340 877 356<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 362 877 378<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 384 877 400<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 406 877 489<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>169 406 877 422<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 429 878 444<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 451 878 466<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 473 878 489<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 495 877 511<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 517 877 533<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 539 879 666<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>170 540 879 555<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 562 879 577<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 584 879 599<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 606 879 622<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 628 879 644<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 651 879 666<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 672 879 688<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>170 695 880 732<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>170 695 880 710<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 717 880 732<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>506 919 516 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/30 [00:00<?, ?it/s]Predict:   7%|▋         | 2/30 [00:00<00:05,  5.28it/s]Predict:  10%|█         | 3/30 [00:02<00:30,  1.14s/it]Predict:  13%|█▎        | 4/30 [00:03<00:21,  1.21it/s]Predict:  17%|█▋        | 5/30 [00:03<00:15,  1.57it/s]Predict:  20%|██        | 6/30 [00:05<00:29,  1.25s/it]Predict:  23%|██▎       | 7/30 [00:06<00:22,  1.03it/s]Predict:  27%|██▋       | 8/30 [00:08<00:30,  1.38s/it]Predict:  30%|███       | 9/30 [00:08<00:22,  1.07s/it]Predict:  33%|███▎      | 10/30 [00:09<00:16,  1.19it/s]Predict:  37%|███▋      | 11/30 [00:11<00:24,  1.27s/it]Predict:  40%|████      | 12/30 [00:11<00:18,  1.02s/it]Predict:  43%|████▎     | 13/30 [00:14<00:25,  1.47s/it]Predict:  47%|████▋     | 14/30 [00:14<00:18,  1.15s/it]Predict:  50%|█████     | 15/30 [00:15<00:14,  1.06it/s]Predict:  53%|█████▎    | 16/30 [00:17<00:18,  1.34s/it]Predict:  57%|█████▋    | 17/30 [00:17<00:13,  1.04s/it]Predict:  60%|██████    | 18/30 [00:18<00:09,  1.22it/s]Predict:  63%|██████▎   | 19/30 [00:20<00:13,  1.27s/it]Predict:  67%|██████▋   | 20/30 [00:21<00:10,  1.03s/it]Predict:  70%|███████   | 21/30 [00:23<00:12,  1.41s/it]Predict:  73%|███████▎  | 22/30 [00:23<00:08,  1.10s/it]Predict:  77%|███████▋  | 23/30 [00:24<00:06,  1.16it/s]Predict:  80%|████████  | 24/30 [00:26<00:07,  1.28s/it]Predict:  83%|████████▎ | 25/30 [00:26<00:04,  1.01it/s]Predict:  87%|████████▋ | 26/30 [00:26<00:03,  1.25it/s]Predict:  90%|█████████ | 27/30 [00:29<00:03,  1.26s/it]Predict:  93%|█████████▎| 28/30 [00:29<00:01,  1.02it/s]Predict:  97%|█████████▋| 29/30 [00:29<00:00,  1.25it/s]Predict: 100%|██████████| 30/30 [00:30<00:00,  1.00s/it]
+  page 3/15 done in 91.7s, 1072 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:25<00:00, 25.71s/it]Predict: 100%|██████████| 1/1 [00:25<00:00, 25.71s/it]
+2026-08-17 16:00:06.356 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>340 082 667 106<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 127 876 189<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>167 200 576 216<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 223 867 259<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>167 266 334 282<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 295 548 316<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 329 859 364<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 378 421 398<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>149 408 513 423<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>148 425 877 479<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 492 290 514<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>168 524 192 539<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>502 918 513 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/13 [00:00<?, ?it/s]Predict:   8%|▊         | 1/13 [00:00<00:03,  3.73it/s]Predict:  15%|█▌        | 2/13 [00:00<00:04,  2.53it/s]Predict:  23%|██▎       | 3/13 [00:03<00:12,  1.29s/it]Predict:  31%|███       | 4/13 [00:05<00:16,  1.84s/it]Predict:  38%|███▊      | 5/13 [00:06<00:10,  1.28s/it]Predict:  46%|████▌     | 6/13 [00:06<00:06,  1.07it/s]Predict:  54%|█████▍    | 7/13 [00:09<00:09,  1.55s/it]Predict:  62%|██████▏   | 8/13 [00:09<00:05,  1.13s/it]Predict:  69%|██████▉   | 9/13 [00:11<00:06,  1.51s/it]Predict:  77%|███████▋  | 10/13 [00:15<00:06,  2.12s/it]Predict:  85%|████████▍ | 11/13 [00:15<00:03,  1.55s/it]Predict:  92%|█████████▏| 12/13 [00:17<00:01,  1.70s/it]Predict: 100%|██████████| 13/13 [00:17<00:00,  1.35s/it]
+  page 4/15 done in 43.3s, 450 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.07s/it]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.07s/it]
+2026-08-17 16:00:39.198 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>150 080 856 142<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>130 165 588 187<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>300 204 706 220<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>143 228 865 707<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>130 716 545 739<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>351 755 659 771<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>111 780 900 912<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>500 919 511 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/8 [00:00<?, ?it/s]Predict:  12%|█▎        | 1/8 [00:02<00:16,  2.36s/it]Predict:  25%|██▌       | 2/8 [00:02<00:06,  1.16s/it]Predict:  38%|███▊      | 3/8 [00:03<00:03,  1.26it/s]Predict:  50%|█████     | 4/8 [00:20<00:29,  7.42s/it]Predict:  62%|██████▎   | 5/8 [00:20<00:14,  4.83s/it]Predict:  75%|███████▌  | 6/8 [00:23<00:08,  4.00s/it]Predict:  88%|████████▊ | 7/8 [00:26<00:03,  3.82s/it]Predict: 100%|██████████| 8/8 [00:26<00:00,  3.35s/it]
+  page 5/15 done in 41.9s, 1296 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.45s/it]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.45s/it]
+2026-08-17 16:01:17.595 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>111 073 898 393<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>132 404 757 427<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>283 443 731 460<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>256 468 758 910<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>503 919 513 930<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/5 [00:00<?, ?it/s]Predict:  20%|██        | 1/5 [00:11<00:47, 11.81s/it]Predict:  40%|████      | 2/5 [00:12<00:15,  5.07s/it]Predict:  60%|██████    | 3/5 [00:14<00:07,  3.81s/it]Predict:  80%|████████  | 4/5 [00:31<00:09,  9.20s/it]Predict: 100%|██████████| 5/5 [00:32<00:00,  6.40s/it]
+  page 6/15 done in 43.5s, 1494 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.29s/it]Predict: 100%|██████████| 1/1 [00:26<00:00, 26.29s/it]
+2026-08-17 16:02:16.085 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>253 074 751 098<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>132 109 567 132<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>174 191 834 325<|box_end|><|ref_start|>image<|ref_end|><|rotate_up|>
+<|box_start|>442 353 567 368<|box_end|><|ref_start|>image_caption<|ref_end|><|rotate_up|>
+<|box_start|>133 388 623 411<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 423 250 439<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 446 876 500<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 506 876 542<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 548 876 603<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 610 250 626<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 632 876 687<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 699 625 722<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 734 191 749<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>502 918 512 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/13 [00:00<?, ?it/s]Predict:   8%|▊         | 1/13 [00:00<00:03,  3.45it/s]Predict:  15%|█▌        | 2/13 [00:00<00:03,  3.43it/s]Predict:  23%|██▎       | 3/13 [00:00<00:02,  3.70it/s]Predict:  31%|███       | 4/13 [00:03<00:09,  1.04s/it]Predict:  38%|███▊      | 5/13 [00:03<00:05,  1.39it/s]Predict:  46%|████▌     | 6/13 [00:06<00:11,  1.66s/it]Predict:  54%|█████▍    | 7/13 [00:09<00:12,  2.07s/it]Predict:  62%|██████▏   | 8/13 [00:14<00:15,  3.05s/it]Predict:  69%|██████▉   | 9/13 [00:14<00:08,  2.14s/it]Predict:  77%|███████▋  | 10/13 [00:18<00:07,  2.52s/it]Predict:  85%|████████▍ | 11/13 [00:18<00:03,  1.86s/it]Predict:  92%|█████████▏| 12/13 [00:20<00:01,  1.92s/it]Predict: 100%|██████████| 13/13 [00:20<00:00,  1.37s/it]Predict: 100%|██████████| 13/13 [00:20<00:00,  1.60s/it]
+  page 7/15 done in 47.1s, 580 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:09<00:00,  9.42s/it]Predict: 100%|██████████| 1/1 [00:09<00:00,  9.42s/it]
+2026-08-17 16:02:46.441 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>195 081 817 146<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 158 865 194<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 195 830 212<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 214 877 287<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>506 919 516 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/5 [00:00<?, ?it/s]Predict:  20%|██        | 1/5 [00:02<00:09,  2.33s/it]Predict:  40%|████      | 2/5 [00:05<00:07,  2.66s/it]Predict:  60%|██████    | 3/5 [00:05<00:03,  1.72s/it]Predict:  80%|████████  | 4/5 [00:11<00:03,  3.31s/it]Predict: 100%|██████████| 5/5 [00:11<00:00,  2.15s/it]Predict: 100%|██████████| 5/5 [00:11<00:00,  2.33s/it]
+  page 8/15 done in 21.1s, 298 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:38<00:00, 38.13s/it]Predict: 100%|██████████| 1/1 [00:38<00:00, 38.13s/it]
+2026-08-17 16:03:36.410 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>189 080 819 145<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>167 158 460 175<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 182 346 198<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 205 592 220<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 229 242 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 251 860 285<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 294 277 309<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 316 872 369<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 378 277 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>202 400 874 453<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 462 242 477<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>202 484 874 519<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 527 277 542<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>202 549 875 663<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>202 549 875 602<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>202 610 875 663<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 672 242 687<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>202 694 875 728<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 738 249 752<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>204 761 296 775<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>503 918 514 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/20 [00:00<?, ?it/s]Predict:   5%|▌         | 1/20 [00:02<00:45,  2.42s/it]Predict:  10%|█         | 2/20 [00:02<00:21,  1.17s/it]Predict:  15%|█▌        | 3/20 [00:02<00:12,  1.41it/s]Predict:  20%|██        | 4/20 [00:05<00:22,  1.38s/it]Predict:  30%|███       | 6/20 [00:08<00:20,  1.44s/it]Predict:  35%|███▌      | 7/20 [00:08<00:14,  1.08s/it]Predict:  40%|████      | 8/20 [00:11<00:20,  1.73s/it]Predict:  45%|████▌     | 9/20 [00:11<00:13,  1.26s/it]Predict:  50%|█████     | 10/20 [00:17<00:24,  2.43s/it]Predict:  60%|██████    | 12/20 [00:19<00:15,  1.95s/it]Predict:  65%|██████▌   | 13/20 [00:20<00:10,  1.53s/it]Predict:  70%|███████   | 14/20 [00:23<00:11,  1.91s/it]Predict:  75%|███████▌  | 15/20 [00:26<00:10,  2.20s/it]Predict:  80%|████████  | 16/20 [00:26<00:06,  1.63s/it]Predict:  85%|████████▌ | 17/20 [00:29<00:05,  1.98s/it]Predict:  90%|█████████ | 18/20 [00:29<00:02,  1.45s/it]Predict:  95%|█████████▌| 19/20 [00:29<00:01,  1.07s/it]Predict: 100%|██████████| 20/20 [00:29<00:00,  1.48s/it]
+  page 9/15 done in 67.7s, 721 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:28<00:00, 28.84s/it]Predict: 100%|██████████| 1/1 [00:28<00:00, 28.84s/it]
+2026-08-17 16:04:34.958 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>270 083 740 109<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 128 720 152<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 163 867 199<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 211 513 234<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>441 251 569 266<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>263 276 749 423<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>133 457 524 480<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 492 672 509<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 516 478 532<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 539 877 574<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 586 403 609<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>164 616 767 633<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>435 645 578 660<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>194 670 819 916<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>502 920 513 930<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/15 [00:00<?, ?it/s]Predict:   7%|▋         | 1/15 [00:00<00:03,  3.57it/s]Predict:  13%|█▎        | 2/15 [00:02<00:19,  1.49s/it]Predict:  20%|██        | 3/15 [00:03<00:14,  1.19s/it]Predict:  27%|██▋       | 4/15 [00:05<00:17,  1.61s/it]Predict:  33%|███▎      | 5/15 [00:05<00:11,  1.11s/it]Predict:  40%|████      | 6/15 [00:11<00:24,  2.78s/it]Predict:  47%|████▋     | 7/15 [00:12<00:15,  1.96s/it]Predict:  53%|█████▎    | 8/15 [00:14<00:14,  2.12s/it]Predict:  60%|██████    | 9/15 [00:14<00:09,  1.56s/it]Predict:  67%|██████▋   | 10/15 [00:17<00:09,  1.88s/it]Predict:  73%|███████▎  | 11/15 [00:17<00:05,  1.39s/it]Predict:  80%|████████  | 12/15 [00:20<00:05,  1.72s/it]Predict:  87%|████████▋ | 13/15 [00:20<00:02,  1.28s/it]Predict:  93%|█████████▎| 14/15 [00:29<00:03,  3.68s/it]Predict: 100%|██████████| 15/15 [00:29<00:00,  2.00s/it]
+  page 10/15 done in 58.8s, 1044 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.90s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.90s/it]
+2026-08-17 16:05:18.932 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>191 073 816 095<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>130 128 383 150<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>165 162 747 179<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>166 184 877 219<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>166 225 722 241<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>498 917 515 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/6 [00:00<?, ?it/s]Predict:  17%|█▋        | 1/6 [00:00<00:01,  4.82it/s]Predict:  33%|███▎      | 2/6 [00:00<00:00,  4.07it/s]Predict:  50%|█████     | 3/6 [00:02<00:03,  1.27s/it]Predict:  67%|██████▋   | 4/6 [00:03<00:02,  1.06s/it]Predict:  83%|████████▎ | 5/6 [00:06<00:01,  1.56s/it]Predict: 100%|██████████| 6/6 [00:06<00:00,  1.07s/it]Predict: 100%|██████████| 6/6 [00:06<00:00,  1.05s/it]
+  page 11/15 done in 20.2s, 182 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.97s/it]Predict: 100%|██████████| 1/1 [00:11<00:00, 11.97s/it]
+2026-08-17 16:05:37.363 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>217 081 788 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 120 875 174<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>174 188 904 449<|box_end|><|ref_start|>image<|ref_end|><|rotate_up|>
+<|box_start|>132 484 876 519<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 525 876 579<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>497 918 513 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/5 [00:00<?, ?it/s]Predict:  20%|██        | 1/5 [00:02<00:09,  2.29s/it]Predict:  40%|████      | 2/5 [00:05<00:09,  3.02s/it]Predict:  60%|██████    | 3/5 [00:08<00:05,  2.86s/it]Predict:  80%|████████  | 4/5 [00:12<00:03,  3.14s/it]Predict: 100%|██████████| 5/5 [00:14<00:00,  2.75s/it]Predict: 100%|██████████| 5/5 [00:14<00:00,  2.82s/it]
+  page 12/15 done in 26.1s, 332 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:41<00:00, 41.25s/it]Predict: 100%|██████████| 1/1 [00:41<00:00, 41.25s/it]
+2026-08-17 16:06:32.937 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>165 082 840 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 129 355 151<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>210 163 683 179<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>174 186 867 240<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 253 292 274<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>175 287 868 341<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 354 367 375<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>175 388 875 442<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 455 327 478<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>176 489 876 543<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 557 418 579<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>211 592 371 607<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>176 614 858 649<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>237 657 314 673<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>212 680 614 696<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>237 704 314 719<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>211 727 701 743<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>211 750 706 766<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>237 774 314 789<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>176 796 870 832<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>237 840 314 855<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>211 862 579 878<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>499 918 516 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/23 [00:00<?, ?it/s]Predict:   4%|▍         | 1/23 [00:00<00:07,  3.11it/s]Predict:   9%|▊         | 2/23 [00:00<00:05,  3.66it/s]Predict:  13%|█▎        | 3/23 [00:03<00:25,  1.28s/it]Predict:  17%|█▋        | 4/23 [00:06<00:39,  2.08s/it]Predict:  22%|██▏       | 5/23 [00:06<00:25,  1.41s/it]Predict:  26%|██▌       | 6/23 [00:09<00:33,  1.95s/it]Predict:  30%|███       | 7/23 [00:11<00:32,  2.01s/it]Predict:  35%|███▍      | 8/23 [00:15<00:36,  2.44s/it]Predict:  39%|███▉      | 9/23 [00:15<00:24,  1.76s/it]Predict:  43%|████▎     | 10/23 [00:20<00:37,  2.89s/it]Predict:  48%|████▊     | 11/23 [00:20<00:24,  2.07s/it]Predict:  52%|█████▏    | 12/23 [00:21<00:16,  1.49s/it]Predict:  57%|█████▋    | 13/23 [00:23<00:18,  1.84s/it]Predict:  61%|██████    | 14/23 [00:23<00:11,  1.32s/it]Predict:  65%|██████▌   | 15/23 [00:24<00:08,  1.02s/it]Predict:  70%|██████▉   | 16/23 [00:24<00:05,  1.33it/s]Predict:  74%|███████▍  | 17/23 [00:26<00:07,  1.24s/it]Predict:  78%|███████▊  | 18/23 [00:27<00:05,  1.01s/it]Predict:  83%|████████▎ | 19/23 [00:27<00:02,  1.35it/s]Predict:  87%|████████▋ | 20/23 [00:29<00:03,  1.29s/it]Predict:  91%|█████████▏| 21/23 [00:29<00:01,  1.06it/s]Predict:  96%|█████████▌| 22/23 [00:32<00:01,  1.35s/it]Predict: 100%|██████████| 23/23 [00:32<00:00,  1.01it/s]Predict: 100%|██████████| 23/23 [00:32<00:00,  1.41s/it]
+  page 13/15 done in 73.7s, 807 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:09<00:00,  9.49s/it]Predict: 100%|██████████| 1/1 [00:09<00:00,  9.49s/it]
+2026-08-17 16:07:15.038 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>132 084 490 107<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>178 118 867 154<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 166 569 190<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>178 200 867 255<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>497 919 513 930<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/5 [00:00<?, ?it/s]Predict:  20%|██        | 1/5 [00:02<00:08,  2.17s/it]Predict:  40%|████      | 2/5 [00:02<00:03,  1.22s/it]Predict:  60%|██████    | 3/5 [00:02<00:01,  1.29it/s]Predict:  80%|████████  | 4/5 [00:08<00:02,  2.51s/it]Predict: 100%|██████████| 5/5 [00:08<00:00,  1.65s/it]Predict: 100%|██████████| 5/5 [00:08<00:00,  1.65s/it]
+  page 14/15 done in 17.8s, 201 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.58s/it]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.58s/it]
+2026-08-17 16:07:38.046 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>281 080 731 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 126 640 150<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>331 166 679 183<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>118 192 870 606<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>133 635 649 658<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>134 670 867 706<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>498 917 514 929<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/7 [00:00<?, ?it/s]Predict:  14%|█▍        | 1/7 [00:00<00:01,  3.32it/s]Predict:  29%|██▊       | 2/7 [00:00<00:01,  3.23it/s]Predict:  43%|████▎     | 3/7 [00:02<00:04,  1.22s/it]Predict:  57%|█████▋    | 4/7 [00:20<00:23,  7.71s/it]Predict:  71%|███████▏  | 5/7 [00:20<00:10,  5.02s/it]Predict:  86%|████████▌ | 6/7 [00:23<00:04,  4.23s/it]Predict: 100%|██████████| 7/7 [00:23<00:00,  2.88s/it]Predict: 100%|██████████| 7/7 [00:23<00:00,  3.38s/it]
+  page 15/15 done in 38.2s, 867 chars
+=== DONE 项目计划书 -> E:\A_nrf_sample_codes\working_team_work\public\project\git_project\design_plan_generation_local_model\design_planning_generation_local_model\_mineru_项目计划书.md (11857 chars) ===
+=== START 设计输入: KF-CGM-2-0004 设计输入 V7.0.pdf ===
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.85s/it]Predict: 100%|██████████| 1/1 [00:05<00:00,  5.85s/it]
+2026-08-17 16:08:07.692 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>118 091 919 697<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>107 712 917 856<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/2 [00:00<?, ?it/s]Predict:  50%|█████     | 1/2 [00:20<00:20, 20.55s/it]Predict: 100%|██████████| 2/2 [00:26<00:00, 11.74s/it]Predict: 100%|██████████| 2/2 [00:26<00:00, 13.06s/it]
+  page 1/28 done in 32.0s, 1169 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.96s/it]Predict: 100%|██████████| 1/1 [00:08<00:00,  8.96s/it]
+2026-08-17 16:08:42.927 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>430 079 589 096<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>431 100 577 116<|box_end|><|ref_start|>table_caption<|ref_end|><|rotate_up|>
+<|box_start|>116 115 925 854<|box_end|><|ref_start|>table<|ref_end|><|rotate_up|>
+<|box_start|>443 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:00,  5.99it/s]Predict:  50%|█████     | 2/4 [00:00<00:00,  7.09it/s]Predict:  75%|███████▌  | 3/4 [00:41<00:18, 18.97s/it]Predict: 100%|██████████| 4/4 [00:43<00:00, 12.35s/it]Predict: 100%|██████████| 4/4 [00:43<00:00, 10.97s/it]
+  page 2/28 done in 52.9s, 1218 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [02:30<00:00, 150.00s/it]Predict: 100%|██████████| 1/1 [02:30<00:00, 150.00s/it]
+2026-08-17 16:11:56.996 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>474 085 535 109<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 125 873 141<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 147 873 163<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>169 169 873 185<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 191 873 207<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 213 873 230<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 236 873 251<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>169 169 873 251<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>133 258 873 274<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>168 280 873 296<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 302 873 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 324 873 340<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 346 873 362<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 369 873 384<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 391 873 406<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 413 873 428<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 435 873 451<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 457 873 473<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 479 873 494<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 501 873 517<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 523 873 539<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 546 873 561<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 568 873 583<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 590 873 606<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 612 873 627<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 634 873 650<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 656 873 672<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 679 873 694<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 701 873 716<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 723 873 738<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 745 873 760<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 767 873 783<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 790 873 805<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 812 873 827<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 833 873 848<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 280 873 848<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>201 856 873 871<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 878 873 893<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>201 856 873 893<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>443 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/37 [00:00<?, ?it/s]Predict:   3%|▎         | 1/37 [00:00<00:05,  6.34it/s]Predict:   5%|▌         | 2/37 [00:00<00:07,  4.68it/s]Predict:   8%|▊         | 3/37 [00:00<00:10,  3.15it/s]Predict:  11%|█         | 4/37 [00:03<00:38,  1.16s/it]Predict:  14%|█▎        | 5/37 [00:03<00:30,  1.05it/s]Predict:  16%|█▌        | 6/37 [00:06<00:45,  1.47s/it]Predict:  19%|█▉        | 7/37 [00:08<00:54,  1.80s/it]Predict:  22%|██▏       | 8/37 [00:09<00:40,  1.38s/it]Predict:  24%|██▍       | 9/37 [00:11<00:48,  1.73s/it]Predict:  27%|██▋       | 10/37 [00:12<00:37,  1.38s/it]Predict:  30%|██▉       | 11/37 [00:14<00:44,  1.72s/it]Predict:  32%|███▏      | 12/37 [00:15<00:33,  1.35s/it]Predict:  35%|███▌      | 13/37 [00:18<00:42,  1.75s/it]Predict:  38%|███▊      | 14/37 [00:20<00:45,  1.99s/it]Predict:  41%|████      | 15/37 [00:21<00:36,  1.65s/it]Predict:  43%|████▎     | 16/37 [00:24<00:40,  1.93s/it]Predict:  46%|████▌     | 17/37 [00:26<00:42,  2.11s/it]Predict:  49%|████▊     | 18/37 [00:29<00:44,  2.36s/it]Predict:  51%|█████▏    | 19/37 [00:30<00:32,  1.83s/it]Predict:  54%|█████▍    | 20/37 [00:32<00:34,  2.04s/it]Predict:  57%|█████▋    | 21/37 [00:33<00:25,  1.62s/it]Predict:  59%|█████▉    | 22/37 [00:35<00:28,  1.92s/it]Predict:  62%|██████▏   | 23/37 [00:38<00:29,  2.11s/it]Predict:  65%|██████▍   | 24/37 [00:39<00:21,  1.67s/it]Predict:  68%|██████▊   | 25/37 [00:41<00:22,  1.90s/it]Predict:  70%|███████   | 26/37 [00:42<00:16,  1.51s/it]Predict:  73%|███████▎  | 27/37 [00:44<00:18,  1.85s/it]Predict:  76%|███████▌  | 28/37 [00:47<00:18,  2.08s/it]Predict:  78%|███████▊  | 29/37 [00:50<00:17,  2.24s/it]Predict:  81%|████████  | 30/37 [00:50<00:12,  1.78s/it]Predict:  84%|████████▍ | 31/37 [00:53<00:12,  2.03s/it]Predict:  86%|████████▋ | 32/37 [00:55<00:10,  2.19s/it]Predict:  89%|████████▉ | 33/37 [00:56<00:07,  1.77s/it]Predict:  92%|█████████▏| 34/37 [00:59<00:06,  2.09s/it]Predict:  95%|█████████▍| 35/37 [01:02<00:04,  2.26s/it]Predict:  97%|█████████▋| 36/37 [01:04<00:02,  2.39s/it]Predict: 100%|██████████| 37/37 [01:05<00:00,  1.81s/it]Predict: 100%|██████████| 37/37 [01:05<00:00,  1.77s/it]
+  page 3/28 done in 215.4s, 595 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:20<00:00, 20.29s/it]Predict: 100%|██████████| 1/1 [00:20<00:00, 20.29s/it]
+2026-08-17 16:13:22.833 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>199 081 874 120<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>200 081 873 098<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>200 104 873 120<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>167 126 873 142<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 920 568 935<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/4 [00:00<?, ?it/s]Predict:  25%|██▌       | 1/4 [00:00<00:01,  2.44it/s]Predict:  50%|█████     | 2/4 [00:02<00:03,  1.53s/it]Predict:  75%|███████▌  | 3/4 [00:03<00:01,  1.02s/it]Predict: 100%|██████████| 4/4 [00:03<00:00,  1.43it/s]Predict: 100%|██████████| 4/4 [00:03<00:00,  1.20it/s]
+  page 4/28 done in 23.7s, 69 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:20<00:00, 20.66s/it]Predict: 100%|██████████| 1/1 [00:20<00:00, 20.66s/it]
+2026-08-17 16:13:46.961 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>453 083 554 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 129 237 150<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 159 605 176<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 206 287 228<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>130 237 874 272<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 303 234 325<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>160 343 497 360<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>160 371 520 388<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 418 287 440<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 449 339 465<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>438 918 564 932<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/11 [00:00<?, ?it/s]Predict:   9%|▉         | 1/11 [00:02<00:20,  2.09s/it]Predict:  18%|█▊        | 2/11 [00:02<00:09,  1.00s/it]Predict:  27%|██▋       | 3/11 [00:02<00:06,  1.33it/s]Predict:  36%|███▋      | 4/11 [00:04<00:09,  1.33s/it]Predict:  45%|████▌     | 5/11 [00:05<00:06,  1.12s/it]Predict:  55%|█████▍    | 6/11 [00:07<00:07,  1.49s/it]Predict:  64%|██████▎   | 7/11 [00:08<00:04,  1.12s/it]Predict:  73%|███████▎  | 8/11 [00:08<00:02,  1.14it/s]Predict:  82%|████████▏ | 9/11 [00:10<00:02,  1.29s/it]Predict:  91%|█████████ | 10/11 [00:11<00:01,  1.00s/it]Predict: 100%|██████████| 11/11 [00:11<00:00,  1.29it/s]Predict: 100%|██████████| 11/11 [00:11<00:00,  1.04s/it]
+  page 5/28 done in 32.2s, 221 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:53<00:00, 53.10s/it]Predict: 100%|██████████| 1/1 [00:53<00:00, 53.10s/it]
+2026-08-17 16:14:51.693 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>420 085 584 110<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>082 132 246 154<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 167 172 182<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 187 216 201<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 204 741 221<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 238 218 251<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 255 689 271<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 288 217 302<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 305 680 321<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 339 173 354<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 356 218 368<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 369 483 385<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 400 218 413<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 414 430 430<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 445 218 458<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>224 459 415 475<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 490 218 503<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>226 504 431 520<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 550 246 572<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>134 582 220 596<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 599 507 615<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 647 220 668<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>134 679 220 692<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 697 375 711<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>135 716 326 730<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>137 734 334 748<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 799 221 820<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>135 831 229 845<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>171 848 430 864<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>446 920 571 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/30 [00:00<?, ?it/s]Predict:   3%|▎         | 1/30 [00:00<00:06,  4.42it/s]Predict:   7%|▋         | 2/30 [00:02<00:38,  1.39s/it]Predict:  13%|█▎        | 4/30 [00:02<00:15,  1.64it/s]Predict:  17%|█▋        | 5/30 [00:05<00:30,  1.23s/it]Predict:  20%|██        | 6/30 [00:05<00:21,  1.09it/s]Predict:  23%|██▎       | 7/30 [00:08<00:33,  1.45s/it]Predict:  27%|██▋       | 8/30 [00:08<00:23,  1.07s/it]Predict:  30%|███       | 9/30 [00:09<00:20,  1.05it/s]Predict:  33%|███▎      | 10/30 [00:11<00:25,  1.29s/it]Predict:  37%|███▋      | 11/30 [00:11<00:18,  1.04it/s]Predict:  40%|████      | 12/30 [00:11<00:13,  1.30it/s]Predict:  43%|████▎     | 13/30 [00:11<00:10,  1.67it/s]Predict:  47%|████▋     | 14/30 [00:14<00:17,  1.09s/it]Predict:  50%|█████     | 15/30 [00:14<00:12,  1.22it/s]Predict:  53%|█████▎    | 16/30 [00:14<00:09,  1.53it/s]Predict:  57%|█████▋    | 17/30 [00:14<00:06,  1.94it/s]Predict:  60%|██████    | 18/30 [00:17<00:12,  1.04s/it]Predict:  63%|██████▎   | 19/30 [00:17<00:08,  1.23it/s]Predict:  67%|██████▋   | 20/30 [00:17<00:06,  1.59it/s]Predict:  70%|███████   | 21/30 [00:17<00:05,  1.73it/s]Predict:  73%|███████▎  | 22/30 [00:20<00:08,  1.05s/it]Predict:  77%|███████▋  | 23/30 [00:20<00:05,  1.26it/s]Predict:  80%|████████  | 24/30 [00:20<00:04,  1.44it/s]Predict:  83%|████████▎ | 25/30 [00:23<00:05,  1.19s/it]Predict:  87%|████████▋ | 26/30 [00:23<00:03,  1.03it/s]Predict:  90%|█████████ | 27/30 [00:23<00:02,  1.33it/s]Predict:  93%|█████████▎| 28/30 [00:26<00:02,  1.18s/it]Predict:  97%|█████████▋| 29/30 [00:26<00:00,  1.07it/s]Predict: 100%|██████████| 30/30 [00:26<00:00,  1.38it/s]Predict: 100%|██████████| 30/30 [00:26<00:00,  1.13it/s]
+  page 6/28 done in 79.8s, 470 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:47<00:00, 47.05s/it]Predict: 100%|██████████| 1/1 [00:47<00:00, 47.05s/it]
+2026-08-17 16:16:05.523 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>086 086 339 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 118 223 132<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>167 139 646 155<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>086 186 243 208<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 218 227 232<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 239 714 255<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>086 285 485 308<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 318 226 332<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 339 522 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>086 386 272 408<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 418 227 432<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>167 439 776 455<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>086 486 218 508<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 518 227 532<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>168 536 451 551<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 554 876 589<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>134 620 519 642<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 652 227 666<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 669 876 704<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>086 735 289 757<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 767 227 781<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 785 418 800<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 823 227 837<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 841 507 857<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>445 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/25 [00:00<?, ?it/s]Predict:   4%|▍         | 1/25 [00:00<00:08,  2.99it/s]Predict:   8%|▊         | 2/25 [00:00<00:06,  3.80it/s]Predict:  12%|█▏        | 3/25 [00:03<00:30,  1.39s/it]Predict:  16%|█▌        | 4/25 [00:03<00:19,  1.06it/s]Predict:  20%|██        | 5/25 [00:03<00:13,  1.47it/s]Predict:  24%|██▍       | 6/25 [00:06<00:24,  1.30s/it]Predict:  28%|██▊       | 7/25 [00:06<00:18,  1.00s/it]Predict:  32%|███▏      | 8/25 [00:08<00:23,  1.37s/it]Predict:  36%|███▌      | 9/25 [00:09<00:16,  1.05s/it]Predict:  40%|████      | 10/25 [00:09<00:12,  1.22it/s]Predict:  44%|████▍     | 11/25 [00:09<00:08,  1.56it/s]Predict:  48%|████▊     | 12/25 [00:12<00:15,  1.22s/it]Predict:  52%|█████▏    | 13/25 [00:12<00:11,  1.09it/s]Predict:  56%|█████▌    | 14/25 [00:12<00:07,  1.41it/s]Predict:  60%|██████    | 15/25 [00:14<00:11,  1.18s/it]Predict:  64%|██████▍   | 16/25 [00:17<00:14,  1.65s/it]Predict:  68%|██████▊   | 17/25 [00:18<00:10,  1.29s/it]Predict:  72%|███████▏  | 18/25 [00:18<00:06,  1.04it/s]Predict:  76%|███████▌  | 19/25 [00:21<00:09,  1.56s/it]Predict:  80%|████████  | 20/25 [00:21<00:05,  1.17s/it]Predict:  84%|████████▍ | 21/25 [00:23<00:05,  1.48s/it]Predict:  88%|████████▊ | 22/25 [00:24<00:03,  1.12s/it]Predict:  92%|█████████▏| 23/25 [00:24<00:01,  1.18it/s]Predict:  96%|█████████▌| 24/25 [00:26<00:01,  1.36s/it]Predict: 100%|██████████| 25/25 [00:27<00:00,  1.02s/it]Predict: 100%|██████████| 25/25 [00:27<00:00,  1.08s/it]
+  page 7/28 done in 74.1s, 534 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:50<00:00, 50.70s/it]Predict: 100%|██████████| 1/1 [00:50<00:00, 50.70s/it]
+2026-08-17 16:17:23.437 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 081 228 096<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 098 873 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 155 228 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 172 869 209<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 229 226 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 246 663 264<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 284 191 300<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 304 226 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 320 596 338<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 359 226 374<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 377 208 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 396 416 412<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 443 316 465<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 474 235 490<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 493 228 508<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 510 647 527<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 549 226 563<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 566 463 583<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 584 809 602<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 633 236 654<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 664 228 679<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 681 597 699<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 720 226 735<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 738 242 754<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 775 226 790<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 793 499 810<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 831 226 846<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 849 357 865<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/29 [00:00<?, ?it/s]Predict:   3%|▎         | 1/29 [00:00<00:05,  5.02it/s]Predict:   7%|▋         | 2/29 [00:05<01:27,  3.23s/it]Predict:  10%|█         | 3/29 [00:05<00:48,  1.85s/it]Predict:  14%|█▍        | 4/29 [00:08<00:55,  2.22s/it]Predict:  17%|█▋        | 5/29 [00:08<00:36,  1.50s/it]Predict:  21%|██        | 6/29 [00:11<00:43,  1.90s/it]Predict:  24%|██▍       | 7/29 [00:11<00:29,  1.32s/it]Predict:  28%|██▊       | 8/29 [00:11<00:20,  1.03it/s]Predict:  31%|███       | 9/29 [00:14<00:30,  1.50s/it]Predict:  34%|███▍      | 10/29 [00:14<00:20,  1.11s/it]Predict:  38%|███▊      | 11/29 [00:14<00:14,  1.24it/s]Predict:  41%|████▏     | 12/29 [00:17<00:22,  1.33s/it]Predict:  45%|████▍     | 13/29 [00:17<00:16,  1.02s/it]Predict:  48%|████▊     | 14/29 [00:17<00:11,  1.27it/s]Predict:  52%|█████▏    | 15/29 [00:20<00:16,  1.20s/it]Predict:  55%|█████▌    | 16/29 [00:20<00:14,  1.09s/it]Predict:  59%|█████▊    | 17/29 [00:23<00:16,  1.41s/it]Predict:  62%|██████▏   | 18/29 [00:25<00:20,  1.85s/it]Predict:  66%|██████▌   | 19/29 [00:29<00:23,  2.40s/it]Predict:  69%|██████▉   | 20/29 [00:31<00:21,  2.35s/it]Predict:  72%|███████▏  | 21/29 [00:32<00:13,  1.71s/it]Predict:  76%|███████▌  | 22/29 [00:35<00:14,  2.13s/it]Predict:  79%|███████▉  | 23/29 [00:35<00:09,  1.56s/it]Predict:  83%|████████▎ | 24/29 [00:37<00:09,  1.81s/it]Predict:  86%|████████▌ | 25/29 [00:37<00:05,  1.33s/it]Predict:  90%|████████▉ | 26/29 [00:38<00:03,  1.08s/it]Predict:  93%|█████████▎| 27/29 [00:40<00:02,  1.41s/it]Predict:  97%|█████████▋| 28/29 [00:41<00:01,  1.12s/it]Predict: 100%|██████████| 29/29 [00:41<00:00,  1.17it/s]Predict: 100%|██████████| 29/29 [00:41<00:00,  1.43s/it]
+  page 8/28 done in 92.1s, 842 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:49<00:00, 49.51s/it]Predict: 100%|██████████| 1/1 [00:49<00:00, 49.51s/it]
+2026-08-17 16:18:54.450 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 081 228 095<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 098 312 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 145 343 167<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 177 226 191<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 194 873 229<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 260 291 282<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 292 228 306<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 310 365 326<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 348 228 362<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 365 637 382<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 412 291 434<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 444 228 458<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 461 643 478<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 500 228 514<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 517 863 534<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 564 264 587<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 597 228 611<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 614 412 630<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>257 633 389 649<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>082 680 316 702<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 712 228 726<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 729 556 745<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 767 228 781<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 784 878 857<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 879 228 893<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 896 718 912<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>443 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/27 [00:00<?, ?it/s]Predict:   4%|▎         | 1/27 [00:00<00:05,  4.74it/s]Predict:   7%|▋         | 2/27 [00:00<00:06,  4.08it/s]Predict:  11%|█         | 3/27 [00:02<00:27,  1.14s/it]Predict:  15%|█▍        | 4/27 [00:02<00:17,  1.28it/s]Predict:  19%|█▊        | 5/27 [00:06<00:36,  1.64s/it]Predict:  22%|██▏       | 6/27 [00:06<00:24,  1.18s/it]Predict:  26%|██▌       | 7/27 [00:06<00:17,  1.16it/s]Predict:  30%|██▉       | 8/27 [00:09<00:27,  1.43s/it]Predict:  33%|███▎      | 9/27 [00:09<00:18,  1.05s/it]Predict:  37%|███▋      | 10/27 [00:11<00:25,  1.51s/it]Predict:  41%|████      | 11/27 [00:12<00:18,  1.13s/it]Predict:  44%|████▍     | 12/27 [00:12<00:12,  1.16it/s]Predict:  48%|████▊     | 13/27 [00:15<00:22,  1.58s/it]Predict:  52%|█████▏    | 14/27 [00:15<00:15,  1.16s/it]Predict:  56%|█████▌    | 15/27 [00:17<00:13,  1.15s/it]Predict:  59%|█████▉    | 16/27 [00:17<00:09,  1.14it/s]Predict:  63%|██████▎   | 17/27 [00:17<00:06,  1.47it/s]Predict:  67%|██████▋   | 18/27 [00:17<00:05,  1.76it/s]Predict:  70%|███████   | 19/27 [00:18<00:03,  2.15it/s]Predict:  74%|███████▍  | 20/27 [00:18<00:02,  2.50it/s]Predict:  78%|███████▊  | 21/27 [00:18<00:02,  2.94it/s]Predict:  81%|████████▏ | 22/27 [00:18<00:01,  2.82it/s]Predict:  85%|████████▌ | 23/27 [00:19<00:01,  3.19it/s]Predict:  89%|████████▉ | 24/27 [00:21<00:02,  1.07it/s]Predict:  93%|█████████▎| 25/27 [00:21<00:01,  1.40it/s]Predict:  96%|█████████▋| 26/27 [00:22<00:00,  1.57it/s]Predict: 100%|██████████| 27/27 [00:22<00:00,  1.94it/s]Predict: 100%|██████████| 27/27 [00:22<00:00,  1.21it/s]
+  page 9/28 done in 71.9s, 821 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.40s/it]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.40s/it]
+2026-08-17 16:19:32.417 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>132 101 228 116<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 118 588 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 157 226 171<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 177 794 193<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 216 226 230<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 233 742 248<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 272 226 286<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 288 874 324<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 346 226 360<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 363 480 379<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 402 226 416<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 420 340 436<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 467 292 489<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 499 229 513<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 515 877 569<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 592 229 606<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 609 587 624<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 648 229 662<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 665 509 680<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 703 229 717<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 720 879 793<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>087 823 294 846<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 856 231 870<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 872 660 888<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 892 545 906<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>448 920 573 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/26 [00:00<?, ?it/s]Predict:   4%|▍         | 1/26 [00:00<00:05,  4.77it/s]Predict:   8%|▊         | 2/26 [00:00<00:08,  2.73it/s]Predict:  12%|█▏        | 3/26 [00:00<00:07,  3.22it/s]Predict:  15%|█▌        | 4/26 [00:01<00:10,  2.12it/s]Predict:  19%|█▉        | 5/26 [00:01<00:08,  2.59it/s]Predict:  23%|██▎       | 6/26 [00:02<00:08,  2.25it/s]Predict:  27%|██▋       | 7/26 [00:02<00:06,  2.75it/s]Predict:  31%|███       | 8/26 [00:03<00:09,  1.97it/s]Predict:  35%|███▍      | 9/26 [00:03<00:07,  2.40it/s]Predict:  38%|███▊      | 10/26 [00:04<00:06,  2.43it/s]Predict:  42%|████▏     | 11/26 [00:04<00:05,  2.86it/s]Predict:  46%|████▌     | 12/26 [00:04<00:04,  2.96it/s]Predict:  50%|█████     | 13/26 [00:04<00:04,  3.08it/s]Predict:  54%|█████▍    | 14/26 [00:05<00:03,  3.47it/s]Predict:  58%|█████▊    | 15/26 [00:06<00:07,  1.42it/s]Predict:  62%|██████▏   | 16/26 [00:06<00:05,  1.79it/s]Predict:  65%|██████▌   | 17/26 [00:07<00:05,  1.52it/s]Predict:  69%|██████▉   | 18/26 [00:08<00:04,  1.94it/s]Predict:  73%|███████▎  | 19/26 [00:08<00:03,  2.23it/s]Predict:  77%|███████▋  | 20/26 [00:08<00:02,  2.60it/s]Predict:  81%|████████  | 21/26 [00:10<00:03,  1.26it/s]Predict:  85%|████████▍ | 22/26 [00:10<00:02,  1.56it/s]Predict:  88%|████████▊ | 23/26 [00:10<00:01,  1.97it/s]Predict:  92%|█████████▏| 24/26 [00:11<00:01,  1.81it/s]Predict:  96%|█████████▌| 25/26 [00:12<00:00,  1.70it/s]Predict: 100%|██████████| 26/26 [00:12<00:00,  2.07it/s]Predict: 100%|██████████| 26/26 [00:12<00:00,  2.10it/s]
+  page 10/28 done in 27.8s, 789 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.45s/it]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.45s/it]
+2026-08-17 16:20:01.381 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>132 101 224 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 118 451 133<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 157 226 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 173 854 188<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 213 226 226<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 230 250 245<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 268 226 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 286 260 301<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 324 226 337<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 341 322 356<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>084 389 236 410<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 420 228 434<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 437 875 472<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>084 503 290 525<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 535 228 549<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 553 350 568<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 591 228 605<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 611 875 646<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 669 228 683<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 686 675 701<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 725 228 739<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 742 517 757<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 790 238 811<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 822 228 835<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 839 350 854<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 877 228 891<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 894 439 910<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>443 920 574 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/28 [00:00<?, ?it/s]Predict:   4%|▎         | 1/28 [00:00<00:06,  4.42it/s]Predict:   7%|▋         | 2/28 [00:00<00:07,  3.31it/s]Predict:  11%|█         | 3/28 [00:00<00:06,  3.89it/s]Predict:  14%|█▍        | 4/28 [00:01<00:10,  2.30it/s]Predict:  18%|█▊        | 5/28 [00:01<00:08,  2.85it/s]Predict:  21%|██▏       | 6/28 [00:01<00:06,  3.43it/s]Predict:  25%|██▌       | 7/28 [00:02<00:05,  3.70it/s]Predict:  29%|██▊       | 8/28 [00:02<00:04,  4.21it/s]Predict:  32%|███▏      | 9/28 [00:02<00:04,  4.52it/s]Predict:  36%|███▌      | 10/28 [00:02<00:03,  4.74it/s]Predict:  39%|███▉      | 11/28 [00:02<00:03,  4.33it/s]Predict:  43%|████▎     | 12/28 [00:03<00:03,  4.49it/s]Predict:  46%|████▋     | 13/28 [00:03<00:06,  2.43it/s]Predict:  50%|█████     | 14/28 [00:04<00:05,  2.61it/s]Predict:  54%|█████▎    | 15/28 [00:04<00:04,  3.03it/s]Predict:  57%|█████▋    | 16/28 [00:04<00:03,  3.35it/s]Predict:  61%|██████    | 17/28 [00:04<00:02,  3.71it/s]Predict:  64%|██████▍   | 18/28 [00:06<00:05,  1.87it/s]Predict:  68%|██████▊   | 19/28 [00:06<00:03,  2.30it/s]Predict:  71%|███████▏  | 20/28 [00:06<00:03,  2.22it/s]Predict:  75%|███████▌  | 21/28 [00:06<00:02,  2.64it/s]Predict:  79%|███████▊  | 22/28 [00:07<00:02,  2.84it/s]Predict:  82%|████████▏ | 23/28 [00:07<00:01,  3.10it/s]Predict:  86%|████████▌ | 24/28 [00:07<00:01,  3.42it/s]Predict:  89%|████████▉ | 25/28 [00:07<00:00,  3.61it/s]Predict:  93%|█████████▎| 26/28 [00:08<00:00,  3.80it/s]Predict:  96%|█████████▋| 27/28 [00:08<00:00,  3.61it/s]Predict: 100%|██████████| 28/28 [00:08<00:00,  3.76it/s]Predict: 100%|██████████| 28/28 [00:08<00:00,  3.20it/s]
+  page 11/28 done in 25.2s, 512 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.49s/it]Predict: 100%|██████████| 1/1 [00:16<00:00, 16.49s/it]
+2026-08-17 16:20:26.778 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>132 101 226 115<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 118 312 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>084 165 236 188<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 197 228 211<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 214 487 230<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 253 228 267<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 270 340 286<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 309 228 323<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 326 443 342<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 364 228 379<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 381 758 397<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 420 228 434<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 436 841 453<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 476 228 490<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 493 384 509<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 532 228 546<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 548 629 564<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 587 228 601<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 604 829 620<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 643 228 657<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 661 314 676<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>085 708 292 730<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>170 743 228 758<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 762 228 776<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 782 867 817<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 843 228 857<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>170 865 304 880<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 920 574 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/28 [00:00<?, ?it/s]Predict:   4%|▎         | 1/28 [00:00<00:06,  3.95it/s]Predict:   7%|▋         | 2/28 [00:00<00:06,  4.03it/s]Predict:  11%|█         | 3/28 [00:00<00:06,  3.95it/s]Predict:  14%|█▍        | 4/28 [00:00<00:05,  4.15it/s]Predict:  18%|█▊        | 5/28 [00:01<00:06,  3.68it/s]Predict:  21%|██▏       | 6/28 [00:01<00:05,  3.92it/s]Predict:  25%|██▌       | 7/28 [00:01<00:05,  3.94it/s]Predict:  29%|██▊       | 8/28 [00:01<00:04,  4.28it/s]Predict:  32%|███▏      | 9/28 [00:02<00:04,  3.94it/s]Predict:  36%|███▌      | 10/28 [00:02<00:04,  4.11it/s]Predict:  39%|███▉      | 11/28 [00:03<00:05,  2.93it/s]Predict:  43%|████▎     | 12/28 [00:03<00:04,  3.29it/s]Predict:  46%|████▋     | 13/28 [00:03<00:05,  2.55it/s]Predict:  50%|█████     | 14/28 [00:04<00:04,  2.93it/s]Predict:  54%|█████▎    | 15/28 [00:04<00:04,  3.08it/s]Predict:  57%|█████▋    | 16/28 [00:04<00:03,  3.42it/s]Predict:  61%|██████    | 17/28 [00:05<00:03,  2.92it/s]Predict:  64%|██████▍   | 18/28 [00:05<00:03,  3.27it/s]Predict:  68%|██████▊   | 19/28 [00:05<00:03,  2.52it/s]Predict:  71%|███████▏  | 20/28 [00:06<00:02,  2.96it/s]Predict:  75%|███████▌  | 21/28 [00:06<00:02,  3.46it/s]Predict:  79%|███████▊  | 22/28 [00:06<00:01,  3.42it/s]Predict:  82%|████████▏ | 23/28 [00:06<00:01,  4.16it/s]Predict:  86%|████████▌ | 24/28 [00:06<00:00,  4.35it/s]Predict:  89%|████████▉ | 25/28 [00:07<00:01,  2.32it/s]Predict:  93%|█████████▎| 26/28 [00:08<00:00,  2.70it/s]Predict:  96%|█████████▋| 27/28 [00:08<00:00,  3.10it/s]Predict: 100%|██████████| 28/28 [00:08<00:00,  3.25it/s]Predict: 100%|██████████| 28/28 [00:08<00:00,  3.30it/s]
+  page 12/28 done in 25.0s, 497 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.15s/it]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.15s/it]
+2026-08-17 16:20:53.575 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>084 085 369 108<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>119 128 292 148<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 160 357 178<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 181 226 194<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 198 432 214<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 236 220 250<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 254 406 270<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 292 225 306<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 310 292 325<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 348 225 362<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 366 293 381<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 404 225 418<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 422 247 437<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>192 440 416 455<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>192 458 704 474<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 497 225 510<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 514 351 530<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>119 562 315 582<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 593 225 607<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 610 876 645<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 667 225 681<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 685 546 700<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>165 704 876 793<|box_end|><|ref_start|>list<|ref_end|><|rotate_up|>
+<|box_start|>165 704 876 737<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>165 741 783 756<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>165 759 874 793<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>119 826 243 846<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>133 857 225 870<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 874 659 889<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 893 767 908<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>439 919 570 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/30 [00:00<?, ?it/s]Predict:   3%|▎         | 1/30 [00:00<00:08,  3.24it/s]Predict:   7%|▋         | 2/30 [00:00<00:08,  3.32it/s]Predict:  10%|█         | 3/30 [00:00<00:08,  3.03it/s]Predict:  13%|█▎        | 4/30 [00:01<00:08,  3.24it/s]Predict:  17%|█▋        | 5/30 [00:01<00:08,  2.99it/s]Predict:  20%|██        | 6/30 [00:01<00:07,  3.38it/s]Predict:  23%|██▎       | 7/30 [00:02<00:06,  3.31it/s]Predict:  27%|██▋       | 8/30 [00:02<00:06,  3.65it/s]Predict:  30%|███       | 9/30 [00:02<00:05,  3.73it/s]Predict:  33%|███▎      | 10/30 [00:02<00:05,  3.94it/s]Predict:  37%|███▋      | 11/30 [00:03<00:04,  4.25it/s]Predict:  40%|████      | 12/30 [00:03<00:04,  4.46it/s]Predict:  43%|████▎     | 13/30 [00:03<00:03,  4.90it/s]Predict:  47%|████▋     | 14/30 [00:03<00:03,  4.47it/s]Predict:  50%|█████     | 15/30 [00:04<00:04,  3.34it/s]Predict:  53%|█████▎    | 16/30 [00:04<00:03,  3.74it/s]Predict:  57%|█████▋    | 17/30 [00:04<00:03,  3.71it/s]Predict:  60%|██████    | 18/30 [00:04<00:03,  3.59it/s]Predict:  63%|██████▎   | 19/30 [00:05<00:02,  3.84it/s]Predict:  67%|██████▋   | 20/30 [00:06<00:06,  1.61it/s]Predict:  70%|███████   | 21/30 [00:06<00:04,  2.01it/s]Predict:  73%|███████▎  | 22/30 [00:07<00:03,  2.19it/s]Predict:  77%|███████▋  | 23/30 [00:08<00:04,  1.59it/s]Predict:  80%|████████  | 24/30 [00:09<00:04,  1.46it/s]Predict:  83%|████████▎ | 25/30 [00:10<00:04,  1.23it/s]Predict:  87%|████████▋ | 26/30 [00:10<00:02,  1.52it/s]Predict:  90%|█████████ | 27/30 [00:10<00:01,  1.89it/s]Predict:  93%|█████████▎| 28/30 [00:11<00:01,  1.79it/s]Predict:  97%|█████████▋| 29/30 [00:11<00:00,  1.70it/s]Predict: 100%|██████████| 30/30 [00:12<00:00,  2.04it/s]Predict: 100%|██████████| 30/30 [00:12<00:00,  2.46it/s]
+  page 13/28 done in 30.4s, 703 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.64s/it]Predict: 100%|██████████| 1/1 [00:18<00:00, 18.64s/it]
+2026-08-17 16:21:24.598 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 101 223 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 117 484 132<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>190 137 503 152<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>118 188 251 205<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 217 223 230<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 234 643 249<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 253 430 269<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 272 434 287<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 310 225 323<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 328 230 342<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>149 345 570 360<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>149 364 664 380<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 383 683 398<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>084 429 422 451<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>131 462 227 476<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 479 543 494<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 518 227 531<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 535 393 550<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 574 227 587<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 590 846 605<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 629 227 642<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 645 867 681<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 704 227 717<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 721 473 736<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 759 227 773<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 776 692 791<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 815 227 829<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 832 504 847<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 871 227 884<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 887 768 903<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 920 572 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/31 [00:00<?, ?it/s]Predict:   3%|▎         | 1/31 [00:00<00:06,  4.73it/s]Predict:   6%|▋         | 2/31 [00:00<00:10,  2.66it/s]Predict:  10%|▉         | 3/31 [00:01<00:12,  2.22it/s]Predict:  13%|█▎        | 4/31 [00:01<00:10,  2.68it/s]Predict:  16%|█▌        | 5/31 [00:01<00:08,  3.18it/s]Predict:  19%|█▉        | 6/31 [00:02<00:11,  2.27it/s]Predict:  23%|██▎       | 7/31 [00:02<00:10,  2.33it/s]Predict:  26%|██▌       | 8/31 [00:03<00:09,  2.32it/s]Predict:  29%|██▉       | 9/31 [00:03<00:07,  2.76it/s]Predict:  32%|███▏      | 10/31 [00:03<00:06,  3.19it/s]Predict:  35%|███▌      | 11/31 [00:04<00:08,  2.32it/s]Predict:  39%|███▊      | 12/31 [00:05<00:10,  1.87it/s]Predict:  42%|████▏     | 13/31 [00:05<00:11,  1.58it/s]Predict:  45%|████▌     | 14/31 [00:06<00:09,  1.83it/s]Predict:  48%|████▊     | 15/31 [00:06<00:07,  2.27it/s]Predict:  52%|█████▏    | 16/31 [00:07<00:06,  2.19it/s]Predict:  55%|█████▍    | 17/31 [00:07<00:05,  2.61it/s]Predict:  58%|█████▊    | 18/31 [00:07<00:05,  2.43it/s]Predict:  61%|██████▏   | 19/31 [00:07<00:04,  2.85it/s]Predict:  65%|██████▍   | 20/31 [00:08<00:05,  2.09it/s]Predict:  68%|██████▊   | 21/31 [00:08<00:04,  2.47it/s]Predict:  71%|███████   | 22/31 [00:10<00:06,  1.43it/s]Predict:  74%|███████▍  | 23/31 [00:10<00:04,  1.79it/s]Predict:  77%|███████▋  | 24/31 [00:11<00:03,  1.81it/s]Predict:  81%|████████  | 25/31 [00:11<00:02,  2.17it/s]Predict:  84%|████████▍ | 26/31 [00:11<00:02,  2.21it/s]Predict:  87%|████████▋ | 27/31 [00:11<00:01,  2.64it/s]Predict:  90%|█████████ | 28/31 [00:12<00:01,  2.31it/s]Predict:  94%|█████████▎| 29/31 [00:12<00:00,  2.71it/s]Predict:  97%|█████████▋| 30/31 [00:13<00:00,  2.01it/s]Predict: 100%|██████████| 31/31 [00:13<00:00,  2.35it/s]Predict: 100%|██████████| 31/31 [00:13<00:00,  2.25it/s]
+  page 14/28 done in 32.5s, 798 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:17<00:00, 17.81s/it]Predict: 100%|██████████| 1/1 [00:17<00:00, 17.81s/it]
+2026-08-17 16:21:56.365 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 100 226 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 118 672 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 156 226 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 173 756 190<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 212 226 226<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 229 603 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 247 874 283<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 305 226 319<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 323 387 338<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 361 226 374<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 378 845 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 416 236 430<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 434 445 450<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 472 236 486<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 489 411 506<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 528 236 542<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 545 666 561<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 584 236 598<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 601 545 617<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 640 236 654<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 656 734 672<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 695 236 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 712 879 747<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 770 236 784<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 786 879 822<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 844 236 858<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 862 334 877<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 880 465 896<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>142 899 412 914<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 920 573 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/30 [00:00<?, ?it/s]Predict:   3%|▎         | 1/30 [00:00<00:06,  4.64it/s]Predict:   7%|▋         | 2/30 [00:01<00:15,  1.77it/s]Predict:  10%|█         | 3/30 [00:01<00:10,  2.48it/s]Predict:  13%|█▎        | 4/30 [00:01<00:14,  1.84it/s]Predict:  17%|█▋        | 5/30 [00:02<00:10,  2.39it/s]Predict:  20%|██        | 6/30 [00:02<00:11,  2.02it/s]Predict:  23%|██▎       | 7/30 [00:03<00:15,  1.51it/s]Predict:  27%|██▋       | 8/30 [00:04<00:11,  1.90it/s]Predict:  30%|███       | 9/30 [00:04<00:11,  1.89it/s]Predict:  33%|███▎      | 10/30 [00:04<00:08,  2.32it/s]Predict:  37%|███▋      | 11/30 [00:05<00:11,  1.65it/s]Predict:  40%|████      | 12/30 [00:06<00:08,  2.05it/s]Predict:  43%|████▎     | 13/30 [00:06<00:07,  2.35it/s]Predict:  47%|████▋     | 14/30 [00:06<00:05,  2.73it/s]Predict:  50%|█████     | 15/30 [00:06<00:04,  3.03it/s]Predict:  53%|█████▎    | 16/30 [00:07<00:04,  3.25it/s]Predict:  57%|█████▋    | 17/30 [00:07<00:05,  2.23it/s]Predict:  60%|██████    | 18/30 [00:08<00:04,  2.60it/s]Predict:  63%|██████▎   | 19/30 [00:08<00:04,  2.25it/s]Predict:  67%|██████▋   | 20/30 [00:08<00:03,  2.58it/s]Predict:  70%|███████   | 21/30 [00:09<00:04,  2.02it/s]Predict:  73%|███████▎  | 22/30 [00:09<00:03,  2.40it/s]Predict:  77%|███████▋  | 23/30 [00:11<00:04,  1.55it/s]Predict:  80%|████████  | 24/30 [00:11<00:03,  1.91it/s]Predict:  83%|████████▎ | 25/30 [00:12<00:03,  1.43it/s]Predict:  87%|████████▋ | 26/30 [00:12<00:02,  1.76it/s]Predict:  90%|█████████ | 27/30 [00:12<00:01,  2.11it/s]Predict:  93%|█████████▎| 28/30 [00:13<00:00,  2.32it/s]Predict:  97%|█████████▋| 29/30 [00:13<00:00,  2.60it/s]Predict: 100%|██████████| 30/30 [00:13<00:00,  2.82it/s]Predict: 100%|██████████| 30/30 [00:13<00:00,  2.17it/s]
+  page 15/28 done in 31.7s, 786 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:19<00:00, 19.43s/it]Predict: 100%|██████████| 1/1 [00:19<00:00, 19.43s/it]
+2026-08-17 16:22:29.794 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>143 079 374 095<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 098 303 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 117 376 132<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 135 478 150<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 153 583 169<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 172 373 187<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 191 530 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 210 338 224<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 228 393 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 246 443 262<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 265 376 280<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 284 410 299<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 302 373 317<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 320 425 336<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 340 408 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>143 358 338 373<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 396 235 410<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 413 875 448<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 470 235 484<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 488 875 522<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 544 235 558<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 562 557 578<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 600 231 614<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 618 867 634<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 656 234 670<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 674 875 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 730 234 744<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 748 860 764<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 786 234 800<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 804 875 838<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 860 234 874<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>133 878 875 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>437 919 569 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/33 [00:00<?, ?it/s]Predict:   3%|▎         | 1/33 [00:00<00:07,  4.48it/s]Predict:   6%|▌         | 2/33 [00:00<00:06,  4.75it/s]Predict:   9%|▉         | 3/33 [00:00<00:06,  4.58it/s]Predict:  12%|█▏        | 4/33 [00:00<00:07,  3.89it/s]Predict:  15%|█▌        | 5/33 [00:01<00:08,  3.25it/s]Predict:  18%|█▊        | 6/33 [00:01<00:07,  3.56it/s]Predict:  21%|██        | 7/33 [00:01<00:08,  3.19it/s]Predict:  24%|██▍       | 8/33 [00:02<00:06,  3.67it/s]Predict:  27%|██▋       | 9/33 [00:02<00:06,  3.74it/s]Predict:  30%|███       | 10/33 [00:02<00:06,  3.75it/s]Predict:  33%|███▎      | 11/33 [00:02<00:05,  4.00it/s]Predict:  36%|███▋      | 12/33 [00:03<00:05,  4.10it/s]Predict:  39%|███▉      | 13/33 [00:03<00:04,  4.31it/s]Predict:  42%|████▏     | 14/33 [00:03<00:04,  4.18it/s]Predict:  45%|████▌     | 15/33 [00:03<00:04,  4.14it/s]Predict:  48%|████▊     | 16/33 [00:04<00:03,  4.41it/s]Predict:  52%|█████▏    | 17/33 [00:04<00:03,  4.36it/s]Predict:  55%|█████▍    | 18/33 [00:04<00:05,  2.79it/s]Predict:  58%|█████▊    | 19/33 [00:05<00:04,  3.09it/s]Predict:  61%|██████    | 20/33 [00:05<00:05,  2.19it/s]Predict:  64%|██████▎   | 21/33 [00:06<00:04,  2.50it/s]Predict:  67%|██████▋   | 22/33 [00:06<00:05,  2.19it/s]Predict:  70%|██████▉   | 23/33 [00:07<00:03,  2.57it/s]Predict:  73%|███████▎  | 24/33 [00:07<00:04,  2.06it/s]Predict:  76%|███████▌  | 25/33 [00:07<00:03,  2.43it/s]Predict:  79%|███████▉  | 26/33 [00:09<00:04,  1.46it/s]Predict:  82%|████████▏ | 27/33 [00:09<00:03,  1.83it/s]Predict:  85%|████████▍ | 28/33 [00:10<00:03,  1.66it/s]Predict:  88%|████████▊ | 29/33 [00:10<00:01,  2.05it/s]Predict:  91%|█████████ | 30/33 [00:11<00:01,  1.62it/s]Predict:  94%|█████████▍| 31/33 [00:11<00:01,  1.99it/s]Predict:  97%|█████████▋| 32/33 [00:12<00:00,  1.41it/s]Predict: 100%|██████████| 33/33 [00:13<00:00,  1.65it/s]Predict: 100%|██████████| 33/33 [00:13<00:00,  2.50it/s]
+  page 16/28 done in 32.6s, 1138 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.63s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.63s/it]
+2026-08-17 16:22:56.764 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 100 234 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 118 873 154<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 174 234 189<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 192 874 227<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 249 234 263<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 266 875 302<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 323 234 337<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 340 875 376<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 398 234 412<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 415 875 451<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 472 234 486<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 489 875 525<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 546 234 560<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 563 875 599<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 621 234 635<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 638 875 673<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 695 234 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 712 875 748<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 769 234 783<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 786 875 821<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 844 234 858<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 861 875 896<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>440 920 571 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/23 [00:00<?, ?it/s]Predict:   4%|▍         | 1/23 [00:00<00:05,  4.16it/s]Predict:   9%|▊         | 2/23 [00:01<00:14,  1.43it/s]Predict:  13%|█▎        | 3/23 [00:01<00:09,  2.08it/s]Predict:  17%|█▋        | 4/23 [00:02<00:12,  1.56it/s]Predict:  22%|██▏       | 5/23 [00:02<00:09,  1.99it/s]Predict:  26%|██▌       | 6/23 [00:03<00:11,  1.52it/s]Predict:  30%|███       | 7/23 [00:03<00:08,  1.95it/s]Predict:  35%|███▍      | 8/23 [00:05<00:11,  1.34it/s]Predict:  39%|███▉      | 9/23 [00:05<00:08,  1.70it/s]Predict:  43%|████▎     | 10/23 [00:06<00:09,  1.43it/s]Predict:  48%|████▊     | 11/23 [00:06<00:06,  1.79it/s]Predict:  52%|█████▏    | 12/23 [00:07<00:07,  1.57it/s]Predict:  57%|█████▋    | 13/23 [00:07<00:05,  1.91it/s]Predict:  61%|██████    | 14/23 [00:08<00:05,  1.54it/s]Predict:  65%|██████▌   | 15/23 [00:08<00:04,  1.90it/s]Predict:  70%|██████▉   | 16/23 [00:09<00:04,  1.64it/s]Predict:  74%|███████▍  | 17/23 [00:09<00:02,  2.03it/s]Predict:  78%|███████▊  | 18/23 [00:10<00:03,  1.59it/s]Predict:  83%|████████▎ | 19/23 [00:10<00:02,  1.98it/s]Predict:  87%|████████▋ | 20/23 [00:11<00:01,  1.68it/s]Predict:  91%|█████████▏| 21/23 [00:11<00:00,  2.08it/s]Predict:  96%|█████████▌| 22/23 [00:12<00:00,  1.59it/s]Predict: 100%|██████████| 23/23 [00:13<00:00,  1.97it/s]Predict: 100%|██████████| 23/23 [00:13<00:00,  1.75it/s]
+  page 17/28 done in 26.8s, 1608 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:12<00:00, 12.83s/it]Predict: 100%|██████████| 1/1 [00:12<00:00, 12.83s/it]
+2026-08-17 16:23:22.910 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 082 234 096<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 100 873 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 156 234 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 174 873 209<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 230 234 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 248 873 282<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 305 234 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 322 873 376<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 397 234 411<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 415 873 450<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 472 234 486<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 490 873 524<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 546 234 560<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 564 873 599<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 621 234 635<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 639 873 692<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 713 234 727<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 731 873 785<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 806 234 820<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 824 873 878<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 899 234 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>439 920 570 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/22 [00:00<?, ?it/s]Predict:   5%|▍         | 1/22 [00:00<00:04,  4.83it/s]Predict:   9%|▉         | 2/22 [00:01<00:11,  1.78it/s]Predict:  14%|█▎        | 3/22 [00:01<00:07,  2.43it/s]Predict:  18%|█▊        | 4/22 [00:02<00:10,  1.66it/s]Predict:  23%|██▎       | 5/22 [00:02<00:08,  2.12it/s]Predict:  27%|██▋       | 6/22 [00:03<00:09,  1.67it/s]Predict:  32%|███▏      | 7/22 [00:03<00:07,  2.08it/s]Predict:  36%|███▋      | 8/22 [00:05<00:13,  1.02it/s]Predict:  41%|████      | 9/22 [00:05<00:09,  1.33it/s]Predict:  45%|████▌     | 10/22 [00:07<00:12,  1.07s/it]Predict:  50%|█████     | 11/22 [00:07<00:08,  1.24it/s]Predict:  55%|█████▍    | 12/22 [00:08<00:08,  1.14it/s]Predict:  59%|█████▉    | 13/22 [00:09<00:06,  1.46it/s]Predict:  64%|██████▎   | 14/22 [00:09<00:06,  1.30it/s]Predict:  68%|██████▊   | 15/22 [00:10<00:04,  1.65it/s]Predict:  73%|███████▎  | 16/22 [00:11<00:04,  1.23it/s]Predict:  77%|███████▋  | 17/22 [00:11<00:03,  1.57it/s]Predict:  82%|████████▏ | 18/22 [00:13<00:03,  1.01it/s]Predict:  86%|████████▋ | 19/22 [00:13<00:02,  1.31it/s]Predict:  91%|█████████ | 20/22 [00:15<00:01,  1.04it/s]Predict:  95%|█████████▌| 21/22 [00:15<00:00,  1.35it/s]Predict: 100%|██████████| 22/22 [00:15<00:00,  1.69it/s]Predict: 100%|██████████| 22/22 [00:15<00:00,  1.40it/s]
+  page 18/28 done in 28.5s, 1876 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.25s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.25s/it]
+2026-08-17 16:23:52.038 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>130 080 875 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 155 235 169<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 173 778 189<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 211 234 225<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 229 874 264<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 285 234 299<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 303 875 338<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 360 232 374<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 377 845 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 415 234 429<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 433 875 486<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 508 234 522<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 526 875 598<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 620 234 634<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 638 875 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 731 234 745<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 749 875 803<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 824 234 838<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 842 587 858<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 880 234 894<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 898 875 914<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>439 920 571 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/22 [00:00<?, ?it/s]Predict:   5%|▍         | 1/22 [00:01<00:30,  1.47s/it]Predict:   9%|▉         | 2/22 [00:01<00:14,  1.34it/s]Predict:  14%|█▎        | 3/22 [00:02<00:14,  1.35it/s]Predict:  18%|█▊        | 4/22 [00:02<00:09,  1.84it/s]Predict:  23%|██▎       | 5/22 [00:03<00:13,  1.31it/s]Predict:  27%|██▋       | 6/22 [00:04<00:09,  1.71it/s]Predict:  32%|███▏      | 7/22 [00:04<00:10,  1.49it/s]Predict:  36%|███▋      | 8/22 [00:05<00:07,  1.89it/s]Predict:  41%|████      | 9/22 [00:05<00:07,  1.66it/s]Predict:  45%|████▌     | 10/22 [00:06<00:05,  2.01it/s]Predict:  50%|█████     | 11/22 [00:07<00:08,  1.26it/s]Predict:  55%|█████▍    | 12/22 [00:07<00:06,  1.62it/s]Predict:  59%|█████▉    | 13/22 [00:10<00:10,  1.11s/it]Predict:  64%|██████▎   | 14/22 [00:10<00:06,  1.17it/s]Predict:  68%|██████▊   | 15/22 [00:12<00:07,  1.10s/it]Predict:  73%|███████▎  | 16/22 [00:12<00:05,  1.19it/s]Predict:  77%|███████▋  | 17/22 [00:13<00:05,  1.06s/it]Predict:  82%|████████▏ | 18/22 [00:14<00:03,  1.23it/s]Predict:  86%|████████▋ | 19/22 [00:14<00:02,  1.45it/s]Predict:  91%|█████████ | 20/22 [00:14<00:01,  1.81it/s]Predict:  95%|█████████▌| 21/22 [00:15<00:00,  1.56it/s]Predict: 100%|██████████| 22/22 [00:15<00:00,  1.89it/s]Predict: 100%|██████████| 22/22 [00:15<00:00,  1.39it/s]
+  page 19/28 done in 29.1s, 2090 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.07s/it]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.07s/it]
+2026-08-17 16:24:22.107 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>132 081 482 098<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 119 236 133<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 137 876 172<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 193 236 208<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 211 874 246<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 267 236 282<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 285 876 320<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 342 236 356<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 359 876 394<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 416 236 431<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 434 876 469<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 491 236 505<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 508 876 543<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 565 236 579<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 583 876 636<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 658 236 672<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 676 876 710<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 732 236 747<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 750 876 785<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 806 236 821<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 824 876 859<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 881 236 895<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 898 876 914<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>442 920 573 934<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/24 [00:00<?, ?it/s]Predict:   4%|▍         | 1/24 [00:00<00:05,  3.94it/s]Predict:   8%|▊         | 2/24 [00:00<00:05,  4.06it/s]Predict:  12%|█▎        | 3/24 [00:01<00:09,  2.15it/s]Predict:  17%|█▋        | 4/24 [00:01<00:07,  2.66it/s]Predict:  21%|██        | 5/24 [00:02<00:12,  1.52it/s]Predict:  25%|██▌       | 6/24 [00:02<00:09,  1.94it/s]Predict:  29%|██▉       | 7/24 [00:04<00:12,  1.32it/s]Predict:  33%|███▎      | 8/24 [00:04<00:09,  1.70it/s]Predict:  38%|███▊      | 9/24 [00:05<00:10,  1.41it/s]Predict:  42%|████▏     | 10/24 [00:05<00:07,  1.78it/s]Predict:  46%|████▌     | 11/24 [00:06<00:09,  1.38it/s]Predict:  50%|█████     | 12/24 [00:06<00:06,  1.75it/s]Predict:  54%|█████▍    | 13/24 [00:07<00:07,  1.39it/s]Predict:  58%|█████▊    | 14/24 [00:08<00:05,  1.75it/s]Predict:  62%|██████▎   | 15/24 [00:09<00:08,  1.11it/s]Predict:  67%|██████▋   | 16/24 [00:10<00:05,  1.42it/s]Predict:  71%|███████   | 17/24 [00:10<00:05,  1.34it/s]Predict:  75%|███████▌  | 18/24 [00:11<00:03,  1.68it/s]Predict:  79%|███████▉  | 19/24 [00:12<00:03,  1.36it/s]Predict:  83%|████████▎ | 20/24 [00:12<00:02,  1.72it/s]Predict:  88%|████████▊ | 21/24 [00:13<00:02,  1.46it/s]Predict:  92%|█████████▏| 22/24 [00:13<00:01,  1.83it/s]Predict:  96%|█████████▌| 23/24 [00:14<00:00,  1.60it/s]Predict: 100%|██████████| 24/24 [00:14<00:00,  1.95it/s]Predict: 100%|██████████| 24/24 [00:14<00:00,  1.64it/s]
+  page 20/28 done in 28.7s, 1794 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.42s/it]Predict: 100%|██████████| 1/1 [00:15<00:00, 15.42s/it]
+2026-08-17 16:24:52.331 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>141 079 216 096<|box_end|><|ref_start|>title<|ref_end|><|rotate_up|>
+<|box_start|>132 117 236 131<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 136 874 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 191 236 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 210 874 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 266 232 280<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 284 874 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 340 236 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 359 874 393<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 414 236 429<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 433 874 467<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 488 236 503<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 507 874 542<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 563 236 577<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 582 801 597<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 619 236 633<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 637 808 653<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 675 236 689<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 693 808 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 730 236 745<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 749 874 783<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 805 236 819<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 823 874 857<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 879 236 893<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 897 874 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>437 919 569 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/26 [00:00<?, ?it/s]Predict:   4%|▍         | 1/26 [00:00<00:03,  7.04it/s]Predict:   8%|▊         | 2/26 [00:00<00:04,  5.13it/s]Predict:  12%|█▏        | 3/26 [00:01<00:12,  1.88it/s]Predict:  15%|█▌        | 4/26 [00:01<00:09,  2.43it/s]Predict:  19%|█▉        | 5/26 [00:02<00:12,  1.70it/s]Predict:  23%|██▎       | 6/26 [00:02<00:09,  2.14it/s]Predict:  27%|██▋       | 7/26 [00:04<00:15,  1.25it/s]Predict:  31%|███       | 8/26 [00:04<00:11,  1.61it/s]Predict:  35%|███▍      | 9/26 [00:05<00:12,  1.38it/s]Predict:  38%|███▊      | 10/26 [00:05<00:09,  1.74it/s]Predict:  42%|████▏     | 11/26 [00:06<00:09,  1.63it/s]Predict:  46%|████▌     | 12/26 [00:06<00:06,  2.00it/s]Predict:  50%|█████     | 13/26 [00:07<00:07,  1.71it/s]Predict:  54%|█████▍    | 14/26 [00:07<00:05,  2.09it/s]Predict:  58%|█████▊    | 15/26 [00:08<00:06,  1.80it/s]Predict:  62%|██████▏   | 16/26 [00:08<00:04,  2.18it/s]Predict:  65%|██████▌   | 17/26 [00:09<00:04,  1.88it/s]Predict:  69%|██████▉   | 18/26 [00:09<00:03,  2.23it/s]Predict:  73%|███████▎  | 19/26 [00:10<00:03,  2.00it/s]Predict:  77%|███████▋  | 20/26 [00:10<00:02,  2.39it/s]Predict:  81%|████████  | 21/26 [00:11<00:02,  1.79it/s]Predict:  85%|████████▍ | 22/26 [00:11<00:01,  2.21it/s]Predict:  88%|████████▊ | 23/26 [00:12<00:01,  1.74it/s]Predict:  92%|█████████▏| 24/26 [00:12<00:00,  2.15it/s]Predict:  96%|█████████▌| 25/26 [00:13<00:00,  1.94it/s]Predict: 100%|██████████| 26/26 [00:13<00:00,  2.31it/s]Predict: 100%|██████████| 26/26 [00:13<00:00,  1.95it/s]
+  page 21/28 done in 28.8s, 1568 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.98s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.98s/it]
+2026-08-17 16:25:19.833 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 080 778 098<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 118 233 132<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 136 874 171<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 193 235 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 210 875 246<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 267 234 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 285 874 319<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 341 235 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 359 875 394<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 415 235 430<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 433 875 469<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 490 235 504<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 507 875 561<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 583 235 597<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 600 875 636<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 657 235 671<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 675 875 710<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 731 235 746<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 749 875 784<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 806 235 820<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 824 875 859<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>132 880 235 894<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 898 875 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>440 919 571 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/24 [00:00<?, ?it/s]Predict:   4%|▍         | 1/24 [00:00<00:11,  2.03it/s]Predict:   8%|▊         | 2/24 [00:00<00:07,  2.92it/s]Predict:  12%|█▎        | 3/24 [00:01<00:11,  1.84it/s]Predict:  17%|█▋        | 4/24 [00:01<00:08,  2.38it/s]Predict:  21%|██        | 5/24 [00:02<00:10,  1.87it/s]Predict:  25%|██▌       | 6/24 [00:02<00:07,  2.32it/s]Predict:  29%|██▉       | 7/24 [00:03<00:08,  1.95it/s]Predict:  33%|███▎      | 8/24 [00:03<00:06,  2.37it/s]Predict:  38%|███▊      | 9/24 [00:04<00:09,  1.64it/s]Predict:  42%|████▏     | 10/24 [00:04<00:06,  2.04it/s]Predict:  46%|████▌     | 11/24 [00:06<00:10,  1.20it/s]Predict:  50%|█████     | 12/24 [00:06<00:07,  1.55it/s]Predict:  54%|█████▍    | 13/24 [00:08<00:10,  1.04it/s]Predict:  58%|█████▊    | 14/24 [00:08<00:07,  1.34it/s]Predict:  62%|██████▎   | 15/24 [00:10<00:08,  1.02it/s]Predict:  67%|██████▋   | 16/24 [00:10<00:06,  1.33it/s]Predict:  71%|███████   | 17/24 [00:11<00:06,  1.07it/s]Predict:  75%|███████▌  | 18/24 [00:11<00:04,  1.38it/s]Predict:  79%|███████▉  | 19/24 [00:13<00:04,  1.11it/s]Predict:  83%|████████▎ | 20/24 [00:13<00:02,  1.42it/s]Predict:  88%|████████▊ | 21/24 [00:14<00:02,  1.16it/s]Predict:  92%|█████████▏| 22/24 [00:14<00:01,  1.48it/s]Predict:  96%|█████████▌| 23/24 [00:16<00:00,  1.28it/s]Predict: 100%|██████████| 24/24 [00:16<00:00,  1.62it/s]Predict: 100%|██████████| 24/24 [00:16<00:00,  1.48it/s]
+  page 22/28 done in 30.3s, 1956 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.86s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.86s/it]
+2026-08-17 16:25:50.124 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 081 401 097<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 119 233 132<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 137 872 171<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 193 233 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 211 872 245<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 267 233 280<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 285 872 320<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 342 233 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 359 872 394<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 416 233 429<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 434 872 487<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 509 233 522<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 526 872 561<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 583 233 597<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 601 872 636<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 658 233 671<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 675 877 710<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 732 233 746<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 750 877 785<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 806 233 820<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 824 877 859<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 880 233 894<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 898 877 913<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>440 920 570 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/24 [00:00<?, ?it/s]Predict:   4%|▍         | 1/24 [00:00<00:04,  4.87it/s]Predict:   8%|▊         | 2/24 [00:00<00:04,  4.52it/s]Predict:  12%|█▎        | 3/24 [00:01<00:15,  1.37it/s]Predict:  17%|█▋        | 4/24 [00:02<00:10,  1.85it/s]Predict:  21%|██        | 5/24 [00:02<00:11,  1.59it/s]Predict:  25%|██▌       | 6/24 [00:03<00:08,  2.03it/s]Predict:  29%|██▉       | 7/24 [00:04<00:12,  1.37it/s]Predict:  33%|███▎      | 8/24 [00:04<00:09,  1.75it/s]Predict:  38%|███▊      | 9/24 [00:05<00:11,  1.27it/s]Predict:  42%|████▏     | 10/24 [00:05<00:08,  1.63it/s]Predict:  46%|████▌     | 11/24 [00:07<00:10,  1.19it/s]Predict:  50%|█████     | 12/24 [00:07<00:07,  1.54it/s]Predict:  54%|█████▍    | 13/24 [00:09<00:11,  1.04s/it]Predict:  58%|█████▊    | 14/24 [00:09<00:07,  1.25it/s]Predict:  62%|██████▎   | 15/24 [00:10<00:07,  1.20it/s]Predict:  67%|██████▋   | 16/24 [00:10<00:05,  1.54it/s]Predict:  71%|███████   | 17/24 [00:11<00:04,  1.54it/s]Predict:  75%|███████▌  | 18/24 [00:11<00:03,  1.91it/s]Predict:  79%|███████▉  | 19/24 [00:12<00:03,  1.65it/s]Predict:  83%|████████▎ | 20/24 [00:12<00:01,  2.02it/s]Predict:  88%|████████▊ | 21/24 [00:13<00:01,  1.79it/s]Predict:  92%|█████████▏| 22/24 [00:13<00:00,  2.16it/s]Predict:  96%|█████████▌| 23/24 [00:14<00:00,  1.79it/s]Predict: 100%|██████████| 24/24 [00:14<00:00,  2.17it/s]Predict: 100%|██████████| 24/24 [00:14<00:00,  1.63it/s]
+  page 23/28 done in 28.6s, 1729 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.14s/it]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.14s/it]
+2026-08-17 16:26:19.166 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 078 375 094<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 116 233 129<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 134 873 168<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 190 233 204<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 209 873 242<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 264 233 278<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 283 872 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 338 233 353<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 357 872 392<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 413 233 427<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 431 872 464<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 487 233 501<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 506 873 540<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 561 233 575<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 580 780 596<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 617 233 631<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 636 787 652<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 673 233 687<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>129 692 872 725<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 747 233 761<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>129 766 872 801<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>129 821 233 836<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>129 840 872 893<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>433 918 564 931<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/24 [00:00<?, ?it/s]Predict:   4%|▍         | 1/24 [00:00<00:05,  4.10it/s]Predict:   8%|▊         | 2/24 [00:00<00:04,  4.41it/s]Predict:  12%|█▎        | 3/24 [00:01<00:10,  1.94it/s]Predict:  17%|█▋        | 4/24 [00:01<00:08,  2.47it/s]Predict:  21%|██        | 5/24 [00:02<00:10,  1.90it/s]Predict:  25%|██▌       | 6/24 [00:02<00:07,  2.34it/s]Predict:  29%|██▉       | 7/24 [00:03<00:11,  1.51it/s]Predict:  33%|███▎      | 8/24 [00:03<00:08,  1.90it/s]Predict:  38%|███▊      | 9/24 [00:04<00:09,  1.59it/s]Predict:  42%|████▏     | 10/24 [00:04<00:07,  1.98it/s]Predict:  46%|████▌     | 11/24 [00:05<00:07,  1.79it/s]Predict:  50%|█████     | 12/24 [00:05<00:05,  2.17it/s]Predict:  54%|█████▍    | 13/24 [00:06<00:06,  1.65it/s]Predict:  58%|█████▊    | 14/24 [00:07<00:04,  2.03it/s]Predict:  62%|██████▎   | 15/24 [00:07<00:05,  1.78it/s]Predict:  67%|██████▋   | 16/24 [00:08<00:03,  2.18it/s]Predict:  71%|███████   | 17/24 [00:08<00:03,  1.87it/s]Predict:  75%|███████▌  | 18/24 [00:08<00:02,  2.22it/s]Predict:  79%|███████▉  | 19/24 [00:09<00:03,  1.64it/s]Predict:  83%|████████▎ | 20/24 [00:10<00:01,  2.02it/s]Predict:  88%|████████▊ | 21/24 [00:11<00:02,  1.41it/s]Predict:  92%|█████████▏| 22/24 [00:11<00:01,  1.78it/s]Predict:  96%|█████████▌| 23/24 [00:13<00:00,  1.13it/s]Predict: 100%|██████████| 24/24 [00:13<00:00,  1.38it/s]Predict: 100%|██████████| 24/24 [00:13<00:00,  1.76it/s]
+  page 24/28 done in 27.8s, 1635 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.37s/it]Predict: 100%|██████████| 1/1 [00:13<00:00, 13.37s/it]
+2026-08-17 16:26:46.325 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 081 236 095<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 099 876 134<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 155 236 169<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 173 874 209<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 229 236 244<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 247 875 283<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 304 236 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 321 875 375<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 396 236 411<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 414 875 450<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 470 236 485<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 489 875 525<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 545 236 559<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 563 875 599<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 619 236 634<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 638 875 673<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 694 236 708<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 712 875 747<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 768 236 783<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 786 875 821<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 843 236 857<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 861 879 896<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>439 919 571 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/23 [00:00<?, ?it/s]Predict:   4%|▍         | 1/23 [00:00<00:05,  4.09it/s]Predict:   9%|▊         | 2/23 [00:01<00:16,  1.31it/s]Predict:  13%|█▎        | 3/23 [00:01<00:10,  1.91it/s]Predict:  17%|█▋        | 4/23 [00:02<00:13,  1.38it/s]Predict:  22%|██▏       | 5/23 [00:02<00:09,  1.83it/s]Predict:  26%|██▌       | 6/23 [00:03<00:12,  1.38it/s]Predict:  30%|███       | 7/23 [00:04<00:08,  1.78it/s]Predict:  35%|███▍      | 8/23 [00:05<00:14,  1.07it/s]Predict:  39%|███▉      | 9/23 [00:06<00:10,  1.39it/s]Predict:  43%|████▎     | 10/23 [00:06<00:09,  1.33it/s]Predict:  48%|████▊     | 11/23 [00:07<00:07,  1.69it/s]Predict:  52%|█████▏    | 12/23 [00:08<00:08,  1.36it/s]Predict:  57%|█████▋    | 13/23 [00:08<00:05,  1.72it/s]Predict:  61%|██████    | 14/23 [00:09<00:06,  1.45it/s]Predict:  65%|██████▌   | 15/23 [00:09<00:04,  1.81it/s]Predict:  70%|██████▉   | 16/23 [00:10<00:04,  1.54it/s]Predict:  74%|███████▍  | 17/23 [00:10<00:03,  1.91it/s]Predict:  78%|███████▊  | 18/23 [00:11<00:03,  1.56it/s]Predict:  83%|████████▎ | 19/23 [00:11<00:02,  1.93it/s]Predict:  87%|████████▋ | 20/23 [00:12<00:02,  1.49it/s]Predict:  91%|█████████▏| 21/23 [00:13<00:01,  1.86it/s]Predict:  96%|█████████▌| 22/23 [00:14<00:00,  1.48it/s]Predict: 100%|██████████| 23/23 [00:14<00:00,  1.82it/s]Predict: 100%|██████████| 23/23 [00:14<00:00,  1.59it/s]
+  page 25/28 done in 27.8s, 1800 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.49s/it]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.49s/it]
+2026-08-17 16:27:15.408 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 079 236 094<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 098 876 133<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 153 236 168<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 172 874 207<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 227 236 242<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 246 875 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 302 236 317<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 320 875 356<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 376 236 391<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 395 875 430<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 450 236 465<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 469 874 504<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 524 236 540<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 544 874 578<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 599 236 614<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 618 874 653<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 673 236 688<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 692 874 710<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 729 236 744<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 748 874 784<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 803 236 818<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 822 783 839<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 859 236 874<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 878 831 895<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>435 918 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/25 [00:00<?, ?it/s]Predict:   4%|▍         | 1/25 [00:00<00:05,  4.35it/s]Predict:   8%|▊         | 2/25 [00:01<00:14,  1.59it/s]Predict:  12%|█▏        | 3/25 [00:01<00:09,  2.25it/s]Predict:  16%|█▌        | 4/25 [00:02<00:12,  1.74it/s]Predict:  20%|██        | 5/25 [00:02<00:08,  2.24it/s]Predict:  24%|██▍       | 6/25 [00:03<00:10,  1.76it/s]Predict:  28%|██▊       | 7/25 [00:03<00:08,  2.18it/s]Predict:  32%|███▏      | 8/25 [00:04<00:09,  1.79it/s]Predict:  36%|███▌      | 9/25 [00:04<00:07,  2.17it/s]Predict:  40%|████      | 10/25 [00:05<00:09,  1.59it/s]Predict:  44%|████▍     | 11/25 [00:05<00:07,  2.00it/s]Predict:  48%|████▊     | 12/25 [00:06<00:08,  1.59it/s]Predict:  52%|█████▏    | 13/25 [00:06<00:06,  1.97it/s]Predict:  56%|█████▌    | 14/25 [00:07<00:06,  1.73it/s]Predict:  60%|██████    | 15/25 [00:07<00:04,  2.08it/s]Predict:  64%|██████▍   | 16/25 [00:08<00:05,  1.74it/s]Predict:  68%|██████▊   | 17/25 [00:08<00:03,  2.14it/s]Predict:  72%|███████▏  | 18/25 [00:09<00:03,  2.07it/s]Predict:  76%|███████▌  | 19/25 [00:09<00:02,  2.48it/s]Predict:  80%|████████  | 20/25 [00:10<00:03,  1.51it/s]Predict:  84%|████████▍ | 21/25 [00:10<00:02,  1.90it/s]Predict:  88%|████████▊ | 22/25 [00:11<00:01,  1.71it/s]Predict:  92%|█████████▏| 23/25 [00:11<00:00,  2.06it/s]Predict:  96%|█████████▌| 24/25 [00:12<00:00,  1.83it/s]Predict: 100%|██████████| 25/25 [00:12<00:00,  2.18it/s]Predict: 100%|██████████| 25/25 [00:12<00:00,  1.94it/s]
+  page 26/28 done in 27.4s, 1587 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.73s/it]Predict: 100%|██████████| 1/1 [00:14<00:00, 14.73s/it]
+2026-08-17 16:27:43.228 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>131 080 233 094<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 099 528 114<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 135 233 150<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 154 710 170<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 191 233 206<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 210 843 226<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 247 233 261<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 265 872 300<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 321 233 336<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 340 872 374<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 395 233 410<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 414 872 449<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 470 233 484<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 488 872 522<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 544 233 558<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 563 872 598<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 618 233 633<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 637 872 672<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 693 233 707<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 712 872 746<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 767 233 782<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 786 872 820<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 842 233 856<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>131 860 872 894<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>435 919 567 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/25 [00:00<?, ?it/s]Predict:   4%|▍         | 1/25 [00:00<00:05,  4.63it/s]Predict:   8%|▊         | 2/25 [00:00<00:10,  2.30it/s]Predict:  12%|█▏        | 3/25 [00:01<00:07,  2.93it/s]Predict:  16%|█▌        | 4/25 [00:01<00:09,  2.14it/s]Predict:  20%|██        | 5/25 [00:01<00:07,  2.58it/s]Predict:  24%|██▍       | 6/25 [00:02<00:09,  1.97it/s]Predict:  28%|██▊       | 7/25 [00:02<00:07,  2.35it/s]Predict:  32%|███▏      | 8/25 [00:03<00:10,  1.69it/s]Predict:  36%|███▌      | 9/25 [00:04<00:07,  2.10it/s]Predict:  40%|████      | 10/25 [00:05<00:10,  1.41it/s]Predict:  44%|████▍     | 11/25 [00:05<00:07,  1.78it/s]Predict:  48%|████▊     | 12/25 [00:06<00:10,  1.27it/s]Predict:  52%|█████▏    | 13/25 [00:07<00:07,  1.62it/s]Predict:  56%|█████▌    | 14/25 [00:08<00:08,  1.34it/s]Predict:  60%|██████    | 15/25 [00:08<00:05,  1.68it/s]Predict:  64%|██████▍   | 16/25 [00:09<00:07,  1.24it/s]Predict:  68%|██████▊   | 17/25 [00:09<00:05,  1.58it/s]Predict:  72%|███████▏  | 18/25 [00:11<00:05,  1.25it/s]Predict:  76%|███████▌  | 19/25 [00:11<00:03,  1.57it/s]Predict:  80%|████████  | 20/25 [00:12<00:03,  1.37it/s]Predict:  84%|████████▍ | 21/25 [00:12<00:02,  1.74it/s]Predict:  88%|████████▊ | 22/25 [00:13<00:02,  1.43it/s]Predict:  92%|█████████▏| 23/25 [00:13<00:01,  1.80it/s]Predict:  96%|█████████▌| 24/25 [00:14<00:00,  1.49it/s]Predict: 100%|██████████| 25/25 [00:15<00:00,  1.61it/s]Predict: 100%|██████████| 25/25 [00:15<00:00,  1.65it/s]
+  page 27/28 done in 29.9s, 1785 chars
+Predict:   0%|          | 0/1 [00:00<?, ?it/s]Predict: 100%|██████████| 1/1 [00:28<00:00, 28.40s/it]Predict: 100%|██████████| 1/1 [00:28<00:00, 28.40s/it]
+2026-08-17 16:28:27.070 | DEBUG    | mineru_vl_utils.mineru_client:parse_layout_output:239 - Layout raw output: 
+<|box_start|>130 080 232 095<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 099 871 133<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 154 232 169<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 173 871 207<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 228 232 243<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 247 871 281<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 303 232 318<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 321 871 355<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 377 232 392<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 395 873 430<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 451 232 466<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 470 871 504<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 525 232 540<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 544 815 560<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 581 232 596<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 600 873 635<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 655 232 670<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 674 871 709<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 730 232 745<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 748 871 783<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 804 232 819<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>130 823 873 858<|box_end|><|ref_start|>text<|ref_end|><|rotate_up|>
+<|box_start|>436 919 568 933<|box_end|><|ref_start|>page_number<|ref_end|><|rotate_up|>
+Predict:   0%|          | 0/23 [00:00<?, ?it/s]Predict:   4%|▍         | 1/23 [00:00<00:09,  2.35it/s]Predict:   9%|▊         | 2/23 [00:02<00:26,  1.28s/it]Predict:  13%|█▎        | 3/23 [00:02<00:17,  1.12it/s]Predict:  17%|█▋        | 4/23 [00:04<00:22,  1.19s/it]Predict:  22%|██▏       | 5/23 [00:04<00:16,  1.10it/s]Predict:  26%|██▌       | 6/23 [00:06<00:19,  1.15s/it]Predict:  30%|███       | 7/23 [00:06<00:14,  1.10it/s]Predict:  35%|███▍      | 8/23 [00:08<00:17,  1.15s/it]Predict:  39%|███▉      | 9/23 [00:08<00:12,  1.09it/s]Predict:  43%|████▎     | 10/23 [00:10<00:15,  1.22s/it]Predict:  48%|████▊     | 11/23 [00:11<00:11,  1.02it/s]Predict:  52%|█████▏    | 12/23 [00:13<00:14,  1.28s/it]Predict:  57%|█████▋    | 13/23 [00:13<00:10,  1.02s/it]Predict:  61%|██████    | 14/23 [00:14<00:09,  1.08s/it]Predict:  65%|██████▌   | 15/23 [00:15<00:07,  1.13it/s]Predict:  70%|██████▉   | 16/23 [00:16<00:07,  1.02s/it]Predict:  74%|███████▍  | 17/23 [00:17<00:05,  1.19it/s]Predict:  78%|███████▊  | 18/23 [00:18<00:05,  1.11s/it]Predict:  83%|████████▎ | 19/23 [00:19<00:03,  1.10it/s]Predict:  87%|████████▋ | 20/23 [00:21<00:03,  1.30s/it]Predict:  91%|█████████▏| 21/23 [00:21<00:02,  1.04s/it]Predict:  96%|█████████▌| 22/23 [00:24<00:01,  1.42s/it]Predict: 100%|██████████| 23/23 [00:24<00:00,  1.13s/it]Predict: 100%|██████████| 23/23 [00:24<00:00,  1.07s/it]
+  page 28/28 done in 53.0s, 1433 chars
+=== DONE 设计输入 -> E:\A_nrf_sample_codes\working_team_work\public\project\git_project\design_plan_generation_local_model\design_planning_generation_local_model\_mineru_设计输入.md (32910 chars) ===
+=== ALL DONE ===

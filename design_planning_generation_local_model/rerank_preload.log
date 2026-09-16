@@ -1,0 +1,26 @@
+E:\anaconda\anaconda_content\envs\env_01\lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+[Reranker] 已加载 BAAI/bge-reranker-v2-m3 到 GPU (FP16)
+=== reranker preloaded ===
+    [VectorStore] retrieve_hybrid start — query='ISO 14971 风险分析'
+    [Embedder] 已完成 1/1 条向量化
+    [VectorStore] embedding done (0.5s)
+Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+Failed to send telemetry event CollectionQueryEvent: capture() takes 1 positional argument but 3 were given
+    [VectorStore] vector search done — 60 results (0.8s from embed start)
+Failed to send telemetry event CollectionGetEvent: capture() takes 1 positional argument but 3 were given
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Users\WANGZI~1\AppData\Local\Temp\jieba.cache
+Loading model cost 0.400 seconds.
+Prefix dict has been built successfully.
+[Tokenizer] 已加载领域词典: E:\nrf_sample_codes\working_team_work\public\project\git_project\design_plan_generation_local_model\design_planning_generation_local_model\app\services\rag\medical_device_dict.txt
+[Tokenizer] 已加载 96 个停用词
+    [VectorStore] BM25 done — 60 results (23.6s)
+    [VectorStore] retrieve_hybrid done — 30 results, total 24.4s
+[TwoStage] 粗召回完成: 30 候选 (24.4s)
+You're using a XLMRobertaTokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+[TwoStage] 精排完成: 5 结果 (1.5s), 总耗时 25.9s
+rerank: 5 results in 25.9s
+  rerank=0.981  GB 9706.1-2020 标准解读-药监局标准管理中心 编.pdf
+  rerank=0.981  GB 9706.1-2020 标准解读（蓝宝书）.pdf
+  rerank=0.966  GBT 16886.1-2025草案稿.pdf

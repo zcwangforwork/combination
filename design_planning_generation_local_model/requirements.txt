@@ -1,0 +1,30 @@
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+python-docx==1.1.0
+requests==2.31.0
+pydantic==2.5.3
+chromadb==0.4.22
+sentence-transformers>=3.0.0
+torch>=2.0.0
+numpy<2.0
+rank_bm25>=0.2.2
+jieba>=0.42.1
+playwright>=1.40.0
+ddgs>=9.0.0
+python-dotenv>=1.0.0
+volcenginesdkarkruntime>=1.0.0
+claude-agent-sdk
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite>=2.0.0
+langgraph-checkpoint-postgres>=2.0.0
+psycopg[binary]>=3.1.0
+langchain-openai>=0.1.0
+langchain-core>=0.2.0
+aiofiles>=23.0.0
+pytest-asyncio>=0.23.0
+# MinerU 文档解析（opt-in，需设置 USE_MINERU=true 启用）
+langchain-mineru>=0.1.0
+mineru-open-sdk
+# OpenViking 集成（Phase 1 capture-only，评审决策 #7 锁定版本）
+langchain-openviking[langgraph]==0.1.0

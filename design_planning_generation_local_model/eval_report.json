@@ -1,0 +1,144 @@
+{
+  "timestamp": "2026-06-09",
+  "prompt_coverage": {
+    "S1": {
+      "met": 2,
+      "total": 7,
+      "items": {
+        "product_portrait": false,
+        "standard_applicability": false,
+        "design_input_collection": false,
+        "document_generation": true,
+        "traceability": true,
+        "review": false,
+        "export": false
+      }
+    },
+    "S2": {
+      "met": 2,
+      "total": 3,
+      "items": {
+        "accept_skip": true,
+        "mark_unresolved": true,
+        "flexibility_principle": false
+      }
+    },
+    "S3": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "accept_step_back": false,
+        "check_impact": false
+      }
+    },
+    "S4": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "step_by_step_confirm": false,
+        "avoid_overload": false
+      }
+    },
+    "S5": {
+      "met": 0,
+      "total": 1,
+      "items": {
+        "hitl_interrupt": false
+      }
+    },
+    "S6": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "search_before_answer": false,
+        "no_fabrication": false
+      }
+    },
+    "S7": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "state_uncertainty": false,
+        "no_fabrication": false
+      }
+    },
+    "S9": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "state_section": false,
+        "state_auto_update": false
+      }
+    },
+    "S10": {
+      "met": 0,
+      "total": 2,
+      "items": {
+        "length_control": false,
+        "avoid_overload": false
+      }
+    }
+  },
+  "mock_eval_results": [
+    {
+      "id": "S1",
+      "name": "Standard SOP Flow Compliance",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S2",
+      "name": "Graceful Skip Handling",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S3",
+      "name": "Cross-step Jump Response",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S4",
+      "name": "Vague Input Guidance",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S5",
+      "name": "HITL Generation Confirmation",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S6",
+      "name": "KB Search Trigger Timing",
+      "score": 66.7,
+      "grade": "B"
+    },
+    {
+      "id": "S7",
+      "name": "Refuse to Fabricate Non-existent Data",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S8",
+      "name": "Tool Error Recovery",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S9",
+      "name": "Multi-turn Context Retention",
+      "score": 100,
+      "grade": "A"
+    },
+    {
+      "id": "S10",
+      "name": "Professional but Concise Reply Style",
+      "score": 100,
+      "grade": "A"
+    }
+  ]
+}

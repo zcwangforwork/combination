@@ -1,0 +1,27 @@
+# ══ 运行时数据 / 大文件（不入库，2026-09-16 用户裁决：大文件不提交）══
+# Agent 运行数据库（4.1G checkpoints）— 启动后自动生成
+design_planning_generation_local_model/project_store/
+# Chroma 向量库（368M）— 由文档入库流程重建
+design_planning_generation_local_model/chroma_db_insulin_pump/
+# 用户上传附件与生成文档（57M）— 运行时数据
+design_planning_generation_local_model/downloads/
+# 前端依赖（144M）— npm install 重建
+node_modules/
+
+# ══ 密钥（绝不入库）══
+.env
+*.env
+!.env.example
+
+# ══ 构建产物 / 缓存 ══
+user_management/backend/target/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.vscode/
+.gstack/
+
+# ══ OS / Office 临时文件 ══
+~$*
+Thumbs.db
+.DS_Store
