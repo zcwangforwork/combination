@@ -5,7 +5,7 @@ API Routes - 文档生成接口（异步任务模式）+ 附件上传接口
 import uuid
 import asyncio
 import threading
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.services.generator import DocumentGenerator
@@ -14,6 +14,7 @@ from app.services.attachment_service import (
     validate_upload, submit_extract_task, get_extract_status
 )
 from app.services.conversation import conversation_manager
+from app.services.agent_auth import require_user, require_project_access
 import io
 import json
 import os
@@ -655,7 +656,7 @@ def _sse_subscribe_response(stream, from_seq: int = 0):
     )
 
 
-@router.post("/agent/projects/{project_id}/messages")
+@router.post("/agent/projects/{project_id}/messages", dependencies=[Depends(require_project_access)])
 async def agent_send_message(
     project_id: str,
     message: str = Form(...),
@@ -705,7 +706,7 @@ async def agent_send_message(
     return _sse_subscribe_response(stream, from_seq=0)
 
 
-@router.get("/agent/projects/{project_id}/stream/status")
+@router.get("/agent/projects/{project_id}/stream/status", dependencies=[Depends(require_project_access)])
 async def agent_stream_status(project_id: str):
     """查询项目后台生成流状态（前端页面加载/切回任务时决定是否重连续播）
 
@@ -722,7 +723,7 @@ async def agent_stream_status(project_id: str):
     return agent_streams.get_status(project_id)
 
 
-@router.get("/agent/projects/{project_id}/stream")
+@router.get("/agent/projects/{project_id}/stream", dependencies=[Depends(require_project_access)])
 async def agent_stream_reconnect(project_id: str, from_seq: int = 0):
     """重连项目后台生成流：回放已缓冲事件并继续实时订阅
 
@@ -741,7 +742,7 @@ async def agent_stream_reconnect(project_id: str, from_seq: int = 0):
     return _sse_subscribe_response(stream, from_seq=from_seq)
 
 
-@router.post("/agent/projects/{project_id}/stream/cancel")
+@router.post("/agent/projects/{project_id}/stream/cancel", dependencies=[Depends(require_project_access)])
 async def agent_stream_cancel(project_id: str):
     """取消项目进行中的后台生成任务
 
@@ -753,7 +754,7 @@ async def agent_stream_cancel(project_id: str):
     return {"success": True, "cancelled": cancelled}
 
 
-@router.post("/agent/projects/{project_id}/mode")
+@router.post("/agent/projects/{project_id}/mode", dependencies=[Depends(require_project_access)])
 async def agent_set_generation_mode(
     project_id: str,
     style: str = Form(...),
@@ -793,7 +794,7 @@ async def agent_set_generation_mode(
         raise HTTPException(status_code=500, detail=f"设置文档风格失败: {str(e)}")
 
 
-@router.post("/agent/projects/{project_id}/resume")
+@router.post("/agent/projects/{project_id}/resume", dependencies=[Depends(require_project_access)])
 async def agent_resume(
     project_id: str,
     decision: str = Form(...),
@@ -835,7 +836,7 @@ async def agent_resume(
     return _sse_subscribe_response(stream, from_seq=0)
 
 
-@router.post("/agent/projects/{project_id}/summarize")
+@router.post("/agent/projects/{project_id}/summarize", dependencies=[Depends(require_project_access)])
 async def agent_summarize(
     project_id: str,
     mode: str = Form(..., description='精简模式: "words" 字数模式 | "ratio" 比例模式'),
@@ -1020,7 +1021,7 @@ async def agent_summarize(
     )
 
 
-@router.post("/agent/projects/{project_id}/auto-generate")
+@router.post("/agent/projects/{project_id}/auto-generate", dependencies=[Depends(require_project_access)])
 async def agent_auto_generate(
     project_id: str,
     product_name: str = Form(...),
@@ -1103,7 +1104,7 @@ async def agent_auto_generate(
     return _sse_subscribe_response(stream, from_seq=0)
 
 
-@router.post("/agent/projects/{project_id}/batch-generate")
+@router.post("/agent/projects/{project_id}/batch-generate", dependencies=[Depends(require_project_access)])
 async def agent_batch_generate(
     project_id: str,
     product_name: str = Form(...),
@@ -1190,7 +1191,7 @@ async def agent_batch_generate(
 _batch_results = {}
 
 
-@router.get("/agent/batch-download/{project_id}")
+@router.get("/agent/batch-download/{project_id}", dependencies=[Depends(require_project_access)])
 async def agent_batch_download(project_id: str):
     """下载批量生成的ZIP文件"""
     if project_id not in _batch_results:
@@ -1208,7 +1209,7 @@ async def agent_batch_download(project_id: str):
     )
 
 
-@router.get("/agent/projects/{project_id}/state")
+@router.get("/agent/projects/{project_id}/state", dependencies=[Depends(require_project_access)])
 async def agent_get_state(project_id: str):
     """获取Agent当前状态快照 (供前端进度面板使用)
 
@@ -1226,7 +1227,7 @@ async def agent_get_state(project_id: str):
         return {"success": True, "state": state, "note": f"使用默认状态 (Agent: {str(e)})"}
 
 
-@router.get("/agent/projects/{project_id}/document")
+@router.get("/agent/projects/{project_id}/document", dependencies=[Depends(require_project_access)])
 async def agent_get_document(project_id: str):
     """获取Agent已生成文档的组装内容（供审阅页面使用）
 
@@ -1276,7 +1277,7 @@ async def agent_get_document(project_id: str):
     }
 
 
-@router.post("/agent/projects/{project_id}/document")
+@router.post("/agent/projects/{project_id}/document", dependencies=[Depends(require_project_access)])
 async def agent_update_document(project_id: str, request: DocumentUpdateRequest):
     """审阅页面保存修改后的文档内容
 
@@ -1319,7 +1320,7 @@ async def agent_update_document(project_id: str, request: DocumentUpdateRequest)
     }
 
 
-@router.get("/agent/projects/{project_id}/download")
+@router.get("/agent/projects/{project_id}/download", dependencies=[Depends(require_project_access)])
 async def agent_download_document(project_id: str):
     """直接从Agent状态组装文档并下载（无需Agent参与）
 
@@ -1413,7 +1414,7 @@ async def agent_download_document(project_id: str):
     )
 
 
-@router.get("/agent/download/{download_id}")
+@router.get("/agent/download/{download_id}", dependencies=[Depends(require_user)])
 async def agent_download_docx(download_id: str):
     """下载Agent通过 build_docx 工具生成的文档（Word .docx 或风险总表 .xlsx）"""
     from app.services.agent_tools import _get_docx
@@ -1438,7 +1439,7 @@ async def agent_download_docx(download_id: str):
     )
 
 
-@router.get("/agent/projects/{project_id}/modified-documents")
+@router.get("/agent/projects/{project_id}/modified-documents", dependencies=[Depends(require_project_access)])
 async def agent_list_modified_documents(project_id: str):
     """列出项目内所有附件修改结果（modify_attachment 工具的产物）
 
@@ -1475,7 +1476,7 @@ async def agent_list_modified_documents(project_id: str):
     }
 
 
-@router.post("/agent/projects/{project_id}/undo")
+@router.post("/agent/projects/{project_id}/undo", dependencies=[Depends(require_project_access)])
 async def agent_undo(project_id: str):
     """回退到最近一次文档修改/生成/精简/附件修改之前的状态（单步撤销）。
 
@@ -1531,7 +1532,7 @@ async def agent_undo(project_id: str):
     }
 
 
-@router.get("/agent/projects/{project_id}/modified-documents/{file_id}/download")
+@router.get("/agent/projects/{project_id}/modified-documents/{file_id}/download", dependencies=[Depends(require_project_access)])
 async def agent_download_modified_document(project_id: str, file_id: str):
     """下载修改后的附件文档 (.docx)
 
@@ -1616,7 +1617,7 @@ async def agent_download_modified_document(project_id: str, file_id: str):
 # Agent 附件上传接口
 # ═══════════════════════════════════════════════════════════════
 
-@router.post("/agent/upload/{project_id}")
+@router.post("/agent/upload/{project_id}", dependencies=[Depends(require_project_access)])
 async def agent_upload_attachment(
     project_id: str,
     file: UploadFile = File(..., description="附件文件 (.pdf/.docx/.doc/.txt/.xlsx)"),
@@ -1659,7 +1660,7 @@ async def agent_upload_attachment(
     }
 
 
-@router.post("/agent/projects/{project_id}/attachments/{file_id}/finalize")
+@router.post("/agent/projects/{project_id}/attachments/{file_id}/finalize", dependencies=[Depends(require_project_access)])
 async def agent_finalize_attachment(project_id: str, file_id: str):
     """将已提取完成的附件全文写入 Agent 状态 attachments 列表。
 
@@ -1743,7 +1744,7 @@ async def agent_finalize_attachment(project_id: str, file_id: str):
     }
 
 
-@router.post("/agent/projects/{project_id}/attachments/from-kb")
+@router.post("/agent/projects/{project_id}/attachments/from-kb", dependencies=[Depends(require_project_access)])
 async def agent_add_attachment_from_kb(project_id: str, payload: KbToAttachmentRequest):
     """将知识库中已入库的文件直接加入当前会话附件。
 
@@ -1832,7 +1833,7 @@ class KbToAttachmentBatchRequest(BaseModel):
     files: List[KbToAttachmentBatchItem] = Field(..., description="要添加的知识库文件列表")
 
 
-@router.post("/agent/projects/{project_id}/attachments/from-kb/batch")
+@router.post("/agent/projects/{project_id}/attachments/from-kb/batch", dependencies=[Depends(require_project_access)])
 async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAttachmentBatchRequest):
     """批量将知识库中已入库的文件加入当前会话附件。
 
@@ -2009,7 +2010,7 @@ def _sanitize_relative_path(path: str) -> str:
     return "/".join(parts) if parts else os.path.basename(cleaned) or "unknown"
 
 
-@router.post("/agent/upload-folder/{project_id}")
+@router.post("/agent/upload-folder/{project_id}", dependencies=[Depends(require_project_access)])
 async def agent_upload_folder(
     project_id: str,
     files: List[UploadFile] = File(..., description="文件夹中的所有文件"),
@@ -2223,7 +2224,7 @@ async def agent_upload_folder(
     )
 
 
-@router.get("/agent/projects/{project_id}/attachments")
+@router.get("/agent/projects/{project_id}/attachments", dependencies=[Depends(require_project_access)])
 async def agent_list_attachments(project_id: str):
     """获取Agent项目已上传的附件列表"""
     from app.services.agent_engine import get_agent
@@ -2257,7 +2258,7 @@ async def agent_list_attachments(project_id: str):
     }
 
 
-@router.post("/agent/projects/{project_id}/recall")
+@router.post("/agent/projects/{project_id}/recall", dependencies=[Depends(require_project_access)])
 async def agent_recall_message(project_id: str):
     """撤回最近一条用户消息及其后所有Agent回复
 
@@ -2314,7 +2315,7 @@ async def agent_recall_message(project_id: str):
     }
 
 
-@router.get("/agent/projects/{project_id}/history")
+@router.get("/agent/projects/{project_id}/history", dependencies=[Depends(require_project_access)])
 async def agent_get_history(project_id: str):
     """获取项目的对话历史（用户消息与Agent回复文本）
 
@@ -2353,11 +2354,11 @@ async def agent_get_history(project_id: str):
     return {"messages": history, "count": len(history)}
 
 
-@router.get("/agent/projects")
-async def agent_list_projects():
+@router.get("/agent/projects", dependencies=[Depends(require_user)])
+async def agent_list_projects(_user: str = Depends(require_user)):
     """列出所有聊天任务（项目）：供前端侧边栏展示多任务切换
 
-    直接从 checkpoint SQLite 库读取全部 thread_id（按最新活动排序），
+    按当前登录用户（JWT sub）过滤 checkpoint 库中其名下 thread_id（按最新活动排序），
     再逐个读取 state 提取标题（首条用户消息前30字）与消息数。
     """
     from app.services import agent_state as _agent_state
@@ -2375,9 +2376,11 @@ async def agent_list_projects():
         conn = sqlite3.connect(db_path, timeout=5)
         try:
             cur = conn.execute(
-                "SELECT DISTINCT thread_id FROM checkpoints "
-                "WHERE thread_id != '' AND checkpoint_ns = '' "
-                "ORDER BY rowid DESC"
+                "SELECT c.thread_id FROM checkpoints c "
+                "JOIN project_owners o ON o.thread_id = c.thread_id "
+                "WHERE o.username = ? AND c.thread_id != '' AND c.checkpoint_ns = '' "
+                "ORDER BY c.rowid DESC",
+                (_user,),
             )
             return [row[0] for row in cur.fetchall()]
         finally:
@@ -2421,7 +2424,7 @@ async def agent_list_projects():
     return {"projects": projects}
 
 
-@router.delete("/agent/projects/{project_id}")
+@router.delete("/agent/projects/{project_id}", dependencies=[Depends(require_project_access)])
 async def agent_delete_project(project_id: str):
     """删除一个聊天任务（连同其 checkpoint 全部历史）"""
     from app.services import agent_state as _agent_state
@@ -2471,7 +2474,7 @@ async def agent_delete_project(project_id: str):
     return {"success": True, "message": f"项目 {project_id} 已删除"}
 
 
-@router.delete("/agent/projects/{project_id}/attachments/{file_id}")
+@router.delete("/agent/projects/{project_id}/attachments/{file_id}", dependencies=[Depends(require_project_access)])
 async def agent_delete_attachment(project_id: str, file_id: str):
     """删除Agent项目中的指定附件"""
     from app.services.agent_engine import get_agent
@@ -2508,7 +2511,7 @@ async def agent_delete_attachment(project_id: str, file_id: str):
     }
 
 
-@router.post("/agent/projects/{project_id}/templates")
+@router.post("/agent/projects/{project_id}/templates", dependencies=[Depends(require_project_access)])
 async def agent_upload_template(
     project_id: str,
     file: UploadFile = File(..., description="模板文件 (.docx/.pdf/.doc/.txt/.md)"),
@@ -2564,7 +2567,7 @@ async def agent_upload_template(
     }
 
 
-@router.post("/agent/projects/{project_id}/templates/{template_id}/finalize")
+@router.post("/agent/projects/{project_id}/templates/{template_id}/finalize", dependencies=[Depends(require_project_access)])
 async def agent_finalize_template(project_id: str, template_id: str):
     """将已提取完成的模板文本写入 Agent 状态 templates 列表。
 
@@ -2657,7 +2660,7 @@ async def agent_finalize_template(project_id: str, template_id: str):
     }
 
 
-@router.get("/agent/templates/orphan")
+@router.get("/agent/templates/orphan", dependencies=[Depends(require_user)])
 async def agent_list_orphan_templates():
     """列出「提取已完成但尚未 finalize」的孤儿模板任务。
 
@@ -2687,7 +2690,7 @@ async def agent_list_orphan_templates():
     return {"count": len(orphans), "orphans": orphans}
 
 
-@router.get("/agent/projects/{project_id}/templates")
+@router.get("/agent/projects/{project_id}/templates", dependencies=[Depends(require_project_access)])
 async def agent_list_templates(project_id: str):
     """获取Agent项目已添加的模板列表"""
     from app.services.agent_engine import get_agent
@@ -2724,7 +2727,7 @@ async def agent_list_templates(project_id: str):
     }
 
 
-@router.delete("/agent/projects/{project_id}/templates/{template_id}")
+@router.delete("/agent/projects/{project_id}/templates/{template_id}", dependencies=[Depends(require_project_access)])
 async def agent_delete_template(project_id: str, template_id: str):
     """删除Agent项目中的指定模板"""
     from app.services.agent_engine import get_agent
@@ -2814,7 +2817,7 @@ class FlowchartInsertRequest(BaseModel):
     section_name: str = Field("", description="目标章节名，为空则新增独立「流程图」章节")
 
 
-@router.post("/agent/flowchart/generate")
+@router.post("/agent/flowchart/generate", dependencies=[Depends(require_user)])
 async def agent_generate_flowchart(request: FlowchartGenerateRequest):
     """生成或修改流程图（返回 mermaid 源码）。
 
@@ -2866,7 +2869,7 @@ async def agent_generate_flowchart(request: FlowchartGenerateRequest):
     return {"success": True, "mermaid": mermaid_code}
 
 
-@router.post("/agent/flowchart/render")
+@router.post("/agent/flowchart/render", dependencies=[Depends(require_user)])
 async def agent_render_flowchart(request: FlowchartRenderRequest):
     """将 mermaid 源码渲染为 PNG 图片（供前端「导出 PNG」下载）。"""
     import asyncio
@@ -2887,7 +2890,7 @@ async def agent_render_flowchart(request: FlowchartRenderRequest):
     )
 
 
-@router.post("/agent/projects/{project_id}/flowchart/insert")
+@router.post("/agent/projects/{project_id}/flowchart/insert", dependencies=[Depends(require_project_access)])
 async def agent_insert_flowchart(project_id: str, request: FlowchartInsertRequest):
     """把流程图插入到正在生成的文档。
 
@@ -2945,7 +2948,7 @@ async def agent_insert_flowchart(project_id: str, request: FlowchartInsertReques
     }
 
 
-@router.get("/agent/projects/{project_id}/download-excel")
+@router.get("/agent/projects/{project_id}/download-excel", dependencies=[Depends(require_project_access)])
 async def agent_download_risk_excel(project_id: str):
     """下载风险分析总表的 Excel (.xlsx) 版本。
 

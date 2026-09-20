@@ -97,6 +97,10 @@ app.add_middleware(
 # Include API routes
 app.include_router(router, prefix="/api")
 
+# [COMBINATION-PORT] 静态资源挂载：token-relay.js（review/kb 新标签页的 JWT 凭证
+# 中转脚本，用户隔离配套——凭证经 URL #jwt= 片段传入，页内转存 sessionStorage）
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 
 @app.get("/")
 async def root():

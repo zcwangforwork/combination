@@ -8,6 +8,9 @@
  *  3. 全部 /api/**、/agent/review/**、/kb 地址加 AGENT_BASE 前缀（跨源 CORS）
  *  4. 项目 ID 由 URL ?project= 改为 localStorage 持久化 + 视图内切换
  *  5. 初始化改为 activate() 首次惰性触发；登出 deactivate() 中断流；mermaid 按需加载
+ *  6. [PORT-AUTH] 用户隔离：fetch 包装自动携带 Authorization: Bearer <UM JWT>；
+ *     localStorage 项目 key 按用户名区分；新建项目 ID 用 UUID 防跨用户碰撞；
+ *     下载接口走 _agentDownload（凭证不进 URL）；review/kb 页经 #jwt= 片段中转凭证
  */
 (function () {
 
@@ -48,15 +51,130 @@
         return _mermaidLoading;
     }
 
+    // ── [PORT-AUTH] 用户隔离（combination 新增）──
+    // 体系管理系统登录后 JWT 存于 localStorage['token']（:3000 源）；Agent 服务以
+    // 共享密钥验签（HS256），项目归属按用户名（sub claim）隔离。
+
+    function _umToken() {
+        try { return localStorage.getItem('token') || ''; } catch (e) { return ''; }
+    }
+
+    // 从 JWT payload 解出用户名（仅用于本地 key 命名，不做签名校验——校验在服务端）
+    function _umUsername() {
+        var t = _umToken();
+        try {
+            var part = t.split('.')[1];
+            if (!part) return 'anonymous';
+            part = part.replace(/-/g, '+').replace(/_/g, '/');
+            while (part.length % 4) part += '=';
+            var bytes = Uint8Array.from(atob(part), function (c) { return c.charCodeAt(0); });
+            var payload = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+            return payload.sub || 'anonymous';
+        } catch (e) { return 'anonymous'; }
+    }
+
+    // 当前用户的项目持久化 key（同浏览器多账号互不串项目）
+    function _projectKey() { return 'agent_project_id:' + _umUsername(); }
+
+    // 新建项目 ID：UUID 优先（防两用户同一毫秒新建碰撞出同一 thread_id 合并历史）
+    function _newProjectId() {
+        return (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : Date.now() + '-' + Math.random().toString(36).slice(2);
+    }
+
+    function _isAgentUrl(url) {
+        if (!url) return false;
+        if (AGENT_BASE) return url.indexOf(AGENT_BASE) === 0;
+        return /^\/(api|kb|agent)/.test(url) || /:800[234]\//.test(url);
+    }
+
+    function _showAuthError() {
+        var box = document.getElementById('agentAuthError');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'agentAuthError';
+            box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;'
+                + 'background:#c62828;color:#fff;padding:10px 16px;font-size:14px;'
+                + 'text-align:center;';
+            box.textContent = '登录状态无效或已过期：请保存当前内容，重新登录体系管理系统后再试';
+            (document.body || document.documentElement).appendChild(box);
+        }
+    }
+
+    // fetch 包装：agent 服务请求自动携带 Authorization（CORS 已放行该头）；
+    // 401 → 顶部横幅提示（不静默失败）
+    (function () {
+        var _rawFetch = window.fetch.bind(window.fetch);
+        window.fetch = function (input, init) {
+            var p;
+            try {
+                var url = (typeof input === 'string') ? input : ((input && input.url) || '');
+                var t = _umToken();
+                if (t && _isAgentUrl(url)) {
+                    init = Object.assign({}, init || {});
+                    if (init.headers instanceof Headers) {
+                        init.headers = new Headers(init.headers);
+                        init.headers.set('Authorization', 'Bearer ' + t);
+                    } else {
+                        init.headers = Object.assign({}, init.headers || {},
+                            { 'Authorization': 'Bearer ' + t });
+                    }
+                }
+            } catch (e) { /* 注入失败按原样请求 */ }
+            p = _rawFetch(input, init);
+            p.then(function (r) { if (r && r.status === 401) _showAuthError(); },
+                   function () { /* 网络错误由调用方处理 */ });
+            return p;
+        };
+    })();
+
+    // 页面跳转（review/kb 新标签页）：凭证经 URL #jwt= 片段中转（fragment 不发给
+    // 服务器、不进服务端日志），页内 token-relay.js 读取后转存 sessionStorage 并清 hash
+    function _agentPageUrl(u) {
+        var t = _umToken();
+        return t ? (u + '#jwt=' + encodeURIComponent(t)) : u;
+    }
+
+    // 认证下载：window.open 无法携带请求头，改为 fetch(带 token) → blob → a.click
+    // （文件名优先取 Content-Disposition，回退 URL 末段）
+    function _agentDownload(url) {
+        var opts = {};
+        var t = _umToken();
+        if (t) opts.headers = { 'Authorization': 'Bearer ' + t };
+        return window.fetch(url, opts).then(function (r) {
+            if (!r.ok) {
+                if (r.status === 401) _showAuthError();
+                throw new Error('HTTP ' + r.status);
+            }
+            var cd = r.headers.get('Content-Disposition') || '';
+            var m = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(cd);
+            var name = m ? decodeURIComponent(m[1].replace(/"/g, ''))
+                : (url.split('/').pop().split('?')[0] || 'download');
+            return r.blob().then(function (b) {
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(b);
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+            });
+        }).catch(function (e) {
+            alert('下载失败：' + (e && e.message ? e.message : e));
+        });
+    }
+
         // ── State ──
         // [PORT] 原从 URL ?project= 恢复并 replaceState 写回；
         // SPA 内嵌后改为 localStorage 持久化（读=恢复，写=新建后立即落盘）
-        const _restoredProject = localStorage.getItem('agent_project_id');
-        let PROJECT_ID = _restoredProject || ('project_' + Date.now());
+        // [PORT-AUTH] key 按登录用户名区分：同浏览器多账号切换互不串项目；
+        // 新建 ID 用 UUID：两用户同一毫秒新建不再碰撞出同一 thread_id
+        const _restoredProject = localStorage.getItem(_projectKey());
+        let PROJECT_ID = _restoredProject || ('project_' + _newProjectId());
         // [PORT] 原语义：!existingProject 时 loadHistory 直接返回（新项目页面生命周期内不拉历史）。
         // 恢复/切换到既有项目时为 true，新建项目时为 false
         let _hasHistory = !!_restoredProject;
-        function _persistProject() { localStorage.setItem('agent_project_id', PROJECT_ID); }
+        function _persistProject() { localStorage.setItem(_projectKey(), PROJECT_ID); }
         _persistProject();
         let isStreaming = false;
         let waitingApproval = null;
@@ -206,7 +324,7 @@
         }
         function _refreshReviewLink() {
             const reviewLink = document.getElementById('reviewLink');
-            reviewLink.href = AGENT_BASE + '/agent/review/' + PROJECT_ID;
+            reviewLink.href = _agentPageUrl(AGENT_BASE + '/agent/review/' + PROJECT_ID);
             reviewLink.style.display = 'inline';
         }
 
@@ -1842,7 +1960,7 @@
 }
 
 function downloadDocx(downloadId) {
-    window.open(AGENT_BASE + '/api/agent/download/' + downloadId, '_blank');
+    _agentDownload(AGENT_BASE + '/api/agent/download/' + downloadId);
 }
 
 async function showQuickDownloadBox() {
@@ -1892,11 +2010,11 @@ function editAndResume() {
         }
 
         function downloadDocument() {
-            window.open(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/download', '_blank');
+            _agentDownload(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/download');
         }
 
         function downloadRiskExcel() {
-            window.open(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/download-excel', '_blank');
+            _agentDownload(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/download-excel');
         }
 
         // 固定「下载修改版」入口：下载最近一次修改/补全/精简的附件文档
@@ -1909,7 +2027,7 @@ function editAndResume() {
                     return;
                 }
                 const latest = data.modifications[data.modifications.length - 1];
-                window.open(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/modified-documents/${encodeURIComponent(latest.file_id)}/download`, '_blank');
+                _agentDownload(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/modified-documents/${encodeURIComponent(latest.file_id)}/download`);
             } catch (e) {
                 showToast('获取修改结果失败: ' + e.message, 'error');
             }
@@ -2077,7 +2195,7 @@ function editAndResume() {
 
         function downloadModifiedDoc(fileId) {
             if (!fileId) { alert('缺少附件ID，无法下载'); return; }
-            window.open(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/modified-documents/' + fileId + '/download', '_blank');
+            _agentDownload(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/modified-documents/' + fileId + '/download');
         }
 
         function onSumModeChange() {
@@ -3178,7 +3296,7 @@ function editAndResume() {
         // ── KB Files List (查看知识库文件列表) ──
         // 跳转到知识库独立页面（携带当前 project 以便在知识库页面"批量添加附件"）
         function gotoKbPage() {
-            window.open(AGENT_BASE + '/kb?project=' + encodeURIComponent(PROJECT_ID), '_blank');
+            window.open(_agentPageUrl(AGENT_BASE + '/kb?project=' + encodeURIComponent(PROJECT_ID)), '_blank');
         }
 
         async function showKbFilesDialog() {
@@ -3364,7 +3482,7 @@ function editAndResume() {
         // 此处手动完成等价的"重载"：换 ID、清屏、重跑初始化）
         function _switchToProject(projectId) {
             _resetTransientState();
-            PROJECT_ID = projectId || ('project_' + Date.now());
+            PROJECT_ID = projectId || ('project_' + _newProjectId());
             _persistProject();
             _hasHistory = !!projectId;
             const area = document.getElementById('chatArea');

@@ -61,3 +61,29 @@
 ## 8. 原项目隔离（合并未破坏源头）
 
 - [ ] 原两个目录按原方式启动仍正常（本次合并零改动：MD5 已复核，可选抽查）
+
+## 9. 用户隔离（对话历史按登录用户分隔）
+
+前置：迁移脚本已执行（`python tools/migrate_project_owners.py admin`，存量 155 线程划归
+admin）；两个不同浏览器（或普通+隐身窗口）分别准备 admin/admin123 与 zhangsan/123456。
+
+- [ ] **强刷缓存**：Ctrl+F5 加载 SPA（旧缓存 agent-chat.js 无鉴权 shim，会全部 401）
+- [ ] F12 Network：admin 会话中任一 `/api/agent/**` 请求头含
+      `Authorization: Bearer eyJ...`，且无 401/403
+- [ ] admin 新建聊天并发一条消息；**zhangsan 登录后聊天列表看不到 admin 的该项目**，
+      反向同样互不可见
+- [ ] zhangsan 浏览器 F12 控制台执行（模拟越权读，project_id 换成 admin 的）：
+      `fetch('http://localhost:8002/api/agent/projects/<admin的项目id>/history',{headers:{Authorization:'Bearer '+JSON.parse(atob(localStorage.token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub&&localStorage.token}}).then(r=>r.status).then(console.log)`
+      → 输出 **403**；无凭证访问同一 URL → **401**
+- [ ] **同浏览器账号切换**：admin → 退出 → zhangsan 进入「AI 文档写作」：
+      不恢复 admin 的当前项目（localStorage 按用户名分键），列表只见 zhangsan 自己的
+- [ ] **下载**：对已生成文档点下载（docx / Excel / 修改稿）→ 正常触发浏览器下载，
+      地址栏不出现 token（blob: 链接）；F12 Network 该请求带 Authorization 头
+- [ ] **审阅页**：「查看完整文档」新标签打开 `:8002/agent/review/<pid>`：
+      URL 的 `#jwt=...` 片段在页面加载后被清除（地址栏不再显示），文档正常渲染；
+      直接复制该 URL 到新标签打开（无凭证）→ 页面顶部红色横幅提示缺少凭证
+- [ ] **知识库页**：Agent 内打开「知识库」新标签 `:8002/kb?project=<pid>`：
+      文件列表正常加载、可检索；从知识库批量加附件到当前项目成功
+- [ ] **token 过期表现**（可选，改 UM 库 token 或等 24h）：Agent 视图任一请求 401
+      → 顶部红色横幅"登录状态无效或已过期…"，非静默失败
+- [ ] admin 登录：聊天列表可见迁移划入的存量项目（可正常打开/删除）

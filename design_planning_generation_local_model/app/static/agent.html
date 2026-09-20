@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>设计开发文档写作 Agent</title>
+    <!-- [COMBINATION-PORT] 用户隔离：独立页直接访问无 UM 登录凭证时给出明确提示；
+         从 review/kb 页同标签页返回时可沿用 sessionStorage 中的中转凭证 -->
+    <script src="/static/token-relay.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {

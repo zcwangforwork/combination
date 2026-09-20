@@ -23,6 +23,8 @@ langchain-openai>=0.1.0
 langchain-core>=0.2.0
 aiofiles>=23.0.0
 pytest-asyncio>=0.23.0
+# 用户隔离：校验体系管理系统（Spring Boot）签发的 JWT（HS256 共享密钥）
+PyJWT>=2.8.0
 # MinerU 文档解析（opt-in，需设置 USE_MINERU=true 启用）
 langchain-mineru>=0.1.0
 mineru-open-sdk
