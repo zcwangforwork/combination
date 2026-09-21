@@ -73,6 +73,67 @@ _current_stream_sink: contextvars.ContextVar = contextvars.ContextVar(
     'stream_sink', default=None
 )
 
+# 用户文档格式要求（set_document_format 工具设置，build_docx/导出时应用）
+_current_document_format: contextvars.ContextVar[dict] = contextvars.ContextVar(
+    'document_format', default={}
+)
+
+# 历史用户消息（agent_engine._sync_doc_context 从 state 同步），供生成/修改工具
+# 构建「历史用户要求累积参考」块——修改时不丢弃前几轮的关键要求
+_current_user_messages: contextvars.ContextVar[list] = contextvars.ContextVar(
+    'user_messages', default=[]
+)
+
+_DEGENERATE_USER_MSGS = ("继续", "好的", "确认", "可以", "开始", "下一步", "是", "对", "嗯")
+
+
+def set_current_user_messages(texts: list) -> None:
+    """由 agent_engine 在每轮开始前调用，同步历史用户消息文本（时间升序）。"""
+    _current_user_messages.set(list(texts or []))
+
+
+def _user_requirements_block(current_instruction: str = "", max_msgs: int = 10) -> str:
+    """历史用户要求累积参考块：修改/生成时兼顾前几轮用户的关键要求。
+
+    规则：与当前指令不冲突的历史要求必须继续遵守；冲突时以当前指令为准。
+    过滤退化消息（"继续/确认"等），每条截断 300 字，取最近 max_msgs 条。
+    """
+    msgs = [t.strip() for t in (_current_user_messages.get() or []) if t and t.strip()]
+    substantive = []
+    for t in msgs:
+        if t.lower() in _DEGENERATE_USER_MSGS or len(t) < 4:
+            continue
+        substantive.append(t)
+    # 排除与当前指令相同的那条（当前指令已在工具参数里）
+    if current_instruction:
+        cur = current_instruction.strip()
+        substantive = [t for t in substantive if t != cur and cur not in t]
+    if not substantive:
+        return ""
+    recent = substantive[-max_msgs:]
+    lines = []
+    for i, t in enumerate(recent, 1):
+        t_cut = t[:300] + ("…" if len(t) > 300 else "")
+        lines.append(f"[要求{i}] {t_cut}")
+    return (
+        "\n## 历史用户要求（累积参考，时间从早到近）\n"
+        "以下是用户在本会话中先前提出的要求。执行本次任务时：\n"
+        "- 与本次指令**不冲突**的历史要求必须继续遵守/保持（不得因本次修改而丢失）\n"
+        "- 与本次指令**冲突**时，以本次指令为准（历史要求中被冲突覆盖的部分作废）\n"
+        + "\n".join(lines) + "\n"
+    )
+_pending_document_format: dict = {}  # 旁路：工具写 → after_tools 写回 state
+
+
+def set_current_document_format(fmt: dict) -> None:
+    """由 agent_engine 在每轮开始前调用，同步当前文档格式要求"""
+    _current_document_format.set(fmt or {})
+
+
+def pop_pending_document_format() -> dict | None:
+    """读取并清除待写回 state 的文档格式要求（无更新时返回 None）。"""
+    return _pending_document_format.pop("format", None)
+
 # write_chapter 完整内容旁路: 工具返回简短摘要，完整内容通过此字典
 # 传递给 _after_tools_node，避免大段内容进入 LLM 对话历史。
 # 使用模块级 dict 而非 contextvar，避免 LangGraph 异步节点切换时
@@ -948,9 +1009,8 @@ def _memory_context_block() -> str:
     """返回召回记忆参考块，追加到文档生成工具 system_prompt 末尾。
 
     记忆由 ov_recall/ltm_recall 按当前用户消息检索（跨会话/跨轮的用户偏好、
-    项目背景、历史决策），供章节/小节写作参考。记忆相关性不稳定（含情景噪声），
-    故限定为参考级：与法规标准、附件原文、补充提示词冲突时以后者为准。
-    无记忆时返回空字符串，不影响原有提示词结构。
+    项目背景、历史决策），作为生成的主要依据之一（尤其用户偏好与项目背景应落实到
+    文档）；与附件原文冲突时以附件为准。无记忆时返回空字符串。
     """
     memory = (_current_memory_context.get() or "").strip()
     if not memory:
@@ -960,10 +1020,73 @@ def _memory_context_block() -> str:
         memory = memory[:3000]
     return (
         f"\n\n"
-        f"## 历史记忆参考（参考级）\n"
+        f"## 历史记忆参考（主要生成依据之一）\n"
         f"以下是从历史会话中检索到的相关记忆（用户偏好、项目背景、既往决策等），"
-        f"写作时可参考；与法规标准、用户上传附件原文或补充提示词冲突时，以后者为准：\n"
+        f"其中的用户偏好与项目背景应落实到文档内容；与用户上传附件原文冲突时以附件为准，"
+        f"与法规标准冲突时以法规为准：\n"
         f"{memory}\n"
+    )
+
+
+def _doc_scope_rule(doc_type: str) -> str:
+    """文档范围规则：软件类文档只写软件内容，不写硬件内容（反之亦然）。
+
+    依据 doc_type 前缀判定软件/硬件类文档；非软件类不注入（零影响）。
+    """
+    dt = (doc_type or "").strip()
+    if not dt.startswith("software_"):
+        return ""
+    return (
+        "\n## 文档范围（强制）\n"
+        "- 本文档为**软件类文档**：只写与软件开发相关的内容（软件需求/架构/设计/"
+        "编码/测试/配置管理/版本等）\n"
+        "- **禁止写入硬件相关内容**：不得描述电路、电机/驱动机构、传感器选型、"
+        "结构尺寸、材料、外壳、电池等硬件设计与实现；硬件信息仅在作为软件运行"
+        "环境或接口前提时用一句话带过（如\"运行于 XX MCU 平台\"），不得展开\n"
+        "- 涉及软硬件接口时，只从软件视角描述接口逻辑与数据协议，不展开硬件实现\n"
+    )
+
+
+def _grounding_rule() -> str:
+    """有据生成规则（防编造）：生成内容必须以参考材料为主要依据。
+
+    参考材料优先级：用户上传附件 > 召回记忆 > 知识库/网络检索。
+    未覆盖内容用通用行业表述，禁止给出无法核实的具体细节。
+    """
+    return (
+        "\n## 有据生成规则（强制——尽量减少编造内容）\n"
+        "- 事实性内容（参数、数值、法规条款、技术指标、流程、结论）必须优先取自本次"
+        "提示词中提供的参考材料，优先级：**用户上传附件（分配块/检索块）> 召回的记忆"
+        "（用户偏好/项目背景/历史决策）> 知识库与网络检索结果**；参考材料之间冲突时"
+        "按此优先级取舍\n"
+        "- 各参考材料均未覆盖的内容：使用通用、行业公认的表述撰写，**避免给出具体数值、"
+        "条款号、型号、测试结果等无法核实的细节**\n"
+        "- 确需具体值而所有参考材料均未提供时：不要编造，采用通用表述或标注该值为"
+        "建议值（需结合产品实际确认）\n"
+        "- **禁止编造**任何无参考材料支撑的具体数据、标准条款引用、实验/测试结果、"
+        "供应商或产品型号\n"
+    )
+
+
+def _attachment_priority_rule() -> str:
+    """附件优先规则（条件注入：仅当用户已上传附件时），防幻觉核心约束。
+
+    附件内容是最高优先事实来源：参数/数值/条款/产品事实凡附件中有必须一致采用；
+    附件未覆盖的才可用知识库/网络/专业常识，且不得与附件冲突。无附件返回空串。
+    """
+    attachments = [a for a in (_current_attachments.get() or []) if a.get("full_text")]
+    if not attachments:
+        return ""
+    names = "、".join((a.get("filename") or "?") for a in attachments[:5])
+    return (
+        "\n## 附件优先规则（强制——用户已上传附件：" + names + "）\n"
+        "- 附件内容是本次生成/修改的**最高优先事实来源**：所有参数、数值、条款、"
+        "产品事实与事实性描述，凡附件中有的，必须与附件一致并优先采用\n"
+        "- 提示词中标注「附件分配内容」「[附件·最高优先]」「用户上传附件参考资料」"
+        "的内容均来自附件原文，必须作为事实依据\n"
+        "- 附件未覆盖的内容方可使用知识库/网络检索结果或专业常识，且**不得与附件"
+        "已有内容冲突**；冲突时一律以附件为准\n"
+        "- **禁止编造附件中没有且无其他依据的数据、参数或事实**\n"
     )
 
 
@@ -1550,74 +1673,236 @@ async def generate_search_query(
 
 
 # ── Tool 1b: search_attachment ──
+# 附件段落级精准检索：jieba 分词关键词 + 附件块向量（qwen3-embedding 懒加载缓存）
+# 混合召回 → bge-reranker-v2-m3 精排 → 结果带位置信息（section_path/块号）。
+# 支持 filename 参数限定单个附件（用户选中某文档提问时精确定位）。
+
+_QUERY_STOPWORDS = {
+    "的", "了", "是", "在", "和", "与", "或", "及", "其", "对", "于", "中", "上", "下",
+    "有", "什么", "哪些", "哪个", "请问", "如何", "怎么", "怎样", "为什么", "这个", "那个",
+    "可以", "需要", "应该", "我们", "你们", "他们", "进行", "通过", "使用", "以及", "还有",
+    "一个", "一下", "告诉", "帮我", "查找", "查询", "搜索", "内容", "信息", "相关", "关于",
+    "请", "吗", "呢", "吧", "啊", "文档", "附件", "文件",
+}
+
+
+def _tokenize_query(query: str) -> list:
+    """jieba 分词 + 停用词过滤（中文关键词检索的基础，替代空格分词）。"""
+    try:
+        import jieba
+        words = [w.strip() for w in jieba.lcut(query or "")]
+    except Exception:
+        words = (query or "").split()
+    out, seen = [], set()
+    for w in words:
+        if not w or w in _QUERY_STOPWORDS:
+            continue
+        # 单字仅保留字母/数字（如 U、5、C），过滤无信息量单字
+        if len(w) == 1 and not w.isalnum():
+            continue
+        k = w.lower()
+        if k not in seen:
+            seen.add(k)
+            out.append(w)
+    return out
+
+
+def _kw_block_score(text: str, terms: list, full_query: str) -> float:
+    """块级关键词打分：词覆盖率为主 + 命中密度轻加成 + 完整短语命中加分。"""
+    if not text or not terms:
+        return 0.0
+    t = text.lower()
+    hits = [w for w in terms if w.lower() in t]
+    if not hits:
+        return 0.0
+    coverage = len(hits) / len(terms)
+    density = sum(t.count(w.lower()) for w in hits) / max(len(t) / 100.0, 1.0)
+    score = min(coverage * 0.8 + min(density, 0.4) * 0.5, 1.0)
+    if full_query and full_query.strip().lower() in t:
+        score = min(score + 0.3, 1.0)  # 完整查询短语命中加分
+    return round(score, 3)
+
+
+# 附件块切分缓存（file_id → blocks，char_count 变化时失效）
+_attachment_blocks_cache: dict = {}
+
+
+def _get_attachment_blocks(att: dict) -> list:
+    fid = att.get("file_id", "") or att.get("filename", "")
+    cc = att.get("char_count", 0) or len(att.get("full_text", "") or "")
+    cached = _attachment_blocks_cache.get(fid)
+    if cached and cached.get("char_count") == cc:
+        return cached["blocks"]
+    blocks = _segment_attachment_blocks(fid, att.get("filename", "unknown"),
+                                        att.get("full_text", ""))
+    _attachment_blocks_cache[fid] = {"char_count": cc, "blocks": blocks}
+    if len(_attachment_blocks_cache) > 32:
+        _attachment_blocks_cache.pop(next(iter(_attachment_blocks_cache)))
+    return blocks
+
+
+# 附件块向量缓存（懒加载；embedding 不可用时静默降级为纯关键词）
+_attachment_vec_cache: dict = {}
+_ollama_embeddings = None
+
+
+def _get_ollama_embeddings():
+    global _ollama_embeddings
+    if _ollama_embeddings is None:
+        from langchain_openai import OpenAIEmbeddings
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11435").rstrip("/") + "/v1"
+        _ollama_embeddings = OpenAIEmbeddings(
+            model=os.getenv("OLLAMA_EMBED_MODEL", "qwen3-embedding:4b"),
+            base_url=base_url,
+            api_key=os.getenv("MINIMAX_API_KEY", "ollama"),
+            # Ollama OpenAI 兼容端点只接受原始文本，关闭 tiktoken 长度检查
+            check_embedding_ctx_length=False,
+        )
+    return _ollama_embeddings
+
+
+def _cosine(a, b) -> float:
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    return dot / (na * nb) if na and nb else 0.0
+
+
+async def _get_block_vectors(att: dict, blocks: list):
+    """获取附件块向量（缓存；首次调用 embed 全文块，失败返回 None 降级关键词路）。"""
+    fid = att.get("file_id", "") or att.get("filename", "")
+    cc = att.get("char_count", 0) or len(att.get("full_text", "") or "")
+    cached = _attachment_vec_cache.get(fid)
+    if cached and cached.get("char_count") == cc and len(cached.get("vectors", [])) == len(blocks):
+        return cached["vectors"]
+    try:
+        emb = _get_ollama_embeddings()
+        texts = [b["text"][:1500] for b in blocks]
+        vectors = await asyncio.wait_for(
+            asyncio.to_thread(emb.embed_documents, texts), timeout=300.0)
+        _attachment_vec_cache[fid] = {"char_count": cc, "vectors": vectors}
+        if len(_attachment_vec_cache) > 8:
+            _attachment_vec_cache.pop(next(iter(_attachment_vec_cache)))
+        print(f"[search_attachment] 附件向量化完成: {att.get('filename')} ({len(vectors)} 块)")
+        return vectors
+    except Exception as e:
+        print(f"[search_attachment] 附件向量化失败（降级关键词检索）: {e}")
+        return None
+
+
+async def _search_attachment_core(query: str, top_k: int = 10, filename: str = "") -> list:
+    """附件段落级混合检索核心：关键词（jieba）+ 向量 混合召回 → 精排 → 带位置信息。
+
+    Returns:
+        [{"content", "source", "score", "rerank_score", "section_path", "block_id", "match"}]
+        按相关度降序；无结果返回空列表。
+    """
+    attachments = [a for a in (_current_attachments.get() or []) if a.get("full_text")]
+    if filename:
+        fl = filename.strip().lower()
+        attachments = [a for a in attachments
+                       if fl in (a.get("filename") or "").lower()]
+    if not attachments or not (query or "").strip():
+        return []
+
+    terms = _tokenize_query(query)
+    candidates = {}  # block_id -> item
+
+    for att in attachments:
+        blocks = _get_attachment_blocks(att)
+        if not blocks:
+            continue
+        fname = att.get("filename", "unknown")
+
+        # 关键词路
+        if terms:
+            for b in blocks:
+                s = _kw_block_score(b["text"], terms, query)
+                if s > 0:
+                    candidates[b["block_id"]] = {
+                        "content": b["text"], "source": fname, "score": s,
+                        "section_path": b.get("section_path", ""),
+                        "block_id": b["block_id"], "match": "kw",
+                    }
+
+        # 向量路（懒加载 embedding，失败静默跳过）
+        vectors = await _get_block_vectors(att, blocks)
+        if vectors:
+            try:
+                emb = _get_ollama_embeddings()
+                qv = await asyncio.wait_for(
+                    asyncio.to_thread(emb.embed_query, query), timeout=60.0)
+                for b, v in zip(blocks, vectors):
+                    cs = _cosine(qv, v)
+                    if cs < 0.35:
+                        continue
+                    key = b["block_id"]
+                    if key in candidates:
+                        candidates[key]["score"] = round(max(candidates[key]["score"], cs), 3)
+                        candidates[key]["match"] = "kw+vec"
+                    else:
+                        candidates[key] = {
+                            "content": b["text"], "source": fname, "score": round(cs, 3),
+                            "section_path": b.get("section_path", ""),
+                            "block_id": key, "match": "vec",
+                        }
+            except Exception as e:
+                print(f"[search_attachment] 查询向量化失败（仅关键词结果）: {e}")
+
+    if not candidates:
+        return []
+
+    merged = sorted(candidates.values(), key=lambda x: x["score"], reverse=True)[:20]
+
+    # Cross-Encoder 精排（bge-reranker-v2-m3；失败时保留混合分数排序）
+    try:
+        from app.services.rag.reranker import Reranker
+        for m in merged:
+            m["text"] = m["content"]
+        ranked = await asyncio.wait_for(
+            asyncio.to_thread(Reranker().rerank, query, merged, top_k), timeout=120.0)
+        for r in ranked:
+            r.pop("text", None)
+        return ranked
+    except Exception as e:
+        print(f"[search_attachment] 精排失败（用混合分数）: {e}")
+        return merged[:top_k]
+
 
 @tool
-async def search_attachment(query: str, top_k: int = 10) -> str:
-    """搜索用户上传的附件内容。当需要查找用户上传文件中的具体信息时使用此工具。
+async def search_attachment(query: str, top_k: int = 10, filename: str = "") -> str:
+    """搜索用户上传的附件内容（段落级精准定位）。当需要查找用户上传文件中的具体信息时使用此工具。
 
-    适用场景: 用户上传了PDF/Word/Excel等参考文档，需要从中提取特定信息。
+    适用场景: 用户上传了PDF/Word/Excel等参考文档，需要从中提取特定信息、
+    回答关于某个文档具体段落/章节的问题。
     与 search_kb 的区别: search_kb 搜索预置知识库（标准法规），search_attachment 搜索用户上传文件。
 
     Args:
-        query: 搜索查询。应包含具体关键词或问题。
+        query: 搜索查询。包含具体术语/参数名/章节关键词（如"输注精度 要求"），
+               不要只写完整问句——术语词命中率更高。
         top_k: 返回结果数量，默认10条。
+        filename: 可选，限定只搜索某个附件（文件名关键词即可，如"技术要求"）。
+                  用户明确针对某一文档提问时传入，定位更准。
 
     Returns:
-        JSON格式的搜索结果，每项包含匹配的文本片段、来源文件名和相关度评分。
+        JSON格式的搜索结果，每项包含 content（段落原文）、source（文件名）、
+        section_path（所在章节路径）、block_id（块号）、score/rerank_score（相关度）。
+        回答用户时应引用 section_path 位置信息，便于用户核对原文。
     """
-    import re as _re
-    attachments = _current_attachments.get()
-    if not attachments:
-        return json.dumps({
-            "status": "no_attachments",
-            "message": "当前项目没有上传附件。请提示用户先上传相关文件，或使用 search_kb 检索知识库。",
-            "results": [],
-        }, ensure_ascii=False)
+    try:
+        results = await _search_attachment_core(query, top_k=top_k, filename=filename)
+        if results:
+            return json.dumps({
+                "status": "ok",
+                "query": query,
+                "count": len(results),
+                "source": "hybrid_kw_vec_rerank",
+                "results": results,
+            }, ensure_ascii=False)
 
-    # 在所有附件中搜索
-    all_matches = []
-    query_lower = query.lower()
-    query_terms = query_lower.split()
-
-    for att in attachments:
-        full_text = att.get("full_text", "")
-        if not full_text:
-            continue
-
-        filename = att.get("filename", "unknown")
-        # 使用滑动窗口分割文本为段落（按双换行或单句分割）
-        paragraphs = _re.split(r'\n\s*\n', full_text)
-        if len(paragraphs) < 2:
-            # 按句子分割
-            paragraphs = _re.split(r'(?<=[。！？.!?])\s*', full_text)
-
-        for para in paragraphs:
-            para = para.strip()
-            if len(para) < 10:
-                continue
-
-            para_lower = para.lower()
-            # 计算相关度分数 (简单TF)
-            score = 0
-            for term in query_terms:
-                count = para_lower.count(term)
-                if count > 0:
-                    score += count * (1.0 / len(query_terms))
-            # 完整短语匹配加分
-            if query_lower in para_lower:
-                score += 2.0
-
-            if score > 0:
-                all_matches.append({
-                    "content": para,
-                    "source": filename,
-                    "score": round(min(score / 3.0, 1.0), 3),
-                })
-
-    if not all_matches:
-        # 尝试向量检索（附件已入库到 uploads 集合时）。
-        # retrieve_hybrid 现在会检索整个语料（含主知识库），附件检索需直查
-        # uploads 集合，仅返回用户上传文件的内容。
+        # 兜底：附件已入库 uploads 集合时走向量库（附件未入库/向量不可用均可能走到）
         try:
             from app.services.rag.vector_store import VectorStore
             store = VectorStore(collection_name="uploads")
@@ -1652,29 +1937,16 @@ async def search_attachment(query: str, top_k: int = 10) -> str:
 
         return json.dumps({
             "status": "no_match",
-            "message": f'在已上传的{len(attachments)}个附件中未找到与"{query}"直接相关的内容。请尝试使用更通用的关键词，或告知用户当前附件中未包含此信息。',
+            "message": f'在附件中未找到与"{query}"直接相关的内容。请尝试更换术语关键词，或告知用户当前附件中未包含此信息。',
             "results": [],
         }, ensure_ascii=False)
 
-    # 按分数排序，去重
-    all_matches.sort(key=lambda x: x["score"], reverse=True)
-    seen = set()
-    unique_matches = []
-    for m in all_matches:
-        key = m["content"][:100]
-        if key not in seen:
-            seen.add(key)
-            unique_matches.append(m)
-        if len(unique_matches) >= top_k:
-            break
-
-    return json.dumps({
-        "status": "ok",
-        "query": query,
-        "count": len(unique_matches),
-        "source": "attachment_text",
-        "results": unique_matches,
-    }, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"附件检索异常: {str(e)}",
+            "results": [],
+        }, ensure_ascii=False)
 
 
 # ── Tool: search_template ──
@@ -2656,7 +2928,7 @@ async def generate_section(section_name: str, doc_type: str = "design_developmen
 - 禁止以"本章依据XX标准编制"等冗余前缀行开头
 
 {covered_block}
-{style_ref_block}{style_section}{_output_structure_requirement(doc_type)}{_supplementary_block()}{_memory_context_block()}"""
+{style_ref_block}{style_section}{_output_structure_requirement(doc_type)}{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block()}"""
 
         # RAG 检索: 用 LLM 基于产品上下文+章节信息生成针对性查询词
         rag_context = ""
@@ -2903,6 +3175,7 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
                 content=markdown,
                 product_name=product_name,
                 doc_type=doc_type,
+                format_overrides=dict(_current_document_format.get() or {}),
             )
             file_bytes = template_service.document_to_bytes(doc)
             return file_bytes
@@ -2941,6 +3214,127 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
             "status": "error",
             "message": f"文档构建失败: {str(e)}",
         }, ensure_ascii=False)
+
+# ── 修改符合性自检（revise_section 生成后多轮验证）──
+# 用户提出修改意见重新生成后，自动检查：①是否完整落实了最新指令 ②是否做了
+# 指令之外的额外更改；未通过则带审查反馈修复再验，封顶 REVISION_VERIFY_ROUNDS 轮。
+
+_REVISION_VERIFY_ROUNDS = int(os.getenv("REVISION_VERIFY_ROUNDS", "2"))
+
+_VERIFY_REVISION_SYSTEM = """你是文档修改审查专家。给定用户的修改指令、修改前的原文和修改后的内容，请严格审查两点：
+1. 指令落实：修改后内容是否完整落实了用户指令的全部要求？列出未落实或落实不到位的点
+2. 额外更改：是否存在用户指令之外的更改（改动了指令未涉及的内容、措辞、结构、数据）？逐条列出具体位置
+输出严格 JSON（无围栏无解释）：
+{"instruction_followed": true/false,
+ "missing_points": ["未落实点…"],
+ "has_unauthorized_changes": true/false,
+ "unauthorized_changes": ["指令外更改的具体描述…"]}
+审查标准：宁可严格——不确定是否属于指令范围的更改也列出来；两项都通过才输出 true。"""
+
+
+async def _verify_revision_once(instruction: str, original: str, revised: str) -> dict:
+    """单次修改审查（LLM），返回审查 JSON；失败返回空 dict（不阻塞）。"""
+    from app.services.minimax import _call_minimax_api_raw
+
+    user_prompt = (
+        f"## 用户修改指令\n{instruction}\n\n"
+        f"## 修改前原文\n{original[:6000]}\n\n"
+        f"## 修改后内容\n{revised[:6000]}\n\n"
+        f"请审查并输出 JSON。"
+    )
+
+    def _do():
+        return _call_minimax_api_raw(
+            system_prompt=_VERIFY_REVISION_SYSTEM,
+            user_prompt=user_prompt,
+            temperature=0.1,
+            max_tokens=2048,
+        )
+
+    try:
+        raw = await asyncio.wait_for(asyncio.to_thread(_do), timeout=120.0)
+    except Exception as e:
+        print(f"[revise_section] 修改审查调用失败（跳过自检）: {e}")
+        return {}
+    data = _parse_att_map_json(raw or "")
+    return data if isinstance(data, dict) else {}
+
+
+async def _verify_revision_compliance(instruction: str, original: str, revised: str,
+                                      revision_system_prompt: str, revision_user_prompt: str,
+                                      max_rounds: int = _REVISION_VERIFY_ROUNDS) -> tuple:
+    """修改符合性自检闭环：审查 → 未通过带反馈修复 → 再审查，封顶 max_rounds 轮。
+
+    Returns:
+        (最终内容, 报告 dict)。报告: {"rounds", "passed"（True/False/None=验证不可用）,
+        "missing_points", "unauthorized_changes", "repaired"}。
+        验证不可用时返回原内容且不阻塞修改流程。
+    """
+    content = revised
+    report = {"rounds": 0, "passed": None, "missing_points": [],
+              "unauthorized_changes": [], "repaired": False}
+    try:
+        for round_i in range(1, max_rounds + 1):
+            report["rounds"] = round_i
+            verdict = await _verify_revision_once(instruction, original, content)
+            if not verdict:
+                return content, report  # 验证不可用，不阻塞
+
+            missing = [str(x).strip() for x in (verdict.get("missing_points") or [])
+                       if str(x).strip()]
+            unauth = []
+            if verdict.get("has_unauthorized_changes"):
+                unauth = [str(x).strip() for x in (verdict.get("unauthorized_changes") or [])
+                          if str(x).strip()]
+            followed = bool(verdict.get("instruction_followed")) and not missing
+
+            if followed and not unauth:
+                report["passed"] = True
+                print(f"[revise_section] 修改自检通过（第 {round_i} 轮）")
+                return content, report
+
+            # 未通过 → 构造审查反馈，带反馈修复后进入下一轮验证
+            report["missing_points"] = missing
+            report["unauthorized_changes"] = unauth
+            feedback_parts = []
+            if missing:
+                feedback_parts.append(
+                    "以下指令要求未落实，必须补充落实：\n- " + "\n- ".join(missing))
+            if unauth:
+                feedback_parts.append(
+                    "以下更改超出了用户指令范围，必须恢复为修改前原文的对应内容"
+                    "（只保留指令明确要求的部分）：\n- " + "\n- ".join(unauth))
+            repair_user = (
+                revision_user_prompt
+                + "\n\n# ⚠️ 修改审查反馈（上一版修改未通过审查，本次输出必须同时满足"
+                  "原修改指令与以下修正要求）\n" + "\n\n".join(feedback_parts)
+            )
+            try:
+                repaired = await asyncio.wait_for(
+                    _stream_llm_to_sink(
+                        system_prompt=revision_system_prompt,
+                        user_prompt=repair_user,
+                        temperature=0.3,
+                        max_tokens=8192,
+                    ),
+                    timeout=180.0,
+                )
+            except Exception as e:
+                print(f"[revise_section] 修复轮调用失败: {e}")
+                break
+            if repaired and repaired.strip():
+                content = repaired
+                report["repaired"] = True
+                continue  # 修复后再验
+            break
+
+        report["passed"] = False
+        print(f"[revise_section] 修改自检 {report['rounds']} 轮后仍有待确认项")
+        return content, report
+    except Exception as e:
+        print(f"[revise_section] 修改自检异常（不阻塞）: {e}")
+        return content, report
+
 
 @tool
 async def revise_section(section_name: str, instruction: str, doc_type: str = "design_development_plan") -> str:
@@ -3079,7 +3473,7 @@ async def revise_section(section_name: str, instruction: str, doc_type: str = "d
 - 如果修改影响了其他章节的参数/引用，在回复末尾用"⚠️ 关联影响:"标注
 - 用中文回复
 
-{style_ref_block}{_output_structure_requirement(doc_type, is_revision=True)}{_supplementary_block()}{_memory_context_block()}"""
+{style_ref_block}{_output_structure_requirement(doc_type, is_revision=True)}{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}"""
 
         user_prompt = f"""请修改《{doc_label}》的「{section_name}」章节，修改指令: {instruction}
 
@@ -3111,11 +3505,28 @@ async def revise_section(section_name: str, instruction: str, doc_type: str = "d
             timeout=180.0,
         )
 
+        # ── 修改符合性自检：确认按用户最新指令修改且无额外更改（未通过则带反馈修复再验）──
         if response:
+            response, verify_report = await _verify_revision_compliance(
+                instruction, current_section_content, response,
+                system_prompt, user_prompt,
+            )
+            verify_note = ""
+            if verify_report.get("passed") is True:
+                verify_note = ("\n\n（自检通过：已经 "
+                               f"{verify_report.get('rounds')} 轮审查确认——修改完整落实了用户指令，"
+                               "且无指令之外的额外更改。）")
+            elif verify_report.get("passed") is False:
+                verify_note = ("\n\n（⚠️ 自检报告：经 "
+                               f"{verify_report.get('rounds')} 轮审查修复后仍有以下待确认项——"
+                               f"疑似未落实: {verify_report.get('missing_points') or '无'}；"
+                               f"疑似额外更改: {verify_report.get('unauthorized_changes') or '无'}。"
+                               "回复用户时必须如实说明这些待确认项，由用户决定是否进一步调整。）")
             return (
                 f"[已修改: {section_name}]\n\n{response}\n\n"
                 "（系统提示：以上修改后全文已保存进文档。回复用户时不要复述全文，"
                 "只输出提炼后的修改摘要：逐条列出变更点，整条回复 ≤200 字。）"
+                + verify_note
             )
         else:
             return f"[错误] 无法修改「{section_name}」章节。请稍后重试。"
@@ -3225,7 +3636,7 @@ async def revise_paragraph(section_name: str, anchor_text: str, instruction: str
 - 修改后段落的措辞语气、详略程度与全文其他章节保持一致
 
 {style_ref_block}输出格式:
-只输出修改后的段落文本，不要输出章节标题、不要输出其他段落、不要加"修改摘要"等额外说明。{_supplementary_block()}{_memory_context_block()}{_PRODUCT_PREMISE_RULE}"""
+只输出修改后的段落文本，不要输出章节标题、不要输出其他段落、不要加"修改摘要"等额外说明。{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}{_PRODUCT_PREMISE_RULE}"""
 
         user_prompt = f"""## 修改指令
 {instruction}
@@ -3238,6 +3649,22 @@ async def revise_paragraph(section_name: str, anchor_text: str, instruction: str
 后一段: {context_after if context_after else "(无，这是章节末尾)"}
 
 请只输出修改后的目标段落文本："""
+
+        # 附件参考（有附件时注入——段落修改的事实依据，防幻觉）
+        try:
+            assigned_context = _assigned_attachment_block(section_name)
+            if assigned_context:
+                user_prompt += (
+                    f"\n\n# 附件分配内容（最高优先参考——已通读全部上传附件并判定与本章相关，"
+                    f"其中的参数、数据、条款与表述必须优先采用）:\n{assigned_context}"
+                )
+            att_context = await _attachment_refs_block(
+                f"{doc_label} {section_name} {instruction[:100]}", top_k=3, verb="修改"
+            )
+            if att_context:
+                user_prompt += f"\n{att_context}"
+        except Exception:
+            pass
 
         response = await asyncio.wait_for(
             _stream_llm_to_sink(
@@ -3947,6 +4374,10 @@ async def write_chapter(
                 f"{tail_rules}"
                 f"{_supplementary_block()}"
                 f"{_memory_context_block()}"
+                f"{_attachment_priority_rule()}"
+                f"{_grounding_rule()}"
+                f"{_doc_scope_rule(doc_type)}"
+                f"{_user_requirements_block()}"
             )
 
             user_prompt = (
@@ -4114,6 +4545,10 @@ async def write_chapter(
             f"整章总字数控制在 800-2000 字之间。**宁少勿多**。"
             f"{_supplementary_block()}"
             f"{_memory_context_block()}"
+            f"{_attachment_priority_rule()}"
+            f"{_grounding_rule()}"
+            f"{_doc_scope_rule(doc_type)}"
+            f"{_user_requirements_block()}"
         )
 
         user_prompt = (
@@ -4513,6 +4948,27 @@ def _validate_readability(text: str, orig_text: str = "") -> dict:
     return {"is_valid": len(issues) == 0, "issues": issues}
 
 
+def _extract_mermaid_blocks(text: str) -> list:
+    """提取文本中的 mermaid 流程图代码块（```mermaid ... ```）。"""
+    import re as _re
+    return _re.findall(r"```mermaid.*?```", text or "", _re.S)
+
+
+def _ensure_mermaid_preserved(original: str, condensed: str) -> str:
+    """流程图保护硬保障：精简结果若丢失原文中的 mermaid 块，追加回缺失的块。
+
+    提示词已要求保留流程图，但 LLM 偶发不遵守（精简时丢代码块常见），
+    此处在返回前做代码级校验兜底。
+    """
+    missing = [b for b in _extract_mermaid_blocks(original)
+               if b not in (condensed or "")]
+    if not missing:
+        return condensed
+    restored = (condensed or "").rstrip() + "\n\n" + "\n\n".join(missing)
+    print(f"[condense] 已恢复被精简丢失的 {len(missing)} 个流程图块")
+    return restored
+
+
 async def _summarize_one_subsection(
     sub_title: str,
     sub_body: str,
@@ -4561,6 +5017,7 @@ async def _summarize_one_subsection(
 ### 必须保留（不可删除/篡改）
 - 所有法规标准条款号（如 "ISO 13485 §7.3.2"、"GB 9706.224-2021 第4章"）
 - 所有具体技术参数和数值（如 "0.05 U/h"、"IPX8"、"3-7天"）
+- **流程图必须完整保留**：所有 mermaid 代码块（```mermaid ... ``` 围栏）原样保留，不得删除、改写、精简或截断；流程图前后的引出句与结论句一并保留
 - 表格结构必须完整保留：不得删除任何表格、表头，不得删除整列、整行或任何数据行，也不得合并行列（行数列数与顺序不变）；但**表格单元格内的文字可以精简**——压缩冗长描述、删除修饰性措辞、长句改短句，每格须保持语法完整、语义不变、可读通顺；单元格中的数值、参数、单位、标准号不得改变
 - 核心结论和合规判定语句
 - 关键术语首次出现时的定义
@@ -4780,6 +5237,10 @@ async def _summarize_one_subsection(
         # 硬截断兜底已移除（用户要求）：3 轮 LLM 精简后仍超目标时，
         # 保留 LLM 的最佳结果（不再按句子边界物理裁剪，避免内容缺失/段落断裂）
 
+        # 流程图保护硬保障：精简结果若丢失原文 mermaid 块，追加回缺失的块
+        cleaned = _ensure_mermaid_preserved(sub_body, cleaned)
+        new_chars = _count_chinese_chars(cleaned)
+
         return (sub_title, cleaned, {
             "status": "ok",
             "orig_chars": orig_chars,
@@ -4937,6 +5398,68 @@ async def _strip_regulations_from_document(markdown: str) -> tuple[str, int]:
     return _reassemble_full_markdown(sections, list(bodies)), len(bodies)
 
 
+# ── 可精简度预判：先判断哪些小节已无精简空间，只精简仍有空间的部分 ──
+
+_CONDENSABILITY_SYSTEM = """你是文档精简预判专家。给定各小节的标题、字数与内容预览，判断每个小节是否还有精简空间。
+判定标准：
+- 已高度精炼（要点式短句/列表/表格为主、无冗余叙述）→ 无精简空间（condensable=false），继续压缩会丢失信息
+- 仍有冗余叙述、重复表述、长段落铺垫、过程性推导 → 可精简（condensable=true）
+宁可保守：不确定时判 true（可精简）。
+输出严格 JSON（无围栏无解释）：
+{"judgments": [{"title": "小节标题原文", "condensable": true, "reason": "≤20字"}]}"""
+
+
+async def _judge_condensable_subsections(subsections: list) -> set:
+    """预判各小节可精简度（一次 LLM 调用批量判断）。
+
+    Returns:
+        「不可精简」的小节标题集合（已 lstrip # 归一）。
+        LLM 失败/解析失败返回空集（全部视为可精简，即原有行为），不阻塞精简。
+    """
+    from app.services.minimax import _call_minimax_api_raw
+
+    items = [s for s in (subsections or []) if (s.get("body") or "").strip()]
+    if len(items) <= 1:
+        return set()  # 单小节无需预判
+
+    lines = []
+    for s in items:
+        plain = s["title"].lstrip("#").strip()
+        preview = (s["body"] or "")[:120].replace("\n", " ")
+        lines.append(f"- 标题: {plain} | 字数: {_count_chinese_chars(s['body'])} | 预览: {preview}")
+    user_prompt = f"待精简文档的小节清单：\n" + "\n".join(lines) + "\n\n请输出各小节可精简度判断 JSON。"
+
+    def _do():
+        return _call_minimax_api_raw(
+            system_prompt=_CONDENSABILITY_SYSTEM,
+            user_prompt=user_prompt,
+            temperature=0.1,
+            max_tokens=2048,
+        )
+
+    try:
+        raw = await asyncio.wait_for(asyncio.to_thread(_do), timeout=90.0)
+    except Exception as e:
+        print(f"[condense] 可精简度预判失败（退化为全量精简）: {e}")
+        return set()
+    data = _parse_att_map_json(raw or "")
+    non_cond = set()
+    for j in (data.get("judgments") or []):
+        if isinstance(j, dict) and j.get("condensable") is False:
+            t = str(j.get("title") or "").strip()
+            if t:
+                non_cond.add(t)
+    # 与实际小节标题宽松匹配（预判返回的标题可能略有出入）
+    result = set()
+    for s in items:
+        plain = s["title"].lstrip("#").strip()
+        if plain in non_cond or any(_same_chapter(plain, t) for t in non_cond):
+            result.add(plain)
+    if result:
+        print(f"[condense] 预判 {len(result)}/{len(items)} 个小节无精简空间，保持原文")
+    return result
+
+
 async def _condense_document_to_limit(
     markdown: str,
     doc_label: str = "",
@@ -4977,26 +5500,41 @@ async def _condense_document_to_limit(
         if not flat:
             break
 
-        orig_lens = [_count_chinese_chars(sub["body"]) for _, sub in flat]
-        total_len = sum(orig_lens) or 1
-        # 按当前长度比例分配目标预算（保底 40 字，避免小节被压成 0）
-        targets = [max(int(target_chars * ol / total_len), 40) for ol in orig_lens]
+        # ── 可精简度预判：只精简仍有空间的小节，已高度精炼的保持原文 ──
+        non_condensable = await _judge_condensable_subsections([sub for _, sub in flat])
+        condensable_idx = [
+            i for i, (_, sub) in enumerate(flat)
+            if sub["title"].lstrip("#").strip() not in non_condensable
+        ]
+        if not condensable_idx:
+            print(f"[condense] 第 {it} 轮预判：全部小节已无精简空间，停止迭代")
+            break
 
-        tasks = [
-            asyncio.create_task(_summarize_one_subsection(
+        orig_lens = [_count_chinese_chars(sub["body"]) for _, sub in flat]
+        # 预算只在可精简小节间分配（不可精简的保持原文，不占预算；保底 40 字）
+        condensable_len = sum(orig_lens[i] for i in condensable_idx) or 1
+        targets = [0] * len(flat)
+        for i in condensable_idx:
+            targets[i] = max(int(target_chars * orig_lens[i] / condensable_len), 40)
+
+        tasks = [None] * len(flat)
+        for i in condensable_idx:
+            sec, sub = flat[i]
+            tasks[i] = asyncio.create_task(_summarize_one_subsection(
                 sub_title=sub["title"],
                 sub_body=sub["body"],
-                target_chars=t,
+                target_chars=targets[i],
                 chapter_name=sec["name"],
                 doc_label=doc_label,
             ))
-            for (sec, sub), t in zip(flat, targets)
-        ]
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*[t for t in tasks if t])
 
         bodies = []
-        for task, (sec, sub) in zip(tasks, flat):
-            _, new_body, stat = task.result()
+        for i, (sec, sub) in enumerate(flat):
+            if tasks[i] is None:
+                bodies.append(sub["body"])  # 预判无精简空间，保持原文
+                continue
+            _, new_body, stat = tasks[i].result()
             bodies.append(new_body if stat.get("status") == "ok" else sub["body"])
 
         new_md = _reassemble_full_markdown(sections, bodies)
@@ -5126,6 +5664,11 @@ async def summarize_section(
         header = parsed[0]["header"]
         sub_count = len(subsections)
 
+        # ── 可精简度预判：只精简仍有空间的小节，已高度精炼的保持原文 ──
+        non_condensable = await _judge_condensable_subsections(subsections)
+        skipped_count = sum(1 for s in subsections
+                            if s["title"].lstrip("#").strip() in non_condensable)
+
         # 计算每个小节的目标字数
         orig_chars_list = [_count_chinese_chars(s["body"]) for s in subsections]
         orig_total = sum(orig_chars_list) or 1  # 避免除0
@@ -5143,24 +5686,44 @@ async def summarize_section(
                     targets.append(max(raw_target, 40))
         else:  # words
             total_target = int(target)
-            for oc in orig_chars_list:
+            # 预算只分配给可精简小节（不可精简的保持原文不占预算）
+            condensable_total = sum(
+                oc for oc, s in zip(orig_chars_list, subsections)
+                if s["title"].lstrip("#").strip() not in non_condensable) or orig_total
+            for oc, s in zip(orig_chars_list, subsections):
+                if s["title"].lstrip("#").strip() in non_condensable:
+                    targets.append(oc)  # 不参与分配（占位，实际保持原文）
+                    continue
                 # 按原字数比例分配，保底80字
-                allocated = max(int(total_target * oc / orig_total), 80)
+                allocated = max(int(total_target * oc / condensable_total), 80)
                 targets.append(allocated)
 
         print(f"[summarize_section] '{section_name}': {sub_count} subsections, "
-              f"mode={mode}, target={target}, orig_total={orig_total}")
+              f"mode={mode}, target={target}, orig_total={orig_total}"
+              + (f"，预判 {skipped_count} 个小节无精简空间保持原文" if skipped_count else ""))
 
-        # 并行精简各小节
-        gen_tasks = [
-            asyncio.create_task(_summarize_one_subsection(
+        # 并行精简各小节（不可精简的直接保持原文，不调 LLM）
+        async def _condense_or_keep(i, s):
+            if s["title"].lstrip("#").strip() in non_condensable:
+                return (s["title"], s["body"], {
+                    "title": s["title"],
+                    "orig_chars": orig_chars_list[i],
+                    "new_chars": orig_chars_list[i],
+                    "target_chars": targets[i],
+                    "status": "skipped",
+                    "reason": "预判无精简空间，保持原文",
+                })
+            return await _summarize_one_subsection(
                 sub_title=s["title"],
                 sub_body=s["body"],
                 target_chars=targets[i],
                 chapter_name=section_name,
                 doc_label=doc_label,
                 is_ratio_mode=(mode == "ratio"),
-            ))
+            )
+
+        gen_tasks = [
+            asyncio.create_task(_condense_or_keep(i, s))
             for i, s in enumerate(subsections)
         ]
         await asyncio.gather(*gen_tasks)
@@ -5180,13 +5743,13 @@ async def summarize_section(
                     "status": "ok",
                 }, subsections[i]))
             else:
-                # 失败保留原文
+                # 失败/预判跳过均保留原文（skipped 状态保留标记供结果统计展示）
                 assembled.append((sub_title, subsections[i]["body"], {
                     "title": sub_title,
                     "orig_chars": stat["orig_chars"],
                     "new_chars": stat["orig_chars"],
                     "target_chars": targets[i],
-                    "status": "error",
+                    "status": stat.get("status") if stat.get("status") == "skipped" else "error",
                     "reason": stat.get("reason", "unknown"),
                 }, subsections[i]))
 
@@ -5385,6 +5948,236 @@ async def summarize_document(
             "message": f"批量精简异常: {str(e)}",
         }, ensure_ascii=False)
 
+
+
+# ── Tool: set_document_format（用户文档格式/字体要求）──
+
+@tool
+async def set_document_format(
+    body_font: str = "",
+    heading_font: str = "",
+    body_size_pt: float = 0,
+    heading_size_pt: float = 0,
+    line_spacing: float = 0,
+    margin_cm: float = 0,
+) -> str:
+    """设置文档导出的字体与格式要求（持久化到会话，后续导出自动应用）。
+
+    当用户对 agent 提出字体或文档格式要求时调用，如：
+    - "正文用仿宋"（body_font=仿宋_GB2312）
+    - "标题用黑体、正文用宋体小四"（heading_font=黑体, body_font=宋体, body_size_pt=12）
+    - "行距 1.5 倍"（line_spacing=1.5）
+    - "页边距 2.5 厘米"（margin_cm=2.5）
+
+    常用字号对照（用户说字号时换算为 pt）：初号=42、小初=36、一号=26、小一=24、
+    二号=22、小二=18、三号=16、小三=15、四号=14、小四=12、五号=10.5、小五=9。
+    常用中文字体：宋体、黑体、仿宋_GB2312（或仿宋）、楷体_GB2312（或楷体）。
+
+    Args:
+        body_font: 正文中文字体名（如 宋体/仿宋_GB2312/楷体_GB2312）。空=不改
+        heading_font: 标题中文字体名（如 黑体）。空=不改
+        body_size_pt: 正文字号（pt）。0=不改
+        heading_size_pt: 一级标题字号（pt，二~五级依次递减1pt）。0=不改
+        line_spacing: 行距倍数（如 1.5）。0=不改
+        margin_cm: 页边距（厘米，四边统一）。0=不改
+
+    Returns:
+        JSON：status、updated（本次修改项）、current_format（当前生效的完整设置）。
+        设置在下一次 build_docx 导出及「下载文档」时自动应用。
+    """
+    fmt = dict(_current_document_format.get() or {})
+    updated = []
+
+    if (body_font or "").strip():
+        fmt["body_font"] = body_font.strip()
+        updated.append(f"正文字体={body_font.strip()}")
+    if (heading_font or "").strip():
+        fmt["heading_font"] = heading_font.strip()
+        updated.append(f"标题字体={heading_font.strip()}")
+    if body_size_pt and float(body_size_pt) > 0:
+        fmt["body_size_pt"] = float(body_size_pt)
+        updated.append(f"正文字号={body_size_pt}pt")
+    if heading_size_pt and float(heading_size_pt) > 0:
+        fmt["heading_size_pt"] = float(heading_size_pt)
+        updated.append(f"标题字号={heading_size_pt}pt")
+    if line_spacing and float(line_spacing) > 0:
+        fmt["line_spacing"] = float(line_spacing)
+        updated.append(f"行距={line_spacing}倍")
+    if margin_cm and float(margin_cm) > 0:
+        fmt["margin_cm"] = float(margin_cm)
+        updated.append(f"页边距={margin_cm}cm")
+
+    if not updated:
+        return json.dumps({
+            "status": "ok",
+            "message": "未传入任何修改项，格式保持不变。",
+            "current_format": fmt,
+        }, ensure_ascii=False)
+
+    _current_document_format.set(fmt)
+    _pending_document_format["format"] = fmt
+    return json.dumps({
+        "status": "ok",
+        "updated": updated,
+        "current_format": fmt,
+        "message": "文档格式要求已设置，将在下次导出文档时自动应用（含顶部「下载文档」入口）。",
+    }, ensure_ascii=False)
+
+
+# ── Tool: find_kb_reference_files / add_kb_files_as_attachment ──
+# 生成文档前自主检索知识库中最接近目标的文件 → 向用户展示候选并询问 →
+# 确认后添加为会话附件（自动接入附件最高优先参考的整套生成链路）。
+
+# 旁路：add 工具写入 → _after_tools_node 合并进 state attachments
+_pending_kb_attachments: dict = {}
+
+
+def pop_pending_kb_attachments() -> list:
+    """读取并清除待合并进 state 的知识库附件（无则空列表）。"""
+    return _pending_kb_attachments.pop("files", [])
+
+
+@tool
+async def find_kb_reference_files(doc_type: str = "", instruction: str = "", top_n: int = 3) -> str:
+    """在知识库中检索与待生成文档目标最接近的文件，供添加为附件参考。
+
+    调用时机: 用户要求生成/编写某类文档时，生成前自主调用一次，找出知识库中与该
+    文档目标最相关的参考文件。找到后**必须先向用户展示候选清单（文件名、相关度、
+    内容摘要）并询问是否添加为附件**，用户确认后再调用 add_kb_files_as_attachment。
+    知识库无文件时返回 no_kb_files。
+
+    Args:
+        doc_type: 待生成文档类型标识（用于构造检索目标）
+        instruction: 用户的生成要求原文（可选，与 doc_type 共同构造检索目标）
+        top_n: 返回候选数上限，默认3，最多5
+
+    Returns:
+        JSON: candidates=[{source_file, file_id, score, hits, sample}]
+    """
+    from app.services.doc_types import DOC_TYPE_LABELS
+    label = DOC_TYPE_LABELS.get(doc_type, "") if doc_type else ""
+    goal = " ".join(x for x in (label, (instruction or "").strip()) if x) or "设计开发文档"
+    try:
+        from app.services.rag.vector_store import VectorStore
+        store = VectorStore(collection_name="uploads")
+        if store.collection.count() == 0:
+            return json.dumps({
+                "status": "no_kb_files",
+                "message": "知识库中暂无文件，跳过参考文件检索。",
+                "candidates": [],
+            }, ensure_ascii=False)
+        query_embedding = store.embedder.encode_single(goal)
+        raw = store.collection.query(
+            query_embeddings=[query_embedding], n_results=24,
+            include=["documents", "metadatas", "distances"],
+        )
+        # 按 source_file 聚合：最高相关度 + 命中数 + 首条摘要
+        agg = {}
+        if raw and raw.get("ids") and raw["ids"][0]:
+            for i in range(len(raw["ids"][0])):
+                meta = raw["metadatas"][0][i] or {}
+                src = meta.get("source_file", "未知文件")
+                sim = max(0.0, 1.0 - raw["distances"][0][i] / 2.0)
+                e = agg.setdefault(src, {"score": 0.0, "hits": 0,
+                                         "sample": "", "file_id": meta.get("file_id", "")})
+                e["score"] = max(e["score"], sim)
+                e["hits"] += 1
+                if not e["sample"]:
+                    e["sample"] = (raw["documents"][0][i] or "")[:120]
+        ranked = sorted(agg.items(), key=lambda kv: kv[1]["score"], reverse=True)
+        ranked = ranked[:max(1, min(int(top_n or 3), 5))]
+        candidates = [{
+            "source_file": src,
+            "file_id": v["file_id"],
+            "score": round(v["score"], 3),
+            "hits": v["hits"],
+            "sample": v["sample"],
+        } for src, v in ranked]
+        if not candidates:
+            return json.dumps({
+                "status": "no_match",
+                "message": "知识库中未检索到与文档目标相关的内容。",
+                "candidates": [],
+            }, ensure_ascii=False)
+        return json.dumps({
+            "status": "ok",
+            "goal": goal,
+            "count": len(candidates),
+            "candidates": candidates,
+            "message": "已找到候选参考文件。请向用户展示候选清单（文件名+相关度+摘要）"
+                       "并询问是否添加为附件，确认后调用 add_kb_files_as_attachment。",
+        }, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"知识库检索失败: {e}",
+            "candidates": [],
+        }, ensure_ascii=False)
+
+
+@tool
+async def add_kb_files_as_attachment(source_files: str) -> str:
+    """将知识库文件添加为当前会话附件（仅在用户确认后调用）。
+
+    与 find_kb_reference_files 配套使用：find 返回候选 → 向用户展示并询问 →
+    用户确认后用本工具添加。添加后文件立即成为会话附件，生成文档时将作为
+    最高优先参考（附件分配/检索注入链路自动生效）。
+
+    Args:
+        source_files: 要添加的知识库文件 source_file 列表，多个用英文逗号分隔。
+                      必须来自 find_kb_reference_files 的候选且经用户确认。
+
+    Returns:
+        JSON: added（已添加文件名）/ skipped（跳过及原因）/ char_counts
+    """
+    from app.services.rag.vector_store import VectorStore
+
+    files = [s.strip() for s in (source_files or "").split(",") if s.strip()]
+    if not files:
+        return json.dumps({
+            "status": "error",
+            "message": "未提供文件名。source_files 应为逗号分隔的文件名列表。",
+        }, ensure_ascii=False)
+    try:
+        store = VectorStore(collection_name="uploads")
+        existing_ids = {a.get("file_id") for a in (_current_attachments.get() or [])}
+        added, skipped, pending = [], [], []
+        for src in files:
+            full_text = store.get_text_by_source(src) or ""
+            if not full_text.strip():
+                skipped.append(f"{src}（知识库中无内容）")
+                continue
+            file_id = src  # 与 from-kb 端点回退策略一致：以 source_file 为附件标识
+            if file_id in existing_ids:
+                skipped.append(f"{src}（已在附件列表）")
+                continue
+            pending.append({
+                "file_id": file_id,
+                "filename": os.path.basename(src) or src,
+                "char_count": len(full_text),
+                "preview": full_text[:500] + ("..." if len(full_text) > 500 else ""),
+                "full_text": full_text,
+                "toc": "",
+                "status": "completed",
+            })
+            existing_ids.add(file_id)
+            added.append(src)
+        if pending:
+            _pending_kb_attachments["files"] = _pending_kb_attachments.get("files", []) + pending
+        return json.dumps({
+            "status": "ok",
+            "added": added,
+            "skipped": skipped,
+            "char_counts": {p["filename"]: p["char_count"] for p in pending},
+            "message": (f"已添加 {len(added)} 个知识库文件为附件" if added
+                        else "未添加任何文件") +
+                       ("。" if not skipped else f"；跳过: {'；'.join(skipped)}"),
+        }, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"添加附件失败: {e}",
+        }, ensure_ascii=False)
 
 
 # ── Tool 7: web_search ──
@@ -7231,6 +8024,9 @@ PHASE1_TOOLS = [
     enrich_attachment,
     summarize_attachment,
     web_search,
+    set_document_format,
+    find_kb_reference_files,
+    add_kb_files_as_attachment,
     analyze_document_structure,
     ingest_attachment_to_kb,
     generate_search_query,

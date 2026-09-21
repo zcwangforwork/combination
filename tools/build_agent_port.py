@@ -40,6 +40,8 @@ OUT_JS = os.path.normpath(os.path.join(
     HERE, '..', 'user_management', 'frontend', 'js', 'agent-chat.js'))
 OUT_FRAG = os.path.normpath(os.path.join(
     HERE, '..', 'user_management', 'frontend', 'agent-view-fragment.html'))
+INDEX_HTML = os.path.normpath(os.path.join(
+    HERE, '..', 'user_management', 'frontend', 'index.html'))
 
 with io.open(SRC, 'r', encoding='utf-8') as f:
     FULL = f.read()
@@ -48,12 +50,12 @@ with io.open(SRC, 'r', encoding='utf-8') as f:
 with io.open(UM_CSS, 'r', encoding='utf-8') as f:
     UM_CSS_TEXT = f.read()
 
-# ── 源文件区段边界（1-based 行号；agent.html 头部新增 token-relay.js 引用（含两行
-#    注释共 3 行）后整体 +3）──
-CSS1 = ''.join(lines[10:527])    # lines 11-527  主 <style>
-BODY = ''.join(lines[531:784])   # lines 532-784 <body> 内 HTML
-CSS2 = ''.join(lines[785:798])   # lines 786-798 第二个 <style>（chat-reasoning）
-JS = ''.join(lines[801:4115])    # lines 802-4115 主 <script> 内容
+# ── 源文件区段边界（1-based 行号；2026-09-20 源项目同步后重算：
+#    <style>@10 </style>@559 <body>@562 <style2>@844 </style2>@858 <script>@860 </script>@4616）──
+CSS1 = ''.join(lines[10:558])    # lines 11-558  主 <style>
+BODY = ''.join(lines[562:843])   # lines 563-843 <body> 内 HTML（止于第二个 <style> 前）
+CSS2 = ''.join(lines[844:857])   # lines 845-857 第二个 <style>（chat-reasoning）
+JS = ''.join(lines[860:4615])    # lines 861-4615 主 <script> 内容
 
 AGENT_CSS = CSS1 + '\n' + CSS2
 
@@ -330,14 +332,15 @@ NEW_PROJECT_BLOCK = '''        // ── State ──
         // [PORT] 原从 URL ?project= 恢复并 replaceState 写回；
         // SPA 内嵌后改为 localStorage 持久化（读=恢复，写=新建后立即落盘）
         // [PORT-AUTH] key 按登录用户名区分：同浏览器多账号切换互不串项目；
-        // 新建 ID 用 UUID：两用户同一毫秒新建不再碰撞出同一 thread_id
-        const _restoredProject = localStorage.getItem(_projectKey());
-        let PROJECT_ID = _restoredProject || ('project_' + _newProjectId());
+        // 新建 ID 用 UUID：两用户同一毫秒新建不再碰撞出同一 thread_id。
+        // 本脚本随 SPA 首屏加载，彼时可能尚未登录（无 token → 用户名不可知），
+        // 故恢复读取与首次落盘均延迟到 _doInit()（activate 时必已登录）
+        let _restoredProject = null;
+        let PROJECT_ID = null;
         // [PORT] 原语义：!existingProject 时 loadHistory 直接返回（新项目页面生命周期内不拉历史）。
         // 恢复/切换到既有项目时为 true，新建项目时为 false
-        let _hasHistory = !!_restoredProject;
-        function _persistProject() { localStorage.setItem(_projectKey(), PROJECT_ID); }
-        _persistProject();
+        let _hasHistory = false;
+        function _persistProject() { if (PROJECT_ID) localStorage.setItem(_projectKey(), PROJECT_ID); }
 '''
 
 OLD_INIT = '''        // ── Init ──
@@ -359,6 +362,8 @@ OLD_INIT = '''        // ── Init ──
         fetchTemplates();
         // 找回刷新/切换任务后中断的模板上传：补 finalize 孤儿模板任务
         recoverOrphanTemplates();
+        // 恢复进行中的上传（知识库/模板）：进度 UI + 续接轮询（跨刷新/任务切换）
+        restoreActiveUploads();
         // 加载完整文档类型列表（填充模板「目标文档类型」下拉框）
         loadDocTypes();
         renderSteps({});
@@ -400,6 +405,7 @@ NEW_INIT = '''        // ── Init（[PORT] 原为脚本尾部立即执行；�
             loadChatList();
             fetchTemplates();
             recoverOrphanTemplates();
+            restoreActiveUploads();
             renderSteps({});
             _refreshProjectBadge(!!projectId);
             _refreshReviewLink();
@@ -408,6 +414,11 @@ NEW_INIT = '''        // ── Init（[PORT] 原为脚本尾部立即执行；�
         function _doInit() {
             if (_inited) return;
             _inited = true;
+            // [PORT-AUTH] 登录后才可知用户名：此处才读按用户分键的恢复项目并落盘
+            _restoredProject = localStorage.getItem(_projectKey());
+            PROJECT_ID = _restoredProject || ('project_' + _newProjectId());
+            _hasHistory = !!_restoredProject;
+            _persistProject();
             // [PORT] 原顶层的 DOM 事件绑定（登录后视图 DOM 才存在）
             setupDragDrop();
             setupInputDragDrop();
@@ -430,6 +441,8 @@ NEW_INIT = '''        // ── Init（[PORT] 原为脚本尾部立即执行；�
             fetchTemplates();
             // 找回刷新/切换任务后中断的模板上传：补 finalize 孤儿模板任务
             recoverOrphanTemplates();
+            // 恢复进行中的上传（知识库/模板）：进度 UI + 续接轮询（跨刷新/任务切换）
+            restoreActiveUploads();
             // 加载完整文档类型列表（填充模板「目标文档类型」下拉框）
             loadDocTypes();
             renderSteps({});
@@ -684,9 +697,10 @@ def build_js(to_export):
     }
 
     // fetch 包装：agent 服务请求自动携带 Authorization（CORS 已放行该头）；
-    // 401 → 顶部横幅提示（不静默失败）
+    // 401 → 顶部横幅提示（不静默失败）。注意 _rawFetch 必须 bind(window)——
+    // 原生 fetch 对 this 敏感，绑定到其他对象会抛 Illegal invocation
     (function () {
-        var _rawFetch = window.fetch.bind(window.fetch);
+        var _rawFetch = window.fetch.bind(window);
         window.fetch = function (input, init) {
             var p;
             try {
@@ -837,6 +851,24 @@ def main():
         f.write(js)
     with io.open(OUT_FRAG, 'w', encoding='utf-8') as f:
         f.write(frag)
+
+    # [PORT] cache-busting：index.html 对生成产物的引用附加内容哈希版本号，
+    # 产物一变 URL 即变，浏览器不再持有旧 CSS/JS（2026-09-20 连续三次缓存事故后引入）
+    import hashlib as _hl
+    with io.open(INDEX_HTML, 'r', encoding='utf-8') as f:
+        idx = f.read()
+    for attr, path, out_path in [
+        ('href', 'css/agent-chat.css', OUT_CSS),
+        ('src', 'js/agent-chat.js', OUT_JS),
+    ]:
+        with open(out_path, 'rb') as f:
+            v = _hl.md5(f.read()).hexdigest()[:10]
+        pat = re.compile(r'(%s="%s)(\?v=[0-9a-f]+)?(")' % (attr, re.escape(path)))
+        idx, n_sub = pat.subn(lambda m: m.group(1) + '?v=' + v + m.group(3), idx)
+        assert n_sub >= 1, 'cache-bust target not found: %s' % path
+        print('cache-bust: %s?v=%s (%d 处)' % (path, v, n_sub))
+    with io.open(INDEX_HTML, 'w', encoding='utf-8') as f:
+        f.write(idx)
 
     print('=== build_agent_port OK ===')
     print('css: %d lines; keyframes renamed: %s' % (css.count('\n'), sorted(keyframes.values())))

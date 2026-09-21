@@ -84,14 +84,15 @@ async def get_owner(thread_id: str) -> Optional[str]:
 
 
 async def list_owned_threads(username: str) -> list:
-    """列出某用户拥有的全部 thread_id（按 checkpoint 库 rowid 倒序，即最新活动在前）"""
+    """列出某用户拥有的全部 thread_id（按最新活动倒序；GROUP BY 去重——
+    checkpoints 每线程多行，无去重会重复返回同一项目）"""
     def _q():
         with _conn() as conn:
             cur = conn.execute(
                 "SELECT c.thread_id FROM checkpoints c "
                 "JOIN project_owners o ON o.thread_id = c.thread_id "
                 "WHERE o.username = ? AND c.checkpoint_ns = '' AND c.thread_id != '' "
-                "ORDER BY c.rowid DESC",
+                "GROUP BY c.thread_id ORDER BY MAX(c.rowid) DESC",
                 (username,))
             return [row[0] for row in cur.fetchall()]
     return await asyncio.to_thread(_q)
@@ -107,7 +108,11 @@ def verify_token(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="缺少登录凭证，请先登录体系管理系统")
     token = authorization[len("Bearer "):].strip()
     try:
-        payload = jwt.decode(token, _secret(), algorithms=["HS256"])
+        # HMAC 家族全放行：Spring jjwt 的 signWith(key) 依据密钥字节数自动选
+        # HS256/384/512（当前 65 字节密钥 → HS512）；轮换 UM_JWT_SECRET 变更
+        # 密钥长度时算法会随之变化。非对称与 none 仍被拒绝（无算法混淆风险，
+        # 三者验签均使用同一共享密钥）
+        payload = jwt.decode(token, _secret(), algorithms=["HS256", "HS384", "HS512"])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="登录已过期，请重新登录体系管理系统")
     except jwt.InvalidTokenError:

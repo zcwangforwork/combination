@@ -92,6 +92,14 @@ def test_verify_token_valid():
     assert verify_token(f"Bearer {_make_token('alice')}") == "alice"
 
 
+def test_verify_token_hs512_accepted():
+    """Spring jjwt 对 ≥64 字节密钥自动选 HS512（真实 UM token 形态，2026-09-20 实测）"""
+    token = _make_token("admin", alg="HS512")
+    assert verify_token(f"Bearer {token}") == "admin"
+    token384 = _make_token("alice", alg="HS384")
+    assert verify_token(f"Bearer {token384}") == "alice"
+
+
 def test_verify_token_expired():
     token = _make_token("alice", exp_delta=-10)
     with pytest.raises(Exception) as e:
@@ -192,11 +200,13 @@ def test_list_filters_by_owner(client, _temp_db):
     assert client.post("/agent/projects/b1/messages", headers=bob).status_code == 200
 
     conn = sqlite3.connect(str(_temp_db))
-    conn.execute("INSERT INTO checkpoints (thread_id) VALUES ('a1')")
+    # 同一线程多个检查点行（每轮对话一行）——必须去重为 1 个项目
+    conn.executemany("INSERT INTO checkpoints (thread_id) VALUES (?)",
+                     [("a1",)] * 3)
     conn.commit()
     conn.close()
 
-    # list_projects 测试路由固定查 alice → 只见 a1
+    # list_projects 测试路由固定查 alice → 只见 a1（3 个检查点行 = 1 个项目）
     body = client.get("/agent/projects", headers=alice).json()
     assert body["projects"] == ["a1"]
 

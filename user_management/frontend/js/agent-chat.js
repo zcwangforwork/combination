@@ -103,9 +103,10 @@
     }
 
     // fetch 包装：agent 服务请求自动携带 Authorization（CORS 已放行该头）；
-    // 401 → 顶部横幅提示（不静默失败）
+    // 401 → 顶部横幅提示（不静默失败）。注意 _rawFetch 必须 bind(window)——
+    // 原生 fetch 对 this 敏感，绑定到其他对象会抛 Illegal invocation
     (function () {
-        var _rawFetch = window.fetch.bind(window.fetch);
+        var _rawFetch = window.fetch.bind(window);
         window.fetch = function (input, init) {
             var p;
             try {
@@ -168,14 +169,15 @@
         // [PORT] 原从 URL ?project= 恢复并 replaceState 写回；
         // SPA 内嵌后改为 localStorage 持久化（读=恢复，写=新建后立即落盘）
         // [PORT-AUTH] key 按登录用户名区分：同浏览器多账号切换互不串项目；
-        // 新建 ID 用 UUID：两用户同一毫秒新建不再碰撞出同一 thread_id
-        const _restoredProject = localStorage.getItem(_projectKey());
-        let PROJECT_ID = _restoredProject || ('project_' + _newProjectId());
+        // 新建 ID 用 UUID：两用户同一毫秒新建不再碰撞出同一 thread_id。
+        // 本脚本随 SPA 首屏加载，彼时可能尚未登录（无 token → 用户名不可知），
+        // 故恢复读取与首次落盘均延迟到 _doInit()（activate 时必已登录）
+        let _restoredProject = null;
+        let PROJECT_ID = null;
         // [PORT] 原语义：!existingProject 时 loadHistory 直接返回（新项目页面生命周期内不拉历史）。
         // 恢复/切换到既有项目时为 true，新建项目时为 false
-        let _hasHistory = !!_restoredProject;
-        function _persistProject() { localStorage.setItem(_projectKey(), PROJECT_ID); }
-        _persistProject();
+        let _hasHistory = false;
+        function _persistProject() { if (PROJECT_ID) localStorage.setItem(_projectKey(), PROJECT_ID); }
         let isStreaming = false;
         let waitingApproval = null;
         let currentDocLabel = '文档';
@@ -193,6 +195,90 @@
 
         // ── 对话思维链（chat_reasoning 事件 → 对话区折叠块）──
         let chatReasoningDiv = null;  // 对话区思维链容器
+
+        // ── Agent 工作状态条：集中跟踪所有 SSE 事件，实时更新当前动作 ──
+        // 任何时刻进入对话（含切任务/刷新重连回放）都能立即看到 agent 在做什么；
+        // 文档生成完成（file_ready）时给显著提示（状态条 + 大 toast）
+        let _statusHideTimer = null;
+        let _lastStatusType = '';
+
+        function setAgentStatus(text, spinning, tone) {
+            const bar = document.getElementById('agentStatusBar');
+            if (!bar) return;
+            if (!text) { bar.style.display = 'none'; return; }
+            document.getElementById('agentStatusText').textContent = text;
+            const sp = document.getElementById('agentStatusSpinner');
+            if (sp) sp.style.display = spinning ? '' : 'none';
+            bar.className = 'agent-status-bar' + (tone ? ' ' + tone : '');
+            bar.style.display = 'flex';
+            if (_statusHideTimer) { clearTimeout(_statusHideTimer); _statusHideTimer = null; }
+        }
+
+        function _scheduleStatusHide(delayMs) {
+            if (_statusHideTimer) clearTimeout(_statusHideTimer);
+            _statusHideTimer = setTimeout(() => {
+                const bar = document.getElementById('agentStatusBar');
+                if (bar) bar.style.display = 'none';
+            }, delayMs);
+        }
+
+        function trackAgentStatus(data) {
+            if (!data || !data.type) return;
+            const t = data.type;
+            if (t === 'token' || t === 'chat_reasoning') {
+                // 回复中：仅首次设置，避免每个 chunk 重绘
+                if (_lastStatusType !== 'reply') {
+                    _lastStatusType = 'reply';
+                    setAgentStatus('💬 正在回复…', true);
+                }
+                return;
+            }
+            const prev = _lastStatusType;
+            _lastStatusType = t;
+            switch (t) {
+                case 'tool_start':
+                    setAgentStatus(`🔧 ${toolLabel(data.tool) || data.tool}执行中…`, true);
+                    break;
+                case 'subagent_start':
+                    setAgentStatus(data.message || '正在处理…', true);
+                    break;
+                case 'subagent_complete':
+                    setAgentStatus(`✅ ${data.message || '完成'}`, false, 'done');
+                    break;
+                case 'waiting_approval':
+                    setAgentStatus('⏸ 等待你的确认（请在对话中点击 确认/修改/跳过）', false, 'warn');
+                    break;
+                case 'file_ready':
+                    // 文档生成完成：显著提示（状态条绿色常驻较久 + 大 toast）
+                    setAgentStatus(`📄 文档《${data.filename}》已生成完成，点击下载按钮获取`, false, 'done');
+                    showToast(`🎉 文档《${data.filename}》已生成完成`, 'success', 8000);
+                    _scheduleStatusHide(60000);
+                    break;
+                case 'sections_ready':
+                    setAgentStatus('📝 章节已生成完成', false, 'done');
+                    _scheduleStatusHide(10000);
+                    break;
+                case 'modified_doc_ready':
+                    setAgentStatus(`📄 修改版《${data.filename}》已生成`, false, 'done');
+                    _scheduleStatusHide(15000);
+                    break;
+                case 'done':
+                    // 文档完成提示优先于通用完成语（done 在 file_ready 之后到达时不覆盖）
+                    if (prev !== 'file_ready') {
+                        setAgentStatus('✅ 本轮已完成', false, 'done');
+                        _scheduleStatusHide(6000);
+                    }
+                    break;
+                case 'error':
+                    setAgentStatus(`⚠️ ${String(data.message || '出错了').slice(0, 80)}`, false, 'warn');
+                    _scheduleStatusHide(15000);
+                    break;
+                case 'cancelled':
+                    setAgentStatus('⏸ 已暂停生成', false, 'warn');
+                    _scheduleStatusHide(8000);
+                    break;
+            }
+        }
 
         // 对话区滚动节流：流式 chunk 到达频率高，逐条 scrollTop 会频繁触发重排卡顿页面，
         // 用 requestAnimationFrame 合并到每帧一次
@@ -596,7 +682,7 @@
                     // 后端已改为异步：上传接口立即返回 processing，
                     // 此处轮询提取状态，完成后调用 finalize 把全文写入 Agent 状态
                     let finalized = false;
-                    for (let i = 0; i < 600; i++) {
+                    for (let i = 0; i < 1600; i++) {
                         if (controller.signal.aborted) {
                             throw new DOMException('已取消', 'AbortError');
                         }
@@ -637,7 +723,7 @@
                         }
                     }
                     if (!finalized) {
-                        throw new Error('提取超时（超过 15 分钟），请重试或使用更小的文档');
+                        throw new Error('提取超时（超过 40 分钟），请重试或使用更小的文档');
                     }
                 } else {
                     if (!hidden) {
@@ -1031,47 +1117,14 @@
                     }
 
                     const taskId = data.template_id;
-                    // 轮询提取状态（最长约 15 分钟，适配 MinerU 首次加载模型 + 多页推理耗时）
-                    let finalized = false;
-                    for (let i = 0; i < 600; i++) {
-                        if (controller.signal.aborted) {
-                            throw new DOMException('已取消', 'AbortError');
-                        }
-                        await new Promise(r => setTimeout(r, 1500));
-                        const statusResp = await fetch(AGENT_BASE + '/api/extract-status/' + taskId);
-                        if (statusResp.status === 404) {
-                            throw new Error('提取任务已丢失（服务可能重启），请重试');
-                        }
-                        if (!statusResp.ok) {
-                            throw new Error('查询提取状态失败');
-                        }
-                        const st = await statusResp.json();
-                        if (st.status === 'failed') {
-                            throw new Error(st.message || '提取失败');
-                        }
-                        if (st.status === 'completed') {
-                            // 提取完成，调用 finalize 将全文写入 Agent 状态
-                            const finResp = await fetch(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/templates/${taskId}/finalize`, { method: 'POST' });
-                            const finData = await finResp.json().catch(() => ({}));
-                            if (!finData.success) {
-                                throw new Error(finData.detail || '模板状态写入失败');
-                            }
-                            templates = templates.filter(t => t.template_id !== chipId);
-                            templates.push({
-                                template_id: taskId, name: finData.name, filename: finData.filename,
-                                doc_type: finData.doc_type, char_count: finData.char_count, status: 'completed'
-                            });
-                            successCount++;
-                            finalized = true;
-                            break;
-                        }
-                    }
-                    if (!finalized) {
-                        // 前端轮询到点≠提取失败：后台任务仍在运行（MinerU 大文档/冷启动
-                        // 可能超 15 分钟），完成后孤儿模板找回机制会在刷新页面时自动补登记，
-                        // 无需重试上传
-                        throw new Error('暂时提取超时（后台可能仍在提取中），无需重试上传；稍后刷新页面，已完成的模板会自动找回并显示');
-                    }
+                    const startedAt = Date.now();
+                    // 登记上传任务（跨刷新/任务切换可恢复进度与 finalize）
+                    registerUpload({ type: 'template', taskId, filename: file.name,
+                                     name: tplName, projectId: PROJECT_ID, docType: docType, startedAt });
+                    // 可恢复轮询：chip 实时显示阶段+耗时；超时保留登记（刷新后自动恢复），
+                    // 取消/失败时由 pollTemplateUpload 内部注销登记
+                    await pollTemplateUpload(taskId, PROJECT_ID, chipId, startedAt, controller.signal);
+                    successCount++;
                 } catch (e) {
                     templates = templates.filter(t => t.template_id !== chipId);
                     if (e.name === 'AbortError') {
@@ -1101,8 +1154,9 @@
             templates.forEach(t => {
                 const chip = document.createElement('span');
                 chip.className = 'tpl-chip' + (t.status === 'uploading' ? ' uploading' : '');
-                const sizeText = t.status === 'uploading' ? '上传中...' :
-                    (t.char_count ? (t.char_count / 1024).toFixed(1) + 'KB' : '');
+                const sizeText = t.status === 'uploading'
+                    ? `${t.stage || '上传中'}${t.elapsed ? ' · ' + t.elapsed + 's' : ''}`
+                    : (t.char_count ? (t.char_count / 1024).toFixed(1) + 'KB' : '');
                 chip.innerHTML = `
                     <span class="tpl-name" title="${escapeHtml(t.filename)}">${t.status === 'uploading' ? '⏳ ' : '📄 '}${escapeHtml(t.name || t.filename)}</span>
                     <span class="tpl-type">${escapeHtml(TPL_DOC_TYPE_LABELS[t.doc_type] || t.doc_type || '模板')}</span>
@@ -1322,6 +1376,139 @@
             }
         }
 
+        // ── 用户技能库：沉淀指导命令/生成规则，快捷复用 ──
+        let _editingSkillId = null;
+
+        function openSkillsDialog() {
+            _editingSkillId = null;
+            document.getElementById('skillNameInput').value = '';
+            document.getElementById('skillContentInput').value = '';
+            document.getElementById('skillDescInput').value = '';
+            document.getElementById('skillSaveBtn').textContent = '保存技能';
+            document.getElementById('skillsDialog').style.display = 'flex';
+            loadSkills();
+        }
+
+        function closeSkillsDialog() {
+            document.getElementById('skillsDialog').style.display = 'none';
+        }
+
+        async function loadSkills() {
+            try {
+                const resp = await fetch(AGENT_BASE + '/api/skills');
+                const data = await resp.json().catch(() => ({ skills: [] }));
+                renderSkillList(data.skills || []);
+            } catch (e) {
+                renderSkillList([]);
+            }
+        }
+
+        function renderSkillList(skills) {
+            window._skills = skills;
+            const box = document.getElementById('skillList');
+            if (!skills.length) {
+                box.innerHTML = '<p style="color:#999;text-align:center;padding:12px">暂无技能，用下方表单创建第一个</p>';
+                return;
+            }
+            box.innerHTML = '';
+            const btnStyle = 'padding:3px 10px;border:1px solid #ddd;background:#fff;border-radius:5px;font-size:11px;cursor:pointer';
+            skills.forEach(s => {
+                const item = document.createElement('div');
+                item.style.cssText = 'border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px';
+                const content = s.content.length > 120 ? s.content.slice(0, 120) + '…' : s.content;
+                item.innerHTML =
+                    `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                        <strong style="font-size:13px">🧩 ${escapeHtml(s.name)}</strong>
+                        <span style="display:flex;gap:5px;flex-shrink:0">
+                            <button style="${btnStyle};color:#2e7d32" onclick="useSkillSend('${s.id}')" title="把技能作为指令发送给 Agent">发送</button>
+                            <button style="${btnStyle};color:#1565c0" onclick="useSkillInsert('${s.id}')" title="插入输入框，可再编辑">插入</button>
+                            <button style="${btnStyle}" onclick="editSkill('${s.id}')">编辑</button>
+                            <button style="${btnStyle};color:#c62828" onclick="deleteSkill('${s.id}')">删除</button>
+                        </span>
+                    </div>
+                    <div style="font-size:12px;color:#666;margin-top:4px;white-space:pre-wrap">${escapeHtml(content)}</div>`;
+                box.appendChild(item);
+            });
+        }
+
+        function _getSkill(id) {
+            return (window._skills || []).find(s => s.id === id);
+        }
+
+        function useSkillInsert(id) {
+            const s = _getSkill(id);
+            if (!s) return;
+            const input = document.getElementById('userInput');
+            input.value = (input.value ? input.value + '\n' : '') + s.content;
+            input.focus();
+            updateClearBtn();
+        }
+
+        function useSkillSend(id) {
+            const s = _getSkill(id);
+            if (!s) return;
+            closeSkillsDialog();
+            const input = document.getElementById('userInput');
+            input.value = `【应用技能「${s.name}」】请按以下规则执行：\n${s.content}`;
+            updateClearBtn();
+            sendMessage();
+        }
+
+        async function saveSkill() {
+            const name = document.getElementById('skillNameInput').value.trim();
+            const content = document.getElementById('skillContentInput').value.trim();
+            const description = document.getElementById('skillDescInput').value.trim();
+            if (!name || !content) { showError('技能名称与内容不能为空'); return; }
+            try {
+                let resp;
+                if (_editingSkillId) {
+                    resp = await fetch(AGENT_BASE + '/api/skills/' + _editingSkillId, {
+                        method: 'PUT',
+                        body: new URLSearchParams({ name, content, description }),
+                    });
+                } else {
+                    const fd = new FormData();
+                    fd.append('name', name);
+                    fd.append('content', content);
+                    fd.append('description', description);
+                    resp = await fetch(AGENT_BASE + '/api/skills', { method: 'POST', body: fd });
+                }
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || '保存失败');
+                showToast(_editingSkillId ? '✓ 技能已更新' : '✓ 技能已保存', 'success');
+                _editingSkillId = null;
+                document.getElementById('skillNameInput').value = '';
+                document.getElementById('skillContentInput').value = '';
+                document.getElementById('skillDescInput').value = '';
+                document.getElementById('skillSaveBtn').textContent = '保存技能';
+                loadSkills();
+            } catch (e) {
+                showError('保存技能失败: ' + e.message);
+            }
+        }
+
+        function editSkill(id) {
+            const s = _getSkill(id);
+            if (!s) return;
+            _editingSkillId = id;
+            document.getElementById('skillNameInput').value = s.name;
+            document.getElementById('skillContentInput').value = s.content;
+            document.getElementById('skillDescInput').value = s.description || '';
+            document.getElementById('skillSaveBtn').textContent = '更新技能';
+        }
+
+        async function deleteSkill(id) {
+            if (!confirm('确认删除该技能？')) return;
+            try {
+                const resp = await fetch(AGENT_BASE + '/api/skills/' + id, { method: 'DELETE' });
+                if (!resp.ok) throw new Error('删除失败');
+                showToast('✓ 技能已删除', 'success');
+                loadSkills();
+            } catch (e) {
+                showError('删除技能失败: ' + e.message);
+            }
+        }
+
         // ── Chat ──
         // 时间戳格式化：接受 ISO 字符串或 Date，输出 "MM-dd HH:mm"
         function fmtMsgTs(t) {
@@ -1370,6 +1557,9 @@
         // 仅用于展示，历史消息不附「撤回」按钮（撤回只支持回滚最新一轮）
         // limitCount: 可选，只渲染前 N 条（重连续播时排除本轮生成已写入 checkpoint 的消息，
         //             本轮内容由回放事件渲染，避免重复）
+        // 历史回顾仅显示最近 HISTORY_LIMIT 条，更早的在顶部给省略提示
+        const HISTORY_LIMIT = 20;
+
         async function loadHistory(limitCount) {
             if (!_hasHistory) return;  // [PORT] 原 !existingProject
             try {
@@ -1380,9 +1570,17 @@
                     return;
                 }
                 if (!data.messages || !data.messages.length) return;
-                const msgs = (typeof limitCount === 'number' && limitCount >= 0)
+                let msgs = (typeof limitCount === 'number' && limitCount >= 0)
                     ? data.messages.slice(0, limitCount)
                     : data.messages;
+                if (msgs.length > HISTORY_LIMIT) {
+                    const omitted = msgs.length - HISTORY_LIMIT;
+                    msgs = msgs.slice(-HISTORY_LIMIT);
+                    const hint = document.createElement('div');
+                    hint.className = 'history-omit-hint';
+                    hint.textContent = `⋯ 已省略更早的 ${omitted} 条消息（显示最近 ${HISTORY_LIMIT} 条）`;
+                    document.getElementById('chatArea').appendChild(hint);
+                }
                 for (const m of msgs) {
                     const role = m.role === 'assistant' ? 'agent' : m.role;
                     appendMessage(role, m.content, true, m.ts);
@@ -1409,6 +1607,7 @@
                 // 只渲染本轮生成开始前的历史，本轮内容全部由回放事件渲染，避免重复
                 await loadHistory(typeof status.history_count === 'number' ? status.history_count : undefined);
                 if (status.user_message) appendMessage('user', status.user_message);
+                setAgentStatus('⚡ 该任务正在后台生成中，正在恢复实时进度…', true);
                 showToast('⚡ 该任务正在后台生成中，已为你重连实时进度', 'info', 4000);
                 await reconnectStream();
             } else {
@@ -1449,6 +1648,7 @@
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
                         const data = JSON.parse(line.slice(6));
+                        trackAgentStatus(data);
 
                         // 首个事件到达即结束「思考中」提示
                         if (thinkingShown) {
@@ -1649,6 +1849,65 @@
 
         // 撤回用户消息：移除该消息及其后所有内容；若 Agent 正在生成则中止当前流
         // 同时调用后端 checkpoint 回滚 API，确保 Agent 状态也回到发送前
+        // ── 手动压缩上下文：较早消息归并为摘要，保留最近 15 条完整消息 ──
+        async function compressContext() {
+            if (isStreaming) {
+                showToast('正在生成中，请等本轮完成或先暂停再压缩上下文', 'info');
+                return;
+            }
+            if (!confirm('手动压缩对话上下文？\n\n'
+                + '· 较早的对话消息将被归并为一段进度摘要（最新优先，旧要求以最新为准）\n'
+                + '· 保留最近 15 条完整消息\n'
+                + '· 文档内容、附件、模板不受影响；此操作不可撤销')) return;
+            const btn = document.getElementById('compressCtxBtn');
+            btn.disabled = true;
+            btn.textContent = '🗜️ 压缩中...';
+            try {
+                const resp = await fetch(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/compress-context`, { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || '压缩失败');
+                showToast(data.message, data.compressed ? 'success' : 'info', 6000);
+            } catch (e) {
+                showError('压缩上下文失败: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🗜️ 压缩上下文';
+            }
+        }
+
+        // ── 清空当前聊天对话：仅清对话消息，文档/附件/模板状态不受影响 ──
+        async function clearConversation() {
+            if (isStreaming) {
+                showToast('正在生成中，请先暂停生成（⏸）再清空对话', 'info');
+                return;
+            }
+            if (!confirm('确认清空当前聊天的所有对话内容？\n\n'
+                + '· 仅清除对话消息；已生成的文档内容、附件、模板不受影响\n'
+                + '· Agent 将丢失本轮对话上下文（文档状态仍在）\n'
+                + '· 此操作不可撤销')) return;
+            try {
+                const resp = await fetch(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/messages`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || '清空失败');
+                const area = document.getElementById('chatArea');
+                area.innerHTML = `<div class="empty-state">
+                    <h3>👋 你好！我是设计开发文档写作助手</h3>
+                    <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
+                    <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+                </div>`;
+                // 重置流式相关状态
+                chatReasoningDiv = null; _reasoningBuf = '';
+                resetTypewriter();
+                const bar = document.getElementById('agentStatusBar');
+                if (bar) bar.style.display = 'none';
+                showToast(data.cleared ? `✓ 已清空 ${data.cleared} 条对话消息` : '当前没有对话内容', 'success');
+                fetchState();
+                loadChatList();
+            } catch (e) {
+                showError('清空对话失败: ' + e.message);
+            }
+        }
+
         async function recallMessage(userMsgDiv, btn) {
             const area = document.getElementById('chatArea');
             const allChildren = Array.from(area.children);
@@ -2010,6 +2269,11 @@ function editAndResume() {
         }
 
         function downloadDocument() {
+            // 常驻入口（同「下载修改版」模式）：无已生成章节时给提示，避免点击后打开空错误页
+            if (!(window._generatedSections || []).length) {
+                showToast('暂无已生成的文档，请先生成章节内容', 'info');
+                return;
+            }
             _agentDownload(AGENT_BASE + '/api/agent/projects/' + PROJECT_ID + '/download');
         }
 
@@ -2671,6 +2935,7 @@ function editAndResume() {
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
                         const data = JSON.parse(line.slice(6));
+                        trackAgentStatus(data);
 
                         // 首个事件到达即结束「思考中」提示
                         if (thinkingShown) {
@@ -2796,7 +3061,7 @@ function editAndResume() {
 
         // 排队重发：轮询项目流状态，当前生成结束后自动重新发送消息
         async function waitAndResendMessage(message) {
-            for (let i = 0; i < 600; i++) {   // 最长约 20 分钟
+            for (let i = 0; i < 1600; i++) {   // 最长约 40 分钟
                 await new Promise(r => setTimeout(r, 2000));
                 try {
                     const resp = await fetch(`${AGENT_BASE}/api/agent/projects/${PROJECT_ID}/stream/status`);
@@ -2860,6 +3125,7 @@ function editAndResume() {
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
                         const data = JSON.parse(line.slice(6));
+                        trackAgentStatus(data);
 
                         // 首个事件到达即结束「思考中」提示
                         if (thinkingShown) {
@@ -3002,6 +3268,7 @@ function editAndResume() {
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
                         const data = JSON.parse(line.slice(6));
+                        trackAgentStatus(data);
 
                         switch (data.type) {
                             case 'doc_token':
@@ -3088,10 +3355,10 @@ function editAndResume() {
                     // 文档风格选择：恢复当前项目的语言风格状态
                     writingStyle = data.state?.writing_style || 'concise';
                     setStyleSelectUI();
-                    // Show download/review links if sections have been generated
+                    // Show review link if sections have been generated
+                    // （下载文档入口已改为常驻，不再随状态隐藏）
                     const sections = data.state?.document_generation?.sections_generated || [];
                     const hasSections = sections.length > 0;
-                    document.getElementById('downloadLink').style.display = hasSections ? 'inline' : 'none';
                     document.getElementById('reviewLink').style.display = hasSections ? 'inline' : 'none';
                     // 精简按钮：仅在有已生成章节时显示
                     document.getElementById('summarizeBtn').style.display = hasSections ? 'inline-block' : 'none';
@@ -3218,10 +3485,8 @@ function editAndResume() {
                 if (await uploadFileToKb(file)) successCount++; else failCount++;
             }
             btn.disabled = false;
-            if (files.length > 1) {
-                showToast(`知识库上传完成：成功 ${successCount} 个，失败 ${failCount} 个`,
-                    failCount ? 'error' : 'success', 6000);
-            }
+            showToast(`知识库上传完成：成功 ${successCount} 个，失败 ${failCount} 个`,
+                failCount ? 'error' : 'success', 6000);
         }
 
         function validateKbFile(file) {
@@ -3238,15 +3503,214 @@ function editAndResume() {
             return '';
         }
 
+        // ── 上传任务登记表（localStorage）：跨页面刷新/任务切换恢复进度 ──
+        // 任务切换是整页刷新（location.href），内存中的轮询与进度 UI 会全部丢失；
+        // 登记表记录进行中的上传任务，页面加载时恢复进度显示并续接轮询。
+        const UPLOAD_REG_KEY = 'activeUploads_v1';
+
+        function _loadUploadReg() {
+            try { return JSON.parse(localStorage.getItem(UPLOAD_REG_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function _saveUploadReg(list) {
+            try { localStorage.setItem(UPLOAD_REG_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+        }
+        function registerUpload(entry) {
+            const list = _loadUploadReg().filter(e => e.taskId !== entry.taskId);
+            list.push(entry);
+            _saveUploadReg(list);
+        }
+        function unregisterUpload(taskId) {
+            _saveUploadReg(_loadUploadReg().filter(e => e.taskId !== taskId));
+        }
+
+        // ── 知识库上传进度卡片 ──
+        function _kbCard() {
+            let card = document.getElementById('kbUploadProgress');
+            if (!card || !card.isConnected) {
+                card = document.createElement('div');
+                card.id = 'kbUploadProgress';
+                card.className = 'upload-progress-card';
+                card.innerHTML = '<div class="upc-title">📚 知识库上传进度</div><div class="upc-rows"></div>';
+                const area = document.getElementById('chatArea');
+                const empty = area.querySelector('.empty-state');
+                if (empty) empty.remove();
+                area.appendChild(card);
+            }
+            return card;
+        }
+        function _kbRow(taskId, filename) {
+            const card = _kbCard();
+            let row = document.getElementById('kbrow-' + taskId);
+            if (!row) {
+                row = document.createElement('div');
+                row.id = 'kbrow-' + taskId;
+                row.className = 'upc-row';
+                row.innerHTML = `<span class="upc-name">📄 ${escapeHtml(filename)}</span>` +
+                                `<span class="upc-stage">上传中...</span>`;
+                card.querySelector('.upc-rows').appendChild(row);
+            }
+            return row;
+        }
+        function _kbRowUpdate(taskId, text, state) {
+            const row = document.getElementById('kbrow-' + taskId);
+            if (!row) return;
+            const st = row.querySelector('.upc-stage');
+            if (st) st.textContent = text;
+            row.className = 'upc-row' + (state && state !== 'running' ? ' ' + state : '');
+        }
+
+        // ── 可恢复的轮询：知识库上传 ──
+        async function pollKbUpload(taskId, filename, startedAt) {
+            for (let i = 0; i < 1600; i++) {
+                await new Promise(r => setTimeout(r, 1500));
+                let st;
+                try {
+                    const resp = await fetch(AGENT_BASE + '/api/extract-status/' + taskId);
+                    if (resp.status === 404) throw new Error('任务已丢失（服务可能重启）');
+                    if (!resp.ok) throw new Error('查询状态失败');
+                    st = await resp.json();
+                } catch (e) {
+                    _kbRowUpdate(taskId, `⚠ ${e.message}`, 'error');
+                    showToast(`✗「${filename}」提取失败: ${e.message}`, 'error', 6000);
+                    unregisterUpload(taskId);
+                    return false;
+                }
+                if (st.status === 'failed') {
+                    _kbRowUpdate(taskId, `✗ ${st.message || '提取失败'}`, 'error');
+                    showToast(`✗「${filename}」提取失败: ${st.message || '原因未知'}`, 'error', 6000);
+                    unregisterUpload(taskId);
+                    return false;
+                }
+                if (st.status === 'completed') {
+                    const msg = st.persisted
+                        ? `✓ 已入库知识库（${st.char_count} 字符）`
+                        : `✓ 提取完成（${st.char_count} 字符，未入库）`;
+                    _kbRowUpdate(taskId, msg, 'done');
+                    unregisterUpload(taskId);
+                    return true;
+                }
+                const elapsed = Math.round((Date.now() - (startedAt || Date.now())) / 1000);
+                _kbRowUpdate(taskId, `${st.message || '提取中'} · 已用 ${elapsed}s`, 'running');
+            }
+            // 超时≠失败：后台仍在提取，保留登记，刷新后自动恢复
+            _kbRowUpdate(taskId, '⏳ 仍在后台提取（已超40分钟），完成后可刷新查看', 'running');
+            return false;
+        }
+
+        // ── 可恢复的轮询：模板上传（完成后 finalize 写入 Agent 状态）──
+        async function pollTemplateUpload(taskId, projectId, chipId, startedAt, signal) {
+            for (let i = 0; i < 1600; i++) {
+                if (signal && signal.aborted) {
+                    unregisterUpload(taskId);
+                    throw new DOMException('已取消', 'AbortError');
+                }
+                await new Promise(r => setTimeout(r, 1500));
+                let st;
+                try {
+                    const resp = await fetch(AGENT_BASE + '/api/extract-status/' + taskId);
+                    if (resp.status === 404) throw new Error('提取任务已丢失（服务可能重启），请重试');
+                    if (!resp.ok) throw new Error('查询提取状态失败');
+                    st = await resp.json();
+                } catch (e) {
+                    unregisterUpload(taskId);
+                    throw e;
+                }
+                if (st.status === 'failed') {
+                    unregisterUpload(taskId);
+                    throw new Error(st.message || '提取失败');
+                }
+                // 更新 chip 的阶段与耗时
+                const tEntry = templates.find(t => t.template_id === chipId || t.template_id === taskId);
+                if (tEntry) {
+                    tEntry.stage = st.message || '提取中';
+                    tEntry.elapsed = Math.round((Date.now() - (startedAt || Date.now())) / 1000);
+                    renderTemplateChips();
+                }
+                if (st.status === 'completed') {
+                    const finResp = await fetch(`${AGENT_BASE}/api/agent/projects/${projectId}/templates/${taskId}/finalize`, { method: 'POST' });
+                    const finData = await finResp.json().catch(() => ({}));
+                    if (!finData.success) {
+                        unregisterUpload(taskId);
+                        throw new Error(finData.detail || '模板状态写入失败');
+                    }
+                    unregisterUpload(taskId);
+                    templates = templates.filter(t => t.template_id !== chipId && t.template_id !== taskId);
+                    templates.push({
+                        template_id: taskId, name: finData.name, filename: finData.filename,
+                        doc_type: finData.doc_type, char_count: finData.char_count, status: 'completed'
+                    });
+                    renderTemplateChips();
+                    return true;
+                }
+            }
+            // 超时≠失败：保留登记，刷新/切回后自动恢复并最终 finalize
+            throw new Error('暂时提取超时（后台可能仍在提取中），无需重试上传；稍后刷新页面，已完成的模板会自动找回并显示');
+        }
+
+        // ── 页面加载时恢复进行中的上传（进度 UI + 续接轮询）──
+        async function restoreActiveUploads() {
+            const reg = _loadUploadReg();
+            for (const e of reg) {
+                // 模板任务只在其所属项目页面恢复；知识库任务全局，任意页面恢复
+                if (e.type === 'template' && e.projectId && e.projectId !== PROJECT_ID) continue;
+                let st;
+                try {
+                    const resp = await fetch(AGENT_BASE + '/api/extract-status/' + e.taskId);
+                    if (resp.status === 404) { unregisterUpload(e.taskId); continue; }
+                    if (!resp.ok) continue;  // 网络问题：保留登记，下次再试
+                    st = await resp.json();
+                } catch (err) { continue; }
+
+                if (st.status === 'completed') {
+                    if (e.type === 'template') {
+                        try {
+                            const finResp = await fetch(`${AGENT_BASE}/api/agent/projects/${e.projectId}/templates/${e.taskId}/finalize`, { method: 'POST' });
+                            const finData = await finResp.json().catch(() => ({}));
+                            if (finData.success) {
+                                await fetchTemplates();
+                                showToast(`✓ 模板「${finData.name || e.filename}」已恢复并完成`, 'success', 4000);
+                            }
+                        } catch (err) { /* finalize 失败保留登记，下次再试 */ continue; }
+                    } else {
+                        showToast(`✓「${e.filename}」已入库知识库（${st.char_count || 0} 字符）`, 'success', 5000);
+                    }
+                    unregisterUpload(e.taskId);
+                } else if (st.status === 'failed') {
+                    showToast(`「${e.filename}」处理失败: ${st.message || ''}`, 'error', 6000);
+                    unregisterUpload(e.taskId);
+                } else {
+                    // 仍在处理 → 恢复进度 UI 并续接轮询
+                    if (e.type === 'template') {
+                        if (!templates.some(t => t.template_id === e.taskId)) {
+                            templates.push({
+                                template_id: e.taskId, name: e.name || e.filename,
+                                filename: e.filename, doc_type: e.docType || '',
+                                char_count: 0, status: 'uploading',
+                            });
+                        }
+                        renderTemplateChips();
+                        pollTemplateUpload(e.taskId, e.projectId, e.taskId, e.startedAt)
+                            .catch(err => {
+                                templates = templates.filter(t => t.template_id !== e.taskId);
+                                renderTemplateChips();
+                                if (err && err.message) showToast(`模板「${e.filename}」: ${err.message}`, 'error', 6000);
+                            });
+                    } else {
+                        _kbRow(e.taskId, e.filename);
+                        _kbRowUpdate(e.taskId, `${st.message || '提取中'}（已恢复进度跟踪）`, 'running');
+                        pollKbUpload(e.taskId, e.filename, e.startedAt);
+                    }
+                }
+            }
+        }
+
         async function uploadFileToKb(file) {
             const err = validateKbFile(file);
             if (err) {
                 showToast(err, 'error', 6000);
                 return false;
             }
-
-            const toast = showToast(`正在上传「${file.name}」...`, 'uploading');
-
             try {
                 const formData = new FormData();
                 formData.append('file', file);
@@ -3258,36 +3722,13 @@ function editAndResume() {
                     throw new Error(errData.detail || `上传失败 (HTTP ${resp.status})`);
                 }
                 const result = await resp.json();
-                const fileId = result.file_id;
-
-                // 轮询提取/入库状态（最长约 15 分钟，适配 MinerU 首次加载 + 多页推理耗时）
-                for (let i = 0; i < 600; i++) {
-                    updateToast(toast, `正在提取「${file.name}」...`);
-                    await new Promise(r => setTimeout(r, 1500));
-                    const statusResp = await fetch(AGENT_BASE + '/api/extract-status/' + fileId);
-                    if (!statusResp.ok) {
-                        if (statusResp.status === 404) {
-                            throw new Error('提取任务已丢失（服务可能重启），请重试');
-                        }
-                        throw new Error('查询提取状态失败');
-                    }
-                    const status = await statusResp.json();
-                    if (status.status === 'failed') {
-                        throw new Error(status.message || '提取失败');
-                    }
-                    if (status.status === 'completed') {
-                        dismissToast(toast);
-                        if (status.persisted) {
-                            showToast(`✓「${file.name}」已入库知识库 (${status.char_count} 字符)，可供 RAG 检索使用`, 'success', 5000);
-                        } else {
-                            showToast(`「${file.name}」文本提取完成 (${status.char_count} 字符)，但未写入向量库`, 'info', 5000);
-                        }
-                        return true;
-                    }
-                }
-                throw new Error('提取超时（超过 15 分钟），请重试或使用更小的文档');
+                const taskId = result.file_id;
+                const startedAt = Date.now();
+                // 登记 + 进度卡片（跨刷新/任务切换可恢复）
+                registerUpload({ type: 'kb', taskId, filename: file.name, startedAt });
+                _kbRow(taskId, file.name);
+                return await pollKbUpload(taskId, file.name, startedAt);
             } catch (e) {
-                dismissToast(toast);
                 showToast(`✗「${file.name}」上传失败: ${e.message}`, 'error', 6000);
                 return false;
             }
@@ -3498,6 +3939,7 @@ function editAndResume() {
             loadChatList();
             fetchTemplates();
             recoverOrphanTemplates();
+            restoreActiveUploads();
             renderSteps({});
             _refreshProjectBadge(!!projectId);
             _refreshReviewLink();
@@ -3506,6 +3948,11 @@ function editAndResume() {
         function _doInit() {
             if (_inited) return;
             _inited = true;
+            // [PORT-AUTH] 登录后才可知用户名：此处才读按用户分键的恢复项目并落盘
+            _restoredProject = localStorage.getItem(_projectKey());
+            PROJECT_ID = _restoredProject || ('project_' + _newProjectId());
+            _hasHistory = !!_restoredProject;
+            _persistProject();
             // [PORT] 原顶层的 DOM 事件绑定（登录后视图 DOM 才存在）
             setupDragDrop();
             setupInputDragDrop();
@@ -3528,6 +3975,8 @@ function editAndResume() {
             fetchTemplates();
             // 找回刷新/切换任务后中断的模板上传：补 finalize 孤儿模板任务
             recoverOrphanTemplates();
+            // 恢复进行中的上传（知识库/模板）：进度 UI + 续接轮询（跨刷新/任务切换）
+            restoreActiveUploads();
             // 加载完整文档类型列表（填充模板「目标文档类型」下拉框）
             loadDocTypes();
             renderSteps({});
@@ -3543,21 +3992,26 @@ function editAndResume() {
     window.addSelectedKbFiles = addSelectedKbFiles;
     window.cancelUpload = cancelUpload;
     window.changeWritingStyle = changeWritingStyle;
+    window.clearConversation = clearConversation;
     window.clearInput = clearInput;
     window.closeAutoGenDialog = closeAutoGenDialog;
     window.closeEnrichDialog = closeEnrichDialog;
     window.closeFlowchartDialog = closeFlowchartDialog;
     window.closeKbFilesDialog = closeKbFilesDialog;
     window.closeModifyDialog = closeModifyDialog;
+    window.closeSkillsDialog = closeSkillsDialog;
     window.closeSummarizeDialog = closeSummarizeDialog;
     window.closeTemplateDialog = closeTemplateDialog;
+    window.compressContext = compressContext;
     window.deleteKbFile = deleteKbFile;
+    window.deleteSkill = deleteSkill;
     window.downloadDocument = downloadDocument;
     window.downloadDocx = downloadDocx;
     window.downloadLatestModified = downloadLatestModified;
     window.downloadModifiedDoc = downloadModifiedDoc;
     window.downloadRiskExcel = downloadRiskExcel;
     window.editAndResume = editAndResume;
+    window.editSkill = editSkill;
     window.exportFlowchartPng = exportFlowchartPng;
     window.generateFlowchart = generateFlowchart;
     window.gotoKbPage = gotoKbPage;
@@ -3570,6 +4024,7 @@ function editAndResume() {
     window.onEnrichExistingChange = onEnrichExistingChange;
     window.onSumModeChange = onSumModeChange;
     window.openModifyDialog = openModifyDialog;
+    window.openSkillsDialog = openSkillsDialog;
     window.pauseGeneration = pauseGeneration;
     window.previewFlowchartMermaid = previewFlowchartMermaid;
     window.removeAttachment = removeAttachment;
@@ -3577,6 +4032,7 @@ function editAndResume() {
     window.removeTemplate = removeTemplate;
     window.resumeAgent = resumeAgent;
     window.reviseFlowchart = reviseFlowchart;
+    window.saveSkill = saveSkill;
     window.sendMessage = sendMessage;
     window.showAutoGenDialog = showAutoGenDialog;
     window.showEnrichDialog = showEnrichDialog;
@@ -3594,6 +4050,8 @@ function editAndResume() {
     window.undoLast = undoLast;
     window.updateClearBtn = updateClearBtn;
     window.updateKbSelectAllState = updateKbSelectAllState;
+    window.useSkillInsert = useSkillInsert;
+    window.useSkillSend = useSkillSend;
 
     // ── 对外接口（SPA 调用）──
     window.AgentChat = {

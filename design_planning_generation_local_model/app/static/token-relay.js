@@ -44,7 +44,8 @@
         }
     }
 
-    var _rawFetch = window.fetch.bind(window.fetch);
+    // bind(window)：原生 fetch 对 this 敏感，绑定到其他对象会抛 Illegal invocation
+    var _rawFetch = window.fetch.bind(window);
     window.fetch = function (input, init) {
         var p;
         try {

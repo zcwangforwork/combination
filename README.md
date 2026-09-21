@@ -107,9 +107,11 @@ cd .. && python tools/migrate_project_owners.py admin
 4. **全屏模式**：「AI 文档写作」以全屏浮层呈现（覆盖 UM 头部与侧边栏，还原原 agent.html
    独立页的完整可用宽度）；点击 Agent 工具栏首项「⟵ 返回系统」回到管理系统。
 5. **副本分叉**：两个原目录后续更新不会自动同步到本目录；反向亦然。
-   用户隔离改造在副本内**就地修改**了 `app/static/agent.html`、`review.html`、
-   `kb.html`（各加 token-relay.js 引用；agent.html 加了 3 行，生成脚本行号常量已
-   同步 +3）与后端源码——从源头同步这些文件时需重做该接线。
+   **2026-09-20 已做一次源→副本全量同步**（skill_library 服务、14 个新 Agent 工具、
+   40 条 agent 路由、跨刷新上传恢复等），同步时重放了用户隔离改造（鉴权依赖/
+   CORS/static 挂载/token-relay 接线/PyJWT）。日常就地修改点：`app/static/agent.html`、
+   `review.html`、`kb.html`（token-relay 引用，agent.html 3 行，生成脚本行号常量随源
+   变化需重算）与后端源码——从源头再次同步时需重做该接线。
 6. **项目持久化语义变化**：原版用 URL `?project=` 恢复会话；移植版用 localStorage——
    同一浏览器刷新/重登后自动恢复最后一次的项目（跨浏览器/隐身模式不共享）。
 7. 强依赖本地 Ollama(:11435) + PostgreSQL + ChromaDB 就绪；模板/知识库页（`/kb`、

@@ -123,6 +123,12 @@ class AgentState(TypedDict, total=False):
     #        "chapters": {章节名: {"blocks": [{filename, section_path, text, reason}], "hint": str}}}
     template_chapter_map: Optional[dict]
 
+    # ── 用户文档格式要求 ──
+    # set_document_format 工具设置（用户提字体/格式要求时），随 checkpoint 持久化，
+    # build_docx 与「下载文档」导出时经 format_overrides 应用。
+    # 键: body_font / heading_font / body_size_pt / heading_size_pt / line_spacing / margin_cm
+    document_format: Optional[dict]
+
 
 # ── 默认初始状态 ──
 
@@ -161,6 +167,7 @@ def create_initial_state() -> AgentState:
         long_term_memory_activity=None,
         attachment_chapter_map=None,
         template_chapter_map=None,
+        document_format=None,
     )
 
 

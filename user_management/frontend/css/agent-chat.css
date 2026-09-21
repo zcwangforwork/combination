@@ -171,6 +171,37 @@
         }
         #agent-root .msg.agent .msg-time { color: #999; }
         #agent-root .msg.user .msg-time { color: rgba(255,255,255,.75); }
+        /* Agent 工作状态条：输入区上方常驻，任何时刻进入对话都能看到当前在做什么 */
+        #agent-root .agent-status-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px; font-size: 13px;
+            background: #e3f2fd; color: #1565c0; border-top: 1px solid #bbdefb;
+        }
+        #agent-root .agent-status-bar.done { background: #e8f5e9; color: #2e7d32; border-top-color: #c8e6c9; }
+        #agent-root .agent-status-bar.warn { background: #fff3e0; color: #ef6c00; border-top-color: #ffe0b2; }
+        #agent-root .agent-status-bar .status-spinner {
+            width: 12px; height: 12px; border: 2px solid #90caf9; border-top-color: #1565c0;
+            border-radius: 50%; animation: ag-spin 0.8s linear infinite; flex-shrink: 0;
+        }
+        /* 上传进度卡片（知识库/模板，跨刷新恢复） */
+        #agent-root .upload-progress-card {
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+            padding: 10px 14px; margin: 8px 0; align-self: stretch;
+        }
+        #agent-root .upc-title { font-size: 13px; font-weight: 600; color: #1565c0; margin-bottom: 6px; }
+        #agent-root .upc-row {
+            display: flex; justify-content: space-between; gap: 10px;
+            font-size: 12px; color: #555; padding: 4px 0; border-bottom: 1px solid #f5f5f5;
+        }
+        #agent-root .upc-row:last-child { border-bottom: none; }
+        #agent-root .upc-row .upc-stage { color: #1976d2; flex-shrink: 0; }
+        #agent-root .upc-row.done .upc-stage { color: #2e7d32; }
+        #agent-root .upc-row.error .upc-stage { color: #c62828; }
+        /* 历史回顾省略提示：顶部居中灰字 */
+        #agent-root .history-omit-hint {
+            align-self: center; font-size: 12px; color: #999;
+            padding: 4px 12px; background: #f5f5f5; border-radius: 10px;
+        }
         /* 撤回按钮：仅出现在用户消息上，右下角 */
         #agent-root .recall-bar {
             text-align: right;

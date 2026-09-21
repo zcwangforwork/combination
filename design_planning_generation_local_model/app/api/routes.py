@@ -420,6 +420,48 @@ async def get_extract_task_status(file_id: str):
     return status
 
 
+# ── 用户技能库：沉淀指导命令/生成规则，快捷复用 ──
+
+@router.get("/skills")
+async def list_skills():
+    """列出用户技能库全部技能（新的在前）"""
+    from app.services import skill_library
+    return {"success": True, "skills": skill_library.list_skills()}
+
+
+@router.post("/skills")
+async def create_skill(name: str = Form(...), content: str = Form(...),
+                       description: str = Form("")):
+    """新增技能（name/content 必填）"""
+    from app.services import skill_library
+    try:
+        skill = skill_library.create_skill(name, content, description)
+        return {"success": True, "skill": skill}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/skills/{skill_id}")
+async def update_skill(skill_id: str, name: str = Form(None),
+                       content: str = Form(None), description: str = Form(None)):
+    """更新技能（只改传入的非空字段）"""
+    from app.services import skill_library
+    updated = skill_library.update_skill(skill_id, name, content, description)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="技能不存在")
+    return {"success": True, "skill": updated}
+
+
+@router.delete("/skills/{skill_id}")
+async def delete_skill(skill_id: str):
+    """删除技能"""
+    from app.services import skill_library
+    ok = skill_library.delete_skill(skill_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="技能不存在")
+    return {"success": True}
+
+
 @router.get("/kb/files")
 async def list_kb_files():
     """列出上传知识库（qms_doc_uploads）中的所有文件及其统计信息"""
@@ -475,9 +517,10 @@ async def kb_chat(payload: KbChatRequest):
             return {"answer": "知识库中暂无文件，请先上传文件后再提问。", "sources": []}
         query_embedding = store.embedder.encode_single(question)
         top_k = 6
+        # 超采样后精排：向量粗召回 12 条 → bge-reranker 精排留 top 6，定位更准
         raw = store.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k,
+            n_results=top_k * 2,
             include=["documents", "metadatas", "distances"],
         )
         if not raw or not raw.get("ids") or not raw["ids"][0]:
@@ -493,6 +536,24 @@ async def kb_chat(payload: KbChatRequest):
                 "source_file": meta.get("source_file", "用户上传文件"),
                 "score": round(similarity, 3),
             })
+
+        # Cross-Encoder 精排（失败时保留向量粗排结果，静默降级）
+        try:
+            from app.services.rag.reranker import Reranker
+            ranked = await asyncio.to_thread(
+                Reranker().rerank_with_threshold, question, results, top_k, 0.2)
+            if ranked:
+                results = [
+                    {
+                        "text": r.get("text", ""),
+                        "source_file": r.get("source_file", "用户上传文件"),
+                        "score": round(float(r.get("rerank_score", r.get("score", 0))), 3),
+                    }
+                    for r in ranked
+                ]
+        except Exception as e:
+            print(f"[kb_chat] 精排失败（用向量粗排）: {e}")
+            results = results[:top_k]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"知识库检索失败: {str(e)}")
 
@@ -1389,6 +1450,9 @@ async def agent_download_document(project_id: str):
 
     # 构建.docx：fill_template 内部会用 Playwright 同步 API 渲染 mermaid 流程图，
     # 而 Playwright 同步 API 不能在 asyncio 事件循环线程内运行，故放入独立线程执行。
+    # 应用用户格式要求（set_document_format 工具设置，随会话持久化）
+    doc_format = dict(values.get("document_format") or {})
+
     def _build_docx():
         template_service = TemplateService()
         doc = template_service.load_template(doc_type)
@@ -1397,6 +1461,7 @@ async def agent_download_document(project_id: str):
             content=full_markdown,
             product_name=product_name,
             doc_type=doc_type,
+            format_overrides=doc_format,
         )
         return template_service.document_to_bytes(doc)
 
@@ -1586,6 +1651,9 @@ async def agent_download_modified_document(project_id: str, file_id: str):
         product_name = values.get("product_name", "") or "贴敷式胰岛素泵"
 
         # 构建.docx（复用审阅下载链路）；Playwright 同步 API 渲染 mermaid 须在独立线程执行
+        # 应用用户格式要求（set_document_format 工具设置）
+        doc_format = dict(values.get("document_format") or {})
+
         def _build_docx():
             template_service = TemplateService()
             doc = template_service.load_template(doc_type)
@@ -1594,6 +1662,7 @@ async def agent_download_modified_document(project_id: str, file_id: str):
                 content=modified_markdown,
                 product_name=product_name,
                 doc_type=doc_type,
+                format_overrides=doc_format,
             )
             return template_service.document_to_bytes(doc)
 
@@ -2258,6 +2327,97 @@ async def agent_list_attachments(project_id: str):
     }
 
 
+@router.post("/agent/projects/{project_id}/compress-context", dependencies=[Depends(require_project_access)])
+async def agent_compress_context(project_id: str, keep_recent: int = Form(15)):
+    """手动压缩对话上下文：把较早的消息压缩为摘要，保留最近 N 条完整消息。
+
+    与自动压缩（达到上下文窗口 85% 时触发）相同机制，但强制执行（不等阈值）。
+    仅压缩对话消息；文档/附件/模板等状态不受影响。
+    """
+    from app.services.agent_engine import get_agent
+    from app.services.context_manager import maybe_compress_messages, estimate_tokens
+    from langchain_core.messages.utils import RemoveMessage
+
+    agent = get_agent()
+    config = {"configurable": {"thread_id": project_id}}
+    try:
+        state = await agent.aget_state(config)
+        msgs = list(state.values.get("messages", []) or []) if state and state.values else []
+        if not msgs:
+            return {"success": True, "compressed": False, "message": "当前没有对话内容"}
+        if len(msgs) <= keep_recent:
+            return {"success": True, "compressed": False,
+                    "messages": len(msgs),
+                    "message": f"当前仅 {len(msgs)} 条消息（不超过保留数 {keep_recent}），无需压缩"}
+
+        before_tokens = estimate_tokens(msgs)
+        # 手动压缩：threshold=0.0 强制触发（自动路径为 0.85 窗口阈值）
+        compressed, was_compressed = await maybe_compress_messages(
+            msgs, threshold=0.0, keep_recent=keep_recent)
+        if not was_compressed:
+            return {"success": True, "compressed": False,
+                    "before_tokens": before_tokens,
+                    "message": "压缩未产生变化（可能是摘要生成失败），上下文保持原样"}
+
+        after_tokens = estimate_tokens(compressed)
+        # 写回：按 id 删除全部旧消息 + 写入压缩后消息（add_messages reducer）
+        removals = [RemoveMessage(id=m.id) for m in msgs if getattr(m, "id", None)]
+        await agent.aupdate_state(config, {"messages": removals + list(compressed)},
+                                  as_node="after_tools")
+        print(f"[compress-context] {project_id}: {len(msgs)} → {len(compressed)} 条消息, "
+              f"{before_tokens} → {after_tokens} tokens")
+        return {
+            "success": True,
+            "compressed": True,
+            "before_tokens": before_tokens,
+            "after_tokens": after_tokens,
+            "saved_tokens": before_tokens - after_tokens,
+            "messages_before": len(msgs),
+            "messages_after": len(compressed),
+            "message": (f"上下文已压缩：{len(msgs)} 条消息 → {len(compressed)} 条"
+                        f"（较早内容已归并为摘要），约节省 {before_tokens - after_tokens} tokens"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"压缩上下文失败: {str(e)}")
+
+
+@router.delete("/agent/projects/{project_id}/messages", dependencies=[Depends(require_project_access)])
+async def agent_clear_messages(project_id: str):
+    """清空当前聊天的全部对话消息。
+
+    仅清除对话消息（messages 通道）；已生成的文档内容、附件、模板、
+    补充提示词等状态不受影响。清空前自动取消进行中的后台生成。
+    """
+    from app.services.agent_engine import get_agent
+    from app.services import agent_streams
+    from langchain_core.messages.utils import RemoveMessage
+
+    # 先取消进行中的后台生成，避免清空后生成任务继续写入状态
+    await agent_streams.cancel_stream(project_id)
+
+    agent = get_agent()
+    config = {"configurable": {"thread_id": project_id}}
+    try:
+        state = await agent.aget_state(config)
+        msgs = (state.values.get("messages", []) if state and state.values else []) or []
+        if not msgs:
+            return {"success": True, "cleared": 0, "message": "当前没有对话内容"}
+        # checkpoint 中的消息均有自动分配的 id，按 id 逐条删除（add_messages reducer）
+        removals = [RemoveMessage(id=m.id) for m in msgs if getattr(m, "id", None)]
+        skipped = len(msgs) - len(removals)
+        if removals:
+            await agent.aupdate_state(config, {"messages": removals}, as_node="after_tools")
+        return {
+            "success": True,
+            "cleared": len(removals),
+            "skipped": skipped,
+            "message": f"已清空 {len(removals)} 条对话消息"
+                       + (f"（{skipped} 条无ID消息未能清除）" if skipped else ""),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清空对话失败: {str(e)}")
+
+
 @router.post("/agent/projects/{project_id}/recall", dependencies=[Depends(require_project_access)])
 async def agent_recall_message(project_id: str):
     """撤回最近一条用户消息及其后所有Agent回复
@@ -2376,10 +2536,13 @@ async def agent_list_projects(_user: str = Depends(require_user)):
         conn = sqlite3.connect(db_path, timeout=5)
         try:
             cur = conn.execute(
+                # GROUP BY 去重：checkpoints 每线程多行（每检查点一行），无去重会
+                # 把同一项目重复 N 次（2026-09-20 实测 156 线程膨胀为 7408 行）；
+                # MAX(rowid) = 按最新活动排序
                 "SELECT c.thread_id FROM checkpoints c "
                 "JOIN project_owners o ON o.thread_id = c.thread_id "
                 "WHERE o.username = ? AND c.thread_id != '' AND c.checkpoint_ns = '' "
-                "ORDER BY c.rowid DESC",
+                "GROUP BY c.thread_id ORDER BY MAX(c.rowid) DESC",
                 (_user,),
             )
             return [row[0] for row in cur.fetchall()]

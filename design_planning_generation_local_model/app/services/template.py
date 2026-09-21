@@ -8,7 +8,7 @@ import re
 from io import BytesIO
 from typing import Optional
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
+from docx.shared import Pt, Inches, RGBColor, Cm
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -178,7 +178,8 @@ class TemplateService:
         doc: Document,
         content: str,
         product_name: str,
-        doc_type: str
+        doc_type: str,
+        format_overrides: dict = None,
     ) -> Document:
         """
         用AI生成的内容填充模板
@@ -188,6 +189,9 @@ class TemplateService:
             content: AI生成的文档内容（Markdown格式）
             product_name: 产品名称
             doc_type: 文档类型
+            format_overrides: 用户格式要求（set_document_format 工具设置，随会话持久化）。
+                可选键：body_font / heading_font（中文字体名）、body_size_pt / heading_size_pt、
+                line_spacing（倍）、margin_cm（页边距）。空值键跳过。
 
         Returns:
             填充后的Document对象
@@ -209,6 +213,13 @@ class TemplateService:
 
         # 解析Markdown内容并写入文档
         self._parse_and_fill(doc, content)
+
+        # 用户格式要求：内容全部写完后统一覆盖（样式级 + 逐 run 级，确保实际渲染生效）
+        if format_overrides:
+            try:
+                self._apply_format_overrides(doc, format_overrides)
+            except Exception as e:
+                print(f"[template] 格式覆盖应用失败（忽略，用默认格式）: {e}")
         return doc
 
     # ───────────────────────── 文档前置页 ─────────────────────────
@@ -246,6 +257,93 @@ class TemplateService:
             rfonts = OxmlElement("w:rFonts")
             rpr.append(rfonts)
         rfonts.set(qn("w:eastAsia"), east_asia_name)
+
+    # ───────────── 用户格式要求覆盖（set_document_format 工具设置）─────────────
+
+    @staticmethod
+    def _set_run_east_asia(run, east_asia_name: str):
+        """设置 run 的东亚字体（中文字体），不改西文字体。"""
+        rpr = run._element.get_or_add_rPr()
+        rfonts = rpr.rFonts
+        if rfonts is None:
+            rfonts = OxmlElement("w:rFonts")
+            rpr.append(rfonts)
+        rfonts.set(qn("w:eastAsia"), east_asia_name)
+
+    def _apply_format_overrides(self, doc: Document, overrides: dict) -> None:
+        """按用户格式要求覆盖文档样式：中文字体/字号/行距/页边距。
+
+        在内容全部写入后调用：先改样式（Normal/Heading 1-5），再逐 run 覆盖
+        eastAsia 字体与字号（许多 run 带显式字体，仅改样式不生效），最后设
+        行距与页边距。heading_size_pt 作为 H1 字号，H2-H5 依次递减 1pt（下限 10.5）。
+        """
+        body_font = (overrides.get("body_font") or "").strip()
+        heading_font = (overrides.get("heading_font") or "").strip()
+        body_size = float(overrides.get("body_size_pt") or 0)
+        heading_size = float(overrides.get("heading_size_pt") or 0)
+        line_spacing = float(overrides.get("line_spacing") or 0)
+        margin_cm = float(overrides.get("margin_cm") or 0)
+
+        def _is_heading_style(style_name: str) -> bool:
+            s = (style_name or "").lower()
+            return s.startswith("heading") or s.startswith("标题")
+
+        # 1. 样式级：Normal 与 Heading 1-5
+        if body_font:
+            normal = doc.styles["Normal"]
+            self._set_east_asia_font(normal, body_font)
+        if body_size:
+            doc.styles["Normal"].font.size = Pt(body_size)
+        if heading_font or heading_size:
+            h1 = heading_size or 16
+            for i, hsize in enumerate((h1, max(10.5, h1 - 1), max(10.5, h1 - 2),
+                                       max(10.5, h1 - 3), max(10.5, h1 - 4))):
+                try:
+                    st = doc.styles[f"Heading {i + 1}"]
+                except KeyError:
+                    continue
+                if heading_font:
+                    self._set_east_asia_font(st, heading_font)
+                if heading_size:
+                    st.font.size = Pt(hsize)
+
+        # 2. 逐 run 级：字体/字号（覆盖 run 自带显式字体）
+        if body_font or heading_font or body_size or heading_size:
+            def _cover_paragraph(p):
+                is_h = _is_heading_style(p.style.name if p.style is not None else "")
+                for run in p.runs:
+                    if is_h:
+                        if heading_font:
+                            self._set_run_east_asia(run, heading_font)
+                        if heading_size:
+                            run.font.size = None  # 用样式字号
+                    else:
+                        if body_font:
+                            self._set_run_east_asia(run, body_font)
+                        if body_size:
+                            run.font.size = Pt(body_size)
+
+            for p in doc.paragraphs:
+                _cover_paragraph(p)
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for p in cell.paragraphs:
+                            _cover_paragraph(p)
+
+        # 3. 行距（正文段落；标题保持默认紧凑）
+        if line_spacing:
+            for p in doc.paragraphs:
+                if not _is_heading_style(p.style.name if p.style is not None else ""):
+                    p.paragraph_format.line_spacing = line_spacing
+
+        # 4. 页边距（所有节，四边统一）
+        if margin_cm:
+            for section in doc.sections:
+                section.top_margin = Cm(margin_cm)
+                section.bottom_margin = Cm(margin_cm)
+                section.left_margin = Cm(margin_cm)
+                section.right_margin = Cm(margin_cm)
 
     @staticmethod
     def _set_cell(table, r: int, c: int, zh: str, en: str = None, bold: bool = False):

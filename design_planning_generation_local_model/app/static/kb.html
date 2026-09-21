@@ -141,6 +141,11 @@
         <!-- 左栏：文件管理 -->
         <div class="files-panel">
             <div class="files-header">知识库文件<span class="cnt" id="fileCount"></span></div>
+            <!-- 上传进度面板：阶段+耗时实时刷新，跨页面刷新恢复（与 Agent 主页共用登记表） -->
+            <div id="kbUploadPanel" style="display:none;margin:0 12px 8px;border:1px solid #bbdefb;background:#e3f2fd;border-radius:8px;padding:8px 10px">
+                <div style="font-size:12px;font-weight:600;color:#1565c0;margin-bottom:4px">📤 上传/提取进度</div>
+                <div id="kbUploadRows" style="display:flex;flex-direction:column;gap:3px"></div>
+            </div>
             <div class="files-list" id="filesList">
                 <div class="empty">加载中...</div>
             </div>
@@ -190,6 +195,116 @@
             setTimeout(() => toastEl.classList.remove('show'), ms);
         }
 
+        // ── 上传登记表（与 Agent 主页 agent.html 共用同一 localStorage key）──
+        const UPLOAD_REG_KEY = 'activeUploads_v1';
+        function _loadUploadReg() {
+            try { return JSON.parse(localStorage.getItem(UPLOAD_REG_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function _saveUploadReg(list) {
+            try { localStorage.setItem(UPLOAD_REG_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+        }
+        function registerUpload(entry) {
+            const list = _loadUploadReg().filter(e => e.taskId !== entry.taskId);
+            list.push(entry);
+            _saveUploadReg(list);
+        }
+        function unregisterUpload(taskId) {
+            _saveUploadReg(_loadUploadReg().filter(e => e.taskId !== taskId));
+        }
+
+        // ── 上传进度面板行 ──
+        function _kbRow(taskId, filename) {
+            document.getElementById('kbUploadPanel').style.display = 'block';
+            let row = document.getElementById('kbrow-' + taskId);
+            if (!row) {
+                row = document.createElement('div');
+                row.id = 'kbrow-' + taskId;
+                row.style.cssText = 'display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#555';
+                row.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${esc(filename)}</span>` +
+                                `<span class="kb-stage" style="color:#1565c0;flex-shrink:0">上传中...</span>`;
+                document.getElementById('kbUploadRows').appendChild(row);
+            }
+            return row;
+        }
+        function _kbRowUpdate(taskId, text, state) {
+            const row = document.getElementById('kbrow-' + taskId);
+            if (!row) return;
+            const st = row.querySelector('.kb-stage');
+            if (st) {
+                st.textContent = text;
+                st.style.color = state === 'done' ? '#2e7d32' : (state === 'error' ? '#c62828' : '#1565c0');
+            }
+        }
+
+        // ── 可恢复轮询：阶段+耗时实时刷新 ──
+        async function pollKbUpload(taskId, filename, startedAt) {
+            for (let i = 0; i < 1600; i++) {
+                await new Promise(r => setTimeout(r, 1500));
+                let st;
+                try {
+                    const resp = await fetch('/api/extract-status/' + taskId);
+                    if (resp.status === 404) throw new Error('任务已丢失（服务可能重启）');
+                    if (!resp.ok) throw new Error('查询状态失败');
+                    st = await resp.json();
+                } catch (e) {
+                    _kbRowUpdate(taskId, `⚠ ${e.message}`, 'error');
+                    unregisterUpload(taskId);
+                    return false;
+                }
+                if (st.status === 'failed') {
+                    _kbRowUpdate(taskId, `✗ ${st.message || '提取失败'}`, 'error');
+                    unregisterUpload(taskId);
+                    return false;
+                }
+                if (st.status === 'completed') {
+                    const msg = st.persisted
+                        ? `✓ 已入库（${st.char_count} 字符）`
+                        : `✓ 提取完成（${st.char_count} 字符，未入库）`;
+                    _kbRowUpdate(taskId, msg, 'done');
+                    unregisterUpload(taskId);
+                    return true;
+                }
+                const elapsed = Math.round((Date.now() - (startedAt || Date.now())) / 1000);
+                _kbRowUpdate(taskId, `${st.message || '提取中'} · ${elapsed}s`, 'running');
+            }
+            // 超时≠失败：后台仍在提取，保留登记（刷新后自动恢复）
+            _kbRowUpdate(taskId, '⏳ 仍在后台提取，可稍后刷新查看', 'running');
+            return false;
+        }
+
+        // ── 页面加载恢复：登记表中进行中的 KB 上传（含 Agent 主页发起的）──
+        async function restoreKbUploads() {
+            const reg = _loadUploadReg().filter(e => e.type === 'kb');
+            let anyCompleted = false;
+            for (const e of reg) {
+                let st;
+                try {
+                    const resp = await fetch('/api/extract-status/' + e.taskId);
+                    if (resp.status === 404) { unregisterUpload(e.taskId); continue; }
+                    if (!resp.ok) continue;  // 网络问题：保留登记，下次再试
+                    st = await resp.json();
+                } catch (err) { continue; }
+
+                if (st.status === 'completed') {
+                    _kbRow(e.taskId, e.filename);
+                    _kbRowUpdate(e.taskId, `✓ 已入库（${st.char_count || 0} 字符）`, 'done');
+                    unregisterUpload(e.taskId);
+                    anyCompleted = true;
+                } else if (st.status === 'failed') {
+                    _kbRow(e.taskId, e.filename);
+                    _kbRowUpdate(e.taskId, `✗ ${st.message || '提取失败'}`, 'error');
+                    showToast(`✗「${e.filename}」处理失败: ${st.message || '原因未知'}`, 6000);
+                    unregisterUpload(e.taskId);
+                } else {
+                    _kbRow(e.taskId, e.filename);
+                    _kbRowUpdate(e.taskId, `${st.message || '提取中'}（已恢复进度跟踪）`, 'running');
+                    pollKbUpload(e.taskId, e.filename, e.startedAt).then(ok => { if (ok) loadFiles(); });
+                }
+            }
+            if (anyCompleted) await loadFiles();
+        }
+
         // ── 文件上传 ──
         function triggerKbUpload() { document.getElementById('kbFileInput').click(); }
 
@@ -224,19 +339,11 @@
                 const resp = await fetch('/api/upload', { method: 'POST', body: fd });
                 if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).detail || `HTTP ${resp.status}`);
                 const fileId = (await resp.json()).file_id;
-                for (let i = 0; i < 600; i++) {
-                    await new Promise(r => setTimeout(r, 1500));
-                    const stResp = await fetch('/api/extract-status/' + fileId);
-                    if (stResp.status === 404) throw new Error('提取任务已丢失，请重试');
-                    if (!stResp.ok) throw new Error('查询提取状态失败');
-                    const st = await stResp.json();
-                    if (st.status === 'failed') throw new Error(st.message || '提取失败');
-                    if (st.status === 'completed') {
-                        showToast(`✓「${file.name}」已入库知识库`);
-                        return true;
-                    }
-                }
-                throw new Error('提取超时');
+                const startedAt = Date.now();
+                // 登记 + 进度行（跨页面刷新/在 Agent 主页与知识库页之间切换均可恢复）
+                registerUpload({ type: 'kb', taskId: fileId, filename: file.name, startedAt });
+                _kbRow(fileId, file.name);
+                return await pollKbUpload(fileId, file.name, startedAt);
             } catch (e) {
                 showToast(`✗「${file.name}」上传失败: ${e.message}`);
                 return false;
@@ -398,6 +505,7 @@
 
         // ── Init ──
         loadFiles();
+        restoreKbUploads();
     </script>
 </body>
 </html>

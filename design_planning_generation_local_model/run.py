@@ -30,7 +30,7 @@ if __name__ == "__main__":
         except OSError:
             return False
 
-    port = 8003
+    port = 8002
     if not _try_bind("0.0.0.0", port):
         print(f"Port {port} is occupied, trying 8003...")
         port = 8003

@@ -2,6 +2,7 @@
 Attachment Service - 附件上传、文本提取、向量库入库管理
 """
 import os
+import json
 import uuid
 import hashlib
 import tempfile
@@ -67,6 +68,16 @@ def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str):
         extract_tasks[task_id]["full_text"] = full_text
         extract_tasks[task_id]["toc"] = ""
 
+        # 写入磁盘缓存（模板/附件类），TTL 内同文件重复上传不再触发 MinerU 解析
+        if not persist:
+            _save_extract_cache(
+                extract_tasks[task_id].get("file_hash", ""),
+                extract_tasks[task_id].get("filename", filename),
+                full_text, len(full_text),
+                extract_tasks[task_id]["preview"],
+                "",
+            )
+
         # 可选：写入向量库
         if persist:
             extract_tasks[task_id]["message"] = "正在写入知识库..."
@@ -100,6 +111,67 @@ def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str):
         # 保留原始文件路径：.docx 是段落级手术（修改/精简/补全上传文档）的基底
         extract_tasks[task_id]["original_path"] = file_path
         # 注意: 保留 full_text 不清除 — Agent模式附件功能需要访问全文
+
+
+# ── 提取结果磁盘缓存（按文件哈希，TTL 内避免重复解析）──
+# 缓存目录：app/../data/extract_cache/；键：文件 MD5；值：提取全文等。
+# 仅对 persist=False（模板/会话附件）生效——知识库上传（persist=True）需要
+# 重新走向量入库流程，不适用文本缓存。
+
+_EXTRACT_CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "extract_cache")
+_EXTRACT_CACHE_TTL_HOURS = float(os.getenv("EXTRACT_CACHE_TTL_HOURS", "168"))  # 默认7天
+_EXTRACT_CACHE_MAX_FILES = int(os.getenv("EXTRACT_CACHE_MAX_FILES", "300"))
+
+
+def _extract_cache_path(file_hash: str) -> str:
+    return os.path.join(_EXTRACT_CACHE_DIR, f"{file_hash}.json")
+
+
+def _load_extract_cache(file_hash: str) -> Optional[dict]:
+    """读取提取缓存；不存在/过期/损坏返回 None。"""
+    path = _extract_cache_path(file_hash)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return None
+    cached_at = float(data.get("cached_at") or 0)
+    if cached_at <= 0 or (time.time() - cached_at) > _EXTRACT_CACHE_TTL_HOURS * 3600:
+        return None
+    if not (data.get("full_text") or "").strip():
+        return None
+    return data
+
+
+def _save_extract_cache(file_hash: str, filename: str, full_text: str,
+                        char_count: int, preview: str, toc: str) -> None:
+    """写入提取缓存并按 mtime 淘汰超限旧缓存。"""
+    try:
+        os.makedirs(_EXTRACT_CACHE_DIR, exist_ok=True)
+        data = {
+            "filename": filename,
+            "full_text": full_text,
+            "char_count": char_count,
+            "preview": preview,
+            "toc": toc or "",
+            "cached_at": time.time(),
+        }
+        with open(_extract_cache_path(file_hash), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        # 容量淘汰：超出上限时删除最旧（按文件 mtime）的缓存文件
+        files = [
+            os.path.join(_EXTRACT_CACHE_DIR, fn)
+            for fn in os.listdir(_EXTRACT_CACHE_DIR) if fn.endswith(".json")
+        ]
+        if len(files) > _EXTRACT_CACHE_MAX_FILES:
+            files.sort(key=lambda p: os.path.getmtime(p))
+            for old in files[:len(files) - _EXTRACT_CACHE_MAX_FILES]:
+                try:
+                    os.remove(old)
+                except OSError:
+                    pass
+    except Exception as e:
+        print(f"[extract_cache] 写入失败（不影响提取）: {e}")
 
 
 def validate_upload(filename: str, file_size: int) -> Tuple[bool, str]:
@@ -172,6 +244,32 @@ def submit_extract_task(
             if persist and not task.get("persisted"):
                 continue
             return existing_id
+
+    # ── 提取结果磁盘缓存（模板/附件类，persist=False）──
+    # 服务重启后内存去重失效，同文件重复上传会重新触发 MinerU 解析（分钟级）。
+    # 磁盘缓存按文件哈希保存提取结果，TTL 内命中则直接完成，跳过解析。
+    if not persist:
+        cached = _load_extract_cache(file_hash)
+        if cached is not None:
+            extract_tasks[task_id] = {
+                "file_id": task_id,
+                "filename": filename,
+                "status": "completed",
+                "message": "提取完成（命中缓存，未重新解析）",
+                "preview": cached.get("preview", ""),
+                "char_count": cached.get("char_count", 0),
+                "full_text": cached.get("full_text", ""),
+                "toc": cached.get("toc", ""),
+                "persisted": False,
+                "file_hash": file_hash,
+                "created_at": time.time(),
+                "from_cache": True,
+                # 保留原始文件路径：.docx 段落级手术（修改/精简）的基底
+                "original_path": temp_path,
+            }
+            print(f"[extract_cache] 命中 {filename} "
+                  f"({cached.get('char_count', 0)} chars，跳过解析)")
+            return task_id
 
     extract_tasks[task_id] = {
         "file_id": task_id,

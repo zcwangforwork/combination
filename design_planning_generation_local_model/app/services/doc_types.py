@@ -26,6 +26,7 @@ DOC_TYPES = [
     "ui_requirements_spec",              # 用户界面需求规格书
     "cybersecurity_requirements",        # 网络安全需求规格书
     "labeling_ifu_requirements",         # 标签和说明书需求
+    "usability_specification",           # 可用性规范文件
 
     # ========== 三、设计输出阶段 (Design Output) — 12份 ==========
     "product_drawings",                  # 产品图纸
@@ -188,6 +189,7 @@ DOC_TYPES = [
     "clinical_trial_report",  # 临床试验报告
     "usability_test_plan",  # 可用性测试方案
     "usability_test_report",  # 可用性测试报告
+    "usability_validation_confirmation_report",  # 可用性验证和确认报告
     "design_validation_report",  # 设计确认报告 (DHF row 93)
     # ========== 保留原有兼容类型（映射到新类型） ==========
     "design_output",                     # 设计输出（通用）
@@ -227,6 +229,7 @@ DOC_TYPE_LABELS = {
     "ui_requirements_spec": "用户界面需求规格书",
     "cybersecurity_requirements": "网络安全需求规格书",
     "labeling_ifu_requirements": "标签和说明书需求",
+    "usability_specification": "可用性规范文件",
 
     # 三、设计输出阶段
     "product_drawings": "产品图纸",
@@ -389,6 +392,7 @@ DOC_TYPE_LABELS = {
     "clinical_trial_report": "临床试验报告",
     "usability_test_plan": "可用性测试方案",
     "usability_test_report": "可用性测试报告",
+    "usability_validation_confirmation_report": "可用性验证和确认报告",
     "design_validation_report": "设计确认报告",
     # 保留原有兼容类型
     "design_output": "设计输出",

@@ -1035,15 +1035,21 @@ async def _after_tools_node(state: AgentState) -> dict:
     pending_att_map = None
     pending_tmpl_map = None
     pending_tmpl_style = None
+    pending_doc_format = None
+    pending_kb_atts = None
     try:
         from app.services.agent_tools import (
             pop_pending_attachment_map,
             pop_pending_template_map,
             pop_pending_template_style_summary,
+            pop_pending_document_format,
+            pop_pending_kb_attachments,
         )
         pending_att_map = pop_pending_attachment_map()
         pending_tmpl_map = pop_pending_template_map()
         pending_tmpl_style = pop_pending_template_style_summary()
+        pending_doc_format = pop_pending_document_format()
+        pending_kb_atts = pop_pending_kb_attachments()
     except Exception:
         pass
 
@@ -1070,6 +1076,18 @@ async def _after_tools_node(state: AgentState) -> dict:
         # 懒加载产出的风格总结写回 state（工具路径已设置时跳过，避免覆盖）
         result["template_style_summary"] = pending_tmpl_style
         print(f"[agent_engine] 模板风格总结已持久化 ({len(pending_tmpl_style)} chars)")
+    if pending_doc_format is not None:
+        result["document_format"] = pending_doc_format
+        print(f"[agent_engine] 文档格式要求已持久化: {pending_doc_format}")
+    if pending_kb_atts:
+        # 用户确认的知识库文件 → 合并进会话附件（去重后追加）
+        existing_atts = list(state.get("attachments", []) or [])
+        existing_ids = {a.get("file_id") for a in existing_atts}
+        new_atts = [a for a in pending_kb_atts if a.get("file_id") not in existing_ids]
+        if new_atts:
+            result["attachments"] = existing_atts + new_atts
+            print(f"[agent_engine] 知识库文件已添加为附件: "
+                  f"{[a.get('filename') for a in new_atts]}")
     if outline_data:
         result["outline"] = outline_data
         result["outline_status"] = outline_status
@@ -1144,9 +1162,21 @@ def _sync_doc_context(state: AgentState,
     )
 
     # 附件→章节预分配映射同步到工具层（write_chapter 懒加载构建后经 state 持久化）
-    from app.services.agent_tools import set_current_attachment_map, set_current_template_map
+    from app.services.agent_tools import (
+        set_current_attachment_map, set_current_template_map, set_current_document_format,
+        set_current_user_messages,
+    )
     set_current_attachment_map(state.get("attachment_chapter_map") or {})
     set_current_template_map(state.get("template_chapter_map") or {})
+    set_current_document_format(state.get("document_format") or {})
+    # 历史用户消息同步到工具层：修改/生成时构建「历史用户要求累积参考」块，
+    # 保证不丢弃前几轮的关键要求（冲突时以当前指令为准）
+    user_texts = [
+        str(getattr(m, "content", "") or "")
+        for m in (state.get("messages", []) or [])
+        if getattr(m, "type", None) == "human"
+    ]
+    set_current_user_messages(user_texts)
 
 
 def _sync_attachment_context(state: AgentState) -> None:
