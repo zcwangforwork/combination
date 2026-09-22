@@ -19,7 +19,7 @@ from app.services.rag.ingest import extract_text_from_file, chunk_text, ingest_d
 extract_tasks: Dict[str, dict] = {}
 
 
-def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str):
+def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str, kb_dir: str = None):
     """后台线程：执行文本提取和可选入库"""
     try:
         extract_tasks[task_id]["status"] = "extracting"
@@ -72,18 +72,20 @@ def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str):
         if not persist:
             _save_extract_cache(
                 extract_tasks[task_id].get("file_hash", ""),
-                extract_tasks[task_id].get("filename", filename),
+                extract_tasks[task_id].get("filename", ""),
                 full_text, len(full_text),
                 extract_tasks[task_id]["preview"],
                 "",
             )
 
-        # 可选：写入向量库
+        # 可选：写入向量库（kb_dir 指定个人知识库目录；缺省写入共享库 uploads）
         if persist:
             extract_tasks[task_id]["message"] = "正在写入知识库..."
             try:
                 from app.services.rag.vector_store import VectorStore
-                vector_store = VectorStore(collection_name="uploads")
+                vector_store = VectorStore(
+                    collection_name="uploads",
+                    persist_directory=kb_dir) if kb_dir else VectorStore(collection_name="uploads")
                 # 传入已解析的 paragraphs，避免 ingest_document 内部重复调用
                 # extract_text_from_file（MinerU 等解析器单次调用即数十秒）
                 chunk_count = ingest_document(
@@ -208,7 +210,8 @@ def submit_extract_task(
     file_content: bytes,
     filename: str,
     persist: bool = False,
-    doc_type: str = "unknown"
+    doc_type: str = "unknown",
+    kb_dir: str = None
 ) -> str:
     """
     提交附件提取任务
@@ -218,6 +221,7 @@ def submit_extract_task(
         filename: 原始文件名
         persist: 是否写入向量库
         doc_type: 文档类型标签
+        kb_dir: 知识库目标目录（用户隔离：个人库目录；缺省共享库）
 
     Returns:
         task_id
@@ -286,7 +290,7 @@ def submit_extract_task(
     # 启动后台提取线程
     thread = threading.Thread(
         target=_do_extract,
-        args=(task_id, temp_path, persist, doc_type),
+        args=(task_id, temp_path, persist, doc_type, kb_dir),
         daemon=True
     )
     thread.start()
@@ -307,7 +311,8 @@ def get_extract_status(task_id: str) -> Optional[dict]:
         "message": task["message"],
         "preview": task.get("preview"),
         "char_count": task.get("char_count", 0),
-        "persisted": task.get("persisted", False)
+        "persisted": task.get("persisted", False),
+        "persist_error": task.get("persist_error")
     }
 
 

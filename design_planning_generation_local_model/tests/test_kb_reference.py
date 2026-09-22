@@ -23,7 +23,9 @@ class _FakeStore:
         self.embedder = MagicMock()
         self.embedder.encode_single.return_value = [0.1, 0.2]
 
-    def __call__(self, collection_name=None):
+    def __call__(self, collection_name=None, **kwargs):
+        # [KB-ISO] 用户隔离改造后 kb_scope 以 (collection_name, persist_directory)
+        # 实例化；无上下文时仅共享库一实例，行为与单库等价
         return self
 
     def get_text_by_source(self, src):

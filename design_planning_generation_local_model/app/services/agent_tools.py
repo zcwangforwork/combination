@@ -90,6 +90,173 @@ _DEGENERATE_USER_MSGS = ("继续", "好的", "确认", "可以", "开始", "下�
 def set_current_user_messages(texts: list) -> None:
     """由 agent_engine 在每轮开始前调用，同步历史用户消息文本（时间升序）。"""
     _current_user_messages.set(list(texts or []))
+    # 同步解析用户字数要求：驱动 build_docx 收敛目标、design_outline 规划与提示词预算块
+    _current_word_limit.set(extract_word_limit(texts))
+
+
+# ── 用户字数要求解析（从历史用户消息提取，动态覆盖默认字数预算 _DOC_WORD_LIMIT）──
+# 提取结果供三处消费：
+#   ① build_docx 全文收敛目标（get_effective_word_limit）
+#   ② design_outline 章节密度规划（提示词注入）
+#   ③ build_system_prompt「全文档字数预算」块（get_word_budget_text）
+_current_word_limit: contextvars.ContextVar[dict] = contextvars.ContextVar(
+    'word_limit', default={"max": 0, "min": 0, "raw": ""}
+)
+
+_CN_DIGITS = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+              "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+_CN_UNITS = {"十": 10, "百": 100, "千": 1000}
+
+
+def _cn_to_int(s: str) -> int:
+    """中文数字转整数：支持 五千/一万/十五/八百/两万五（口语尾数缩写）等常见写法。
+    非法字符返回 0。"""
+    total, section, num, last_unit = 0, 0, 0, 0
+    for ch in s:
+        if ch in _CN_DIGITS:
+            num = _CN_DIGITS[ch]
+        elif ch in _CN_UNITS:
+            unit = _CN_UNITS[ch]
+            section += (num if num else 1) * unit  # 十五 = 15
+            num, last_unit = 0, unit
+        elif ch == "万":
+            total += (section + num) * 10000
+            section, num, last_unit = 0, 0, 10000
+        else:
+            return 0
+    if num and last_unit >= 100:
+        num *= last_unit // 10  # 口语缩写：一万二=12000、三千五=3500
+    return total + section + num
+
+
+def _wl_parse_number(tok: str) -> int:
+    """解析检索到的数字 token：纯数字直转，中文数字走 _cn_to_int；
+    仅接受 100~200000 的合理字数值（过滤误匹配）。"""
+    tok = tok.strip()
+    if tok.isdigit():
+        v = int(tok)
+    else:
+        v = _cn_to_int(tok)
+    return v if 100 <= v <= 200000 else 0
+
+
+# 匹配模式：(kind, regex)。kind: max=上限 / min=下限 / target=约N字（视为上限+0.8倍下限）
+_WL_NUM = r"(\d{2,6}|[零一二两三四五六七八九十百千万]{2,6})"
+_WL_PATTERNS: list = []  # [(kind, compiled_re)]，惰性编译（见 _wl_get_patterns）
+
+
+def _wl_get_patterns() -> list:
+    """惰性编译字数要求匹配模式（避免模块导入期依赖 re）。"""
+    if not _WL_PATTERNS:
+        import re
+        specs = [
+            # 上限：不超过/控制在/最多/以内/以下…
+            ("max", rf"(?:不超过|不多于|不要超过|不得超过|不能超|控制在|限制在|最多|上限)\s*{_WL_NUM}\s*个?字"),
+            ("max", rf"{_WL_NUM}\s*个?字(?:以内|以下)"),
+            ("max", rf"字数\s*(?:不超过|不多于|控制在|限制在)\s*{_WL_NUM}"),
+            # 下限：至少/不少于/以上…
+            ("min", rf"(?:至少|不少于|不低于|不得少于|不能少于|最少)\s*{_WL_NUM}\s*个?字"),
+            ("min", rf"{_WL_NUM}\s*个?字以上"),
+            ("min", rf"字数\s*(?:至少|不少于|不低于)\s*{_WL_NUM}"),
+            # 目标值：约N字/N字左右/字数为N
+            ("target", rf"(?:大约|大概|约)\s*{_WL_NUM}\s*个?字"),
+            ("target", rf"{_WL_NUM}\s*个?字(?:左右|上下)"),
+            ("target", rf"字数(?:为|是|要求)\s*{_WL_NUM}"),
+        ]
+        _WL_PATTERNS.extend((k, re.compile(p)) for k, p in specs)
+    return _WL_PATTERNS
+
+
+def extract_word_limit(texts: list) -> dict:
+    """从用户消息列表（时间升序）解析字数要求。
+
+    同一句内按出现位置先后应用（后提及的覆盖先提及的）；跨消息按时间后者覆盖前者。
+    "约N字/N字左右" 视为 target：max=N、min=0.8N。上下限矛盾时以上限为准（min 丢弃）。
+
+    Returns:
+        {"max": int, "min": int, "raw": str}；0/空串表示用户未提该类要求。
+    """
+    result = {"max": 0, "min": 0, "raw": ""}
+    for text in texts or []:
+        if not text or "字" not in text:
+            continue
+        # 收集本条消息内的全部匹配，按出现位置排序应用
+        matches = []  # [(pos, kind, value, phrase)]
+        for kind, pat in _wl_get_patterns():
+            for m in pat.finditer(text):
+                v = _wl_parse_number(m.group(1))
+                if v:
+                    matches.append((m.start(), kind, v, m.group(0)))
+        if not matches:
+            continue
+        matches.sort(key=lambda x: x[0])
+        for _, kind, v, phrase in matches:
+            if kind == "max":
+                result["max"], result["raw"] = v, phrase
+            elif kind == "min":
+                result["min"], result["raw"] = v, phrase
+            else:  # target
+                result["max"], result["min"], result["raw"] = v, int(v * 0.8), phrase
+    # 矛盾守卫：下限高于上限时以上限为准（用户最新明确的上限约束优先）
+    if result["max"] and result["min"] and result["min"] > result["max"]:
+        result["min"] = 0
+    return result
+
+
+def get_effective_word_limit() -> int:
+    """build_docx 全文收敛目标字数：用户明确上限 → 用户值；
+    仅设下限且高于默认预算 → 下限值（避免把文档压到用户要求之下）；否则默认预算。"""
+    limit = _current_word_limit.get() or {}
+    mx, mn = int(limit.get("max") or 0), int(limit.get("min") or 0)
+    if mx:
+        return mx
+    if mn and mn > _DOC_WORD_LIMIT:
+        return mn
+    return _DOC_WORD_LIMIT
+
+
+def get_user_word_budget_text() -> str:
+    """用户明确提出字数要求时返回「全文档字数预算」提示块；未提出时返回空串。"""
+    limit = _current_word_limit.get() or {}
+    mx, mn = int(limit.get("max") or 0), int(limit.get("min") or 0)
+    if not mx and not mn:
+        return ""
+    raw = limit.get("raw") or ""
+    lines = ["## 全文档字数预算（重要 — 用户明确要求，优先于默认口径）"]
+    if raw:
+        lines.append(f"- 用户字数要求原文：「{raw}」")
+    if mx:
+        lines.append(
+            f"- design_outline 设计时即按**总字数不超过 {mx} 字**规划章节数量与小节密度，"
+            f"据此决定每章篇幅分配（含表格文字）")
+        lines.append(
+            f"- 各章生成后若累计明显超预算，立即收紧后续章节，或对已生成章节调用 "
+            f"summarize_section / summarize_document(mode=\"words\", target={mx}) 精简收敛")
+        lines.append(
+            f"- 导出时（build_docx）系统会按 {mx} 字自动做代码级收敛兜底，但生成阶段就应控制在预算内")
+    if mn:
+        lines.append(
+            f"- 全文**不得低于 {mn} 字**：若生成/收敛后全文字数不足，须用 write_chapter "
+            f"对单薄章节补写扩充至达标，不得为凑字数注水，也不得删减关键内容")
+    if not mx:
+        lines.append(f"- 未设上限时沿用默认上限 {_DOC_WORD_LIMIT} 字，重点确保不低于 {mn} 字")
+    return "\n".join(lines)
+
+
+def get_word_budget_text() -> str:
+    """「全文档字数预算」提示块：用户有明确要求时按用户要求，否则返回默认口径
+    （约 10000 字、上限 15000，与 _DOC_WORD_LIMIT 一致）。"""
+    user_block = get_user_word_budget_text()
+    if user_block:
+        return user_block
+    hard_cap = int(_DOC_WORD_LIMIT * 1.5)
+    return (
+        "## 全文档字数预算（重要）\n"
+        f"- design_outline 设计时即按**总字数约 {_DOC_WORD_LIMIT} 字**规划章节数量与小节密度，\n"
+        f"  严守上限 **{hard_cap} 字**（含表格文字），据此决定每章篇幅分配\n"
+        "- 各章生成后若累计明显超预算，立即收紧后续章节，或对已生成章节调用\n"
+        "  summarize_section / summarize_document 精简收敛"
+    )
 
 
 def _user_requirements_block(current_instruction: str = "", max_msgs: int = 10) -> str:
@@ -1005,6 +1172,38 @@ def _supplementary_block() -> str:
     )
 
 
+async def _retrieve_skill_rules_block(query: str, top_k: int = 3) -> str:
+    """检索用户技能库，生成「技能规则」提示块，追加到写作工具 system_prompt。
+
+    技能是用户在技能库沉淀的写作规则/指导命令；写作（生成/修改章节、设计大纲）时
+    按当前上下文自动向量检索，相关技能无需用户手动「发送」即注入提示词生效。
+    与补充提示词去重（技能内容已被并入补充提示词时跳过），无技能/检索失败返回空串。
+    """
+    try:
+        from app.services import skill_library
+        skills = await asyncio.to_thread(skill_library.search_skills, query, top_k)
+    except Exception as e:
+        print(f"[agent_tools] 技能库检索失败（跳过注入）: {e}")
+        return ""
+    if not skills:
+        return ""
+    # 去重：用户曾「发送」过的技能已并入补充提示词，不再重复注入
+    supp = (_current_supplementary_prompts.get() or "").strip()
+    if supp:
+        skills = [s for s in skills if s.get("content", "")[:40] and s["content"][:40] not in supp]
+    if not skills:
+        return ""
+    lines = [
+        "\n\n## 用户技能库规则（自动检索，必须遵守）",
+        "以下是用户沉淀在技能库中、与当前写作内容高度相关的规则，生成/修改时必须逐条遵守"
+        "（与上述默认规则冲突时，以技能规则为准）：",
+    ]
+    for s in skills:
+        lines.append(f"### 技能「{s.get('name', '')}」（相关度 {s.get('score', '')}）\n{s.get('content', '')}")
+    print(f"[agent_tools] 技能库注入: {len(skills)} 条相关技能 (query={query[:50]!r})")
+    return "\n".join(lines) + "\n"
+
+
 def _memory_context_block() -> str:
     """返回召回记忆参考块，追加到文档生成工具 system_prompt 末尾。
 
@@ -1316,21 +1515,30 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
             直接走 self.collection.query 即可，无需 Reranker 或 BM25 二次召回。
             """
             try:
-                store = VectorStore(collection_name="uploads")
-                try:
-                    count = store.collection.count()
-                except Exception:
+                # [KB-ISO] 用户隔离：uploads 检索遍历当前作用域（本人+共享 / ADMIN 全部）
+                from app.services import kb_scope as _kbs
+                scoped = _kbs.scoped_kb_stores()
+                if not scoped:
                     return []
-                if count == 0:
-                    return []
-                query_embedding = store.embedder.encode_single(query)
-                # uploads 集合独立检索，给予与主库同等的配额
+                query_embedding = scoped[0].embedder.encode_single(query)
+                # uploads 集合独立检索，给予与主库同等的配额（各库分别取，汇总后由调用方截断）
                 uploads_n = max(top_k, 5)
-                raw = store.collection.query(
-                    query_embeddings=[query_embedding],
-                    n_results=uploads_n,
-                    include=["documents", "metadatas", "distances"],
-                )
+                merged = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+                for store in scoped:
+                    try:
+                        raw = store.collection.query(
+                            query_embeddings=[query_embedding],
+                            n_results=uploads_n,
+                            include=["documents", "metadatas", "distances"],
+                        )
+                    except Exception:
+                        continue
+                    if raw and raw.get("ids") and raw["ids"][0]:
+                        merged["ids"][0].extend(raw["ids"][0])
+                        merged["documents"][0].extend(raw["documents"][0])
+                        merged["metadatas"][0].extend(raw["metadatas"][0])
+                        merged["distances"][0].extend(raw["distances"][0])
+                raw = merged
                 if not raw or not raw.get("ids") or not raw["ids"][0]:
                     return []
                 results = []
@@ -2913,6 +3121,9 @@ async def generate_section(section_name: str, doc_type: str = "design_developmen
         style_reference = _build_style_reference(section_name)
         style_ref_block = f"{style_reference}\n\n" if style_reference else ""
 
+        # 用户技能库自动检索：与本章相关的技能规则注入提示块（无技能/检索失败为空串）
+        skill_block = await _retrieve_skill_rules_block(f"{doc_label} {section_name}")
+
         system_prompt = f"""你是一位贴敷式胰岛素泵RA文档专家。请基于当前已确认的策划内容信息，
 生成《{doc_label}》文档中「{section_name}」章节的初稿。{expert_section}
 
@@ -2928,7 +3139,7 @@ async def generate_section(section_name: str, doc_type: str = "design_developmen
 - 禁止以"本章依据XX标准编制"等冗余前缀行开头
 
 {covered_block}
-{style_ref_block}{style_section}{_output_structure_requirement(doc_type)}{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block()}"""
+{style_ref_block}{style_section}{_output_structure_requirement(doc_type)}{_supplementary_block()}{skill_block}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block()}"""
 
         # RAG 检索: 用 LLM 基于产品上下文+章节信息生成针对性查询词
         rag_context = ""
@@ -3142,17 +3353,20 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
                     strip_stats = {"subsections": n_stripped}
                     print(f"[build_docx] 法规引用剥离: {n_stripped} 个小节已处理")
 
-            # ② 全文字数收敛
+            # ② 全文字数收敛（目标=用户明确字数要求；未提出时用默认预算 _DOC_WORD_LIMIT）
+            _effective_limit = get_effective_word_limit()
             condensed_md, condense_stats = await _condense_document_to_limit(
                 markdown,
                 doc_label=label,
-                target_chars=_DOC_WORD_LIMIT,
+                target_chars=_effective_limit,
                 max_iterations=_DOC_WORD_LIMIT_MAX_ITERATIONS,
             )
             if condensed_md and condense_stats and \
                     condense_stats.get("final_chars", 0) < condense_stats.get("original_chars", 0):
                 markdown = condensed_md
-                print(f"[build_docx] 字数收敛: {condense_stats.get('original_chars')} → "
+                print(f"[build_docx] 字数收敛（目标 {_effective_limit} 字"
+                      f"{'，用户要求' if _effective_limit != _DOC_WORD_LIMIT else ''}）: "
+                      f"{condense_stats.get('original_chars')} → "
                       f"{condense_stats.get('final_chars')} 字（迭代 {condense_stats.get('iterations')} 轮，"
                       f"收敛={condense_stats.get('converged')}）")
 
@@ -3451,6 +3665,10 @@ async def revise_section(section_name: str, instruction: str, doc_type: str = "d
         style_ref_block = f"{style_reference}\n\n" if style_reference else ""
 
         # ── 构建高质量修订 prompt（复用 write_chapter 的详细质量要求）──
+        # 用户技能库自动检索：与本章+修改指令相关的技能规则注入（无技能/失败为空串）
+        skill_block = await _retrieve_skill_rules_block(
+            f"{doc_label} {section_name} 修改指令: {instruction[:200]}")
+
         system_prompt = f"""你是一位贴敷式胰岛素泵RA文档专家。用户要求修改《{doc_label}》文档中「{section_name}」章节。{expert_section}
 
 要求:
@@ -3473,7 +3691,7 @@ async def revise_section(section_name: str, instruction: str, doc_type: str = "d
 - 如果修改影响了其他章节的参数/引用，在回复末尾用"⚠️ 关联影响:"标注
 - 用中文回复
 
-{style_ref_block}{_output_structure_requirement(doc_type, is_revision=True)}{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}"""
+{style_ref_block}{_output_structure_requirement(doc_type, is_revision=True)}{_supplementary_block()}{skill_block}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}"""
 
         user_prompt = f"""请修改《{doc_label}》的「{section_name}」章节，修改指令: {instruction}
 
@@ -3625,6 +3843,10 @@ async def revise_paragraph(section_name: str, anchor_text: str, instruction: str
         style_ref_block = f"{style_reference}\n\n" if style_reference else ""
 
         # ── 构建精准修订 prompt ──
+        # 用户技能库自动检索：与章节+修改指令相关的技能规则注入（无技能/失败为空串）
+        skill_block = await _retrieve_skill_rules_block(
+            f"{doc_label} {section_name} 修改指令: {instruction[:200]}")
+
         system_prompt = f"""你是一位贴敷式胰岛素泵RA文档专家。用户要求修改《{doc_label}》文档中「{section_name}」章节的某一个段落。{expert_section}
 
 要求:
@@ -3636,7 +3858,7 @@ async def revise_paragraph(section_name: str, anchor_text: str, instruction: str
 - 修改后段落的措辞语气、详略程度与全文其他章节保持一致
 
 {style_ref_block}输出格式:
-只输出修改后的段落文本，不要输出章节标题、不要输出其他段落、不要加"修改摘要"等额外说明。{_supplementary_block()}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}{_PRODUCT_PREMISE_RULE}"""
+只输出修改后的段落文本，不要输出章节标题、不要输出其他段落、不要加"修改摘要"等额外说明。{_supplementary_block()}{skill_block}{_memory_context_block()}{_attachment_priority_rule()}{_grounding_rule()}{_doc_scope_rule(doc_type)}{_user_requirements_block(instruction)}{_PRODUCT_PREMISE_RULE}"""
 
         user_prompt = f"""## 修改指令
 {instruction}
@@ -3816,6 +4038,32 @@ async def design_outline(
 产品名称: {product_name}"""
     if special_requirements:
         prompt += f"\n特殊要求: {special_requirements}"
+
+    # 用户字数要求注入（代码级保障，不依赖 LLM 是否在 special_requirements 里转述）：
+    # 章节数量与小节密度按总字数预算规划，从源头控制篇幅而非全靠事后精简
+    _wl = _current_word_limit.get() or {}
+    if _wl.get("max") or _wl.get("min"):
+        _wl_parts = []
+        if _wl.get("max"):
+            _wl_parts.append(f"全文总字数不超过 {_wl['max']} 字")
+        if _wl.get("min"):
+            _wl_parts.append(f"全文总字数不低于 {_wl['min']} 字")
+        prompt += (
+            "\n字数要求（用户明确指定，必须遵守）: " + "，".join(_wl_parts) +
+            "。请据此规划章节数量与每章小节密度，使各章篇幅分配与总字数预算匹配，"
+            "避免生成后大幅精简。"
+        )
+
+    # 用户技能库自动检索：与大纲结构设计相关的技能/规则注入（无技能/失败为空串）
+    try:
+        from app.services.doc_types import DOC_TYPE_LABELS as _DTL
+        _outline_label = _DTL.get(doc_type, doc_type)
+    except Exception:
+        _outline_label = doc_type
+    _skill_rules = await _retrieve_skill_rules_block(
+        f"{_outline_label} {product_name} 章节结构设计 大纲")
+    if _skill_rules:
+        prompt += "\n" + _skill_rules
 
     # 固定章节结构注入：软件开发计划类文档的用户指定结构，
     # 一级章节必须严格按 DOC_TYPE_SPECIFIC_PROMPTS 中的【章节结构强制要求】设置
@@ -4366,6 +4614,10 @@ async def write_chapter(
                     f"本小节总字数控制在 200-500 字之间。**宁少勿多**。"
                 )
 
+            # 用户技能库自动检索：与本小节相关的技能规则注入（无技能/失败为空串）
+            skill_block = await _retrieve_skill_rules_block(
+                f"{doc_label} {chapter_name} {sub_title}")
+
             system_prompt = (
                 f"你是一位贴敷式胰岛素泵RA文档专家。"
                 f"请编写《{doc_label}》文档中「{chapter_name}」章节下「{sub_title}」小节的内容{context_hint}。"
@@ -4373,6 +4625,7 @@ async def write_chapter(
                 f"{style_rules}"
                 f"{tail_rules}"
                 f"{_supplementary_block()}"
+                f"{skill_block}"
                 f"{_memory_context_block()}"
                 f"{_attachment_priority_rule()}"
                 f"{_grounding_rule()}"
@@ -4534,6 +4787,9 @@ async def write_chapter(
                 f"\n"
             )
 
+        # 用户技能库自动检索：与本章相关的技能规则注入（无技能/失败为空串）
+        skill_block = await _retrieve_skill_rules_block(f"{doc_label} {chapter_name}")
+
         system_prompt = (
             f"你是一位贴敷式胰岛素泵RA文档专家。"
             f"请编写《{doc_label}》文档中「{chapter_name}」章节的完整内容。"
@@ -4544,6 +4800,7 @@ async def write_chapter(
             f"## 字数约束\n"
             f"整章总字数控制在 800-2000 字之间。**宁少勿多**。"
             f"{_supplementary_block()}"
+            f"{skill_block}"
             f"{_memory_context_block()}"
             f"{_attachment_priority_rule()}"
             f"{_grounding_rule()}"
@@ -6059,18 +6316,35 @@ async def find_kb_reference_files(doc_type: str = "", instruction: str = "", top
     goal = " ".join(x for x in (label, (instruction or "").strip()) if x) or "设计开发文档"
     try:
         from app.services.rag.vector_store import VectorStore
-        store = VectorStore(collection_name="uploads")
-        if store.collection.count() == 0:
+        from app.services import kb_scope as _kbs
+        scoped = _kbs.scoped_kb_stores()
+        total_cnt = 0
+        for _st in scoped:
+            try:
+                total_cnt += _st.collection.count()
+            except Exception:
+                continue
+        if total_cnt == 0:
             return json.dumps({
                 "status": "no_kb_files",
                 "message": "知识库中暂无文件，跳过参考文件检索。",
                 "candidates": [],
             }, ensure_ascii=False)
-        query_embedding = store.embedder.encode_single(goal)
-        raw = store.collection.query(
-            query_embeddings=[query_embedding], n_results=24,
-            include=["documents", "metadatas", "distances"],
-        )
+        query_embedding = scoped[0].embedder.encode_single(goal)
+        raw = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+        for _st in scoped:
+            try:
+                _r = _st.collection.query(
+                    query_embeddings=[query_embedding], n_results=24,
+                    include=["documents", "metadatas", "distances"],
+                )
+            except Exception:
+                continue
+            if _r and _r.get("ids") and _r["ids"][0]:
+                raw["ids"][0].extend(_r["ids"][0])
+                raw["documents"][0].extend(_r["documents"][0])
+                raw["metadatas"][0].extend(_r["metadatas"][0])
+                raw["distances"][0].extend(_r["distances"][0])
         # 按 source_file 聚合：最高相关度 + 命中数 + 首条摘要
         agg = {}
         if raw and raw.get("ids") and raw["ids"][0]:
@@ -6139,11 +6413,22 @@ async def add_kb_files_as_attachment(source_files: str) -> str:
             "message": "未提供文件名。source_files 应为逗号分隔的文件名列表。",
         }, ensure_ascii=False)
     try:
-        store = VectorStore(collection_name="uploads")
+        from app.services import kb_scope as _kbs2
+        scoped = _kbs2.scoped_kb_stores()
         existing_ids = {a.get("file_id") for a in (_current_attachments.get() or [])}
         added, skipped, pending = [], [], []
+
+        def _find_text(src):
+            for _st in scoped:
+                try:
+                    t = _st.get_text_by_source(src)
+                except Exception:
+                    t = ""
+                if t and t.strip():
+                    return t
+            return ""
         for src in files:
-            full_text = store.get_text_by_source(src) or ""
+            full_text = _find_text(src)
             if not full_text.strip():
                 skipped.append(f"{src}（知识库中无内容）")
                 continue
@@ -6940,9 +7225,10 @@ async def ingest_attachment_to_kb(file_id: str = "") -> str:
             chunk["source_file"] = filename
             chunk["chunk_id"] = f"att_{att.get('file_id', '?')}_{i}"
 
-        # 写入主知识库
+        # [KB-ISO] 用户隔离：写入当前用户的个人知识库（无登录上下文回退共享库）
         try:
-            vector_store = VectorStore(collection_name="insulin_pump_kb")
+            from app.services import kb_scope as _kbs3
+            vector_store = _kbs3.personal_kb_store()
             vector_store.add_chunks(chunks)
             # 使 BM25 缓存失效
             VectorStore.invalidate_bm25_cache()
@@ -6954,7 +7240,7 @@ async def ingest_attachment_to_kb(file_id: str = "") -> str:
                 "chunk_count": len(chunks),
                 "message": f"「{filename}」已导入知识库，{len(chunks)} 个分块。后续可通过 search_kb 检索到此文档内容。",
             })
-            print(f"[agent_tools] Ingested '{filename}' → insulin_pump_kb ({len(chunks)} chunks)")
+            print(f"[agent_tools] Ingested '{filename}' → personal_kb ({len(chunks)} chunks)")
         except Exception as e:
             results.append({
                 "filename": filename,

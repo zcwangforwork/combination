@@ -900,6 +900,26 @@
         </div>
     </div>
 
+    <!-- 用户技能库对话框 -->
+    <div class="dialog-overlay" id="skillsDialog">
+        <div class="dialog-box" style="max-width:640px">
+            <h3>🧩 我的技能库</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:8px">把常用指导命令/生成规则沉淀为技能，随时快捷复用。「发送」把技能作为指令发给 Agent（Agent 会把它并入补充提示词，后续生成持续生效）；「插入」放进输入框可再编辑。</p>
+            <div id="skillList" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+            <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
+            <label>技能名称 *</label>
+            <input id="skillNameInput" placeholder="如：三线表规则">
+            <label>技能内容 *（发给 Agent 的指令/规则原文）</label>
+            <textarea id="skillContentInput" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" placeholder="如：所有表格统一使用三线表；表头加粗；数值列右对齐"></textarea>
+            <label>备注（可选）</label>
+            <input id="skillDescInput" placeholder="备注说明，便于识别">
+            <div class="dialog-btns">
+                <button class="btn-cancel" onclick="closeSkillsDialog()">关闭</button>
+                <button class="btn-start" id="skillSaveBtn" onclick="saveSkill()">保存技能</button>
+            </div>
+        </div>
+    </div>
+
     <div class="dialog-overlay" id="kbFilesDialog">
         <div class="dialog-box" style="max-width:600px">
             <h3>📋 知识库文件列表</h3>
@@ -921,6 +941,7 @@
             <span class="badge" id="projectBadge">新项目</span>
             <span style="flex:1"></span>
             <button id="attHeaderBtn" onclick="document.getElementById('fileInput').click()" class="att-header-btn" title="上传附件供 Agent 在对话中检索（PDF/Word/Excel/Txt/MD/图片，≤20MB）">📎 添加附件</button>
+            <button id="skillBtn" onclick="openSkillsDialog()" class="tpl-upload-btn" title="我的技能库：把常用指导命令/生成规则存为技能，快捷复用">🧩 技能库</button>
             <button id="enrichBtn" onclick="showEnrichDialog()" class="tpl-upload-btn" title="上传或选择一篇文档，由 Agent 自动识别简略内容并修改完善，生成修改版文档">📝 修改文档</button>
             <button id="templateBtn" onclick="showTemplateDialog()" class="tpl-upload-btn" title="上传参考文档作为生成模板，Agent将参照其章节结构和写作风格生成文档">📄 添加模板</button>
             <button id="kbUploadBtn" onclick="triggerKbUpload()" class="kb-upload-btn" title="上传文件到 upload 向量知识库，供所有会话的 RAG 检索使用">📚 上传知识库</button>
@@ -933,8 +954,10 @@
             <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
             <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
             <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
+            <button id="clearChatBtn" onclick="clearConversation()" style="padding:6px 14px;background:#78909c;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="清空当前聊天的所有对话消息（已生成的文档内容、附件、模板不受影响）">🧹 清空对话</button>
+            <button id="compressCtxBtn" onclick="compressContext()" style="padding:6px 14px;background:#5e35b1;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="手动压缩对话上下文：把较早的消息压缩为摘要，保留最近15条完整消息（文档/附件/模板不受影响）">🗜️ 压缩上下文</button>
             <a href="#" id="reviewLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
-            <a href="#" id="downloadLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none" onclick="downloadDocument()">下载文档</a>
+            <a href="#" id="downloadLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px" onclick="downloadDocument()">下载文档</a>
             <a href="#" id="downloadExcelLink" style="font-size:12px;color:#388e3c;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
             <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#7c4dff;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
         </div>
@@ -960,6 +983,11 @@
             <button class="att-upload-btn" id="folderUploadBtn" onclick="document.getElementById('folderInput').click()" title="上传文件夹（保留目录结构）">📁</button>
         </div>
         <div class="template-area" id="templateArea" style="display:none"></div>
+        <!-- Agent 工作状态条：实时显示 agent 当前动作 / 完成提示 -->
+        <div class="agent-status-bar" id="agentStatusBar" style="display:none">
+            <span class="status-spinner" id="agentStatusSpinner"></span>
+            <span id="agentStatusText"></span>
+        </div>
         <div class="input-area">
             <textarea id="userInput" placeholder="输入消息..." rows="1"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
@@ -2665,6 +2693,6 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/agent-chat.js?v=12e598a8a3"></script>
+    <script src="js/agent-chat.js?v=9b5af8af82"></script>
 </body>
 </html>

@@ -123,6 +123,26 @@ def verify_token(authorization: Optional[str]) -> str:
     return username
 
 
+def verify_token_identity(authorization: Optional[str]) -> tuple:
+    """校验凭证并返回 (username, is_admin)（role claim == 'ADMIN' 判定管理员）。
+
+    知识库作用域等需要角色信息的调用方使用；仅认证场景用 verify_token。
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="缺少登录凭证，请先登录体系管理系统")
+    token = authorization[len("Bearer "):].strip()
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=["HS256", "HS384", "HS512"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录体系管理系统")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="登录凭证无效，请重新登录")
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(status_code=401, detail="登录凭证缺少用户标识，请重新登录")
+    return username, payload.get("role") == "ADMIN"
+
+
 async def require_user(request: Request) -> str:
     """FastAPI 依赖：仅认证（适用于非项目级 /agent 端点）"""
     return verify_token(request.headers.get("authorization"))

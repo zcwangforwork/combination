@@ -85,19 +85,21 @@ cd .. && python tools/migrate_project_owners.py admin
 | `app/api/routes.py` | 全部 38 个 `/agent/*` 路由挂鉴权依赖；`GET /agent/projects` 按当前用户过滤 |
 | `app/static/token-relay.js`（新） | review/kb 新标签页的凭证中转：读 URL `#jwt=` → sessionStorage → 包装 fetch 注入头（**就地修改了 review.html / kb.html 两页 `<head>`，属副本分叉**，见已知限制 #5） |
 | `tools/migrate_project_owners.py` | 存量迁移：无主线程一次性划归 admin（幂等，可重跑） |
-| `tests/test_agent_auth.py` | 鉴权/归属/迁移测试 + guard 测试（扫描全部 agent 路由必须挂鉴权依赖，防新端点漏锁） |
+| `tools/migrate_kb_uploads.py` | 存量知识库迁移：共享库上传文件划归 admin 个人库（幂等，需停服执行） |
+| `app/services/kb_scope.py` | 知识库用户隔离作用域（2026-09-21）：个人库 `chroma_db_users/<用户名>/` + 共享胰岛素泵库；普通用户=本人+共享，ADMIN=全部；ContextVar 按请求贯通 Agent 后台任务 |
+| `tests/test_agent_auth.py`、`tests/test_kb_isolation.py` | 鉴权/归属/迁移 + 知识库隔离测试 + guard 测试（agent 与 kb 路由必须挂鉴权依赖，防新端点漏锁） |
 
 `v-pre` 的作用：Vue 编译器完全跳过 agent 子树——内联 `onclick="fn()"` 保持原生全局解析，
 原生 JS 的 DOM 修改不会被 Vue 补丁回滚。
 
 ## 已知限制（评审决策 D3/D4 + 外部意见）
 
-1. **Agent 服务鉴权范围有限**：`/api/agent/**` 已全部 JWT 鉴权（用户隔离，见上），
-   但 `/api/kb/*`、`/api/generate` 等**非 agent 端点仍无鉴权**（共享资源，边界见
-   TODOS P3）；且 `run.py` 仍绑定 `0.0.0.0`（维持原项目行为，用户决策）——局域网内
-   机器可直接访问这些未鉴权接口。CORS 只是浏览器约束，不是访问控制。若仅本机使用，
-   建议改绑 `127.0.0.1`（run.py 一行）。**共享密钥仍是仓库内默认值**：生产部署务必
-   设置 `UM_JWT_SECRET` 环境变量轮换。
+1. **Agent 服务鉴权范围有限**：`/api/agent/**` 与 `/api/kb/**` 已全部 JWT 鉴权
+   （对话与知识库用户隔离，见上），但 `/api/generate`、`/api/upload` 等**旧版表单
+   端点仍无鉴权**（边界见 TODOS P3）；且 `run.py` 仍绑定 `0.0.0.0`（维持原项目行为，
+   用户决策）——局域网内机器可直接访问这些未鉴权接口。CORS 只是浏览器约束，不是
+   访问控制。若仅本机使用，建议改绑 `127.0.0.1`（run.py 一行）。**共享密钥仍是
+   仓库内默认值**：生产部署务必设置 `UM_JWT_SECRET` 环境变量轮换。
 2. ~~**多用户共享 Agent 项目列表**~~ **已解决（用户隔离）**：全部 `/api/agent/**` 端点
    验 JWT 并按 `project_owners` 归属校验；列表按登录用户过滤，跨用户读/删/续写返回
    403；同浏览器多账号的项目持久化分键。存量项目已迁移划归 admin。token 过期的

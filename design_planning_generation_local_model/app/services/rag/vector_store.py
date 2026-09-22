@@ -44,17 +44,21 @@ class VectorStore:
     def __init__(
         self,
         persist_directory: Optional[str] = None,
-        collection_name: Optional[str] = None
+        collection_name: Optional[str] = None,
+        extra_dbs: Optional[dict] = None
     ):
         """
         初始化向量存储
 
         Args:
-            persist_directory: ChromaDB 数据持久化目录
+            persist_directory: ChromaDB 数据持久化目录（个人库传入 kb_scope.user_kb_dir）
             collection_name: collection 名称（不包含前缀），默认使用 "all"
+            extra_dbs: 显式多库检索目标 {db_path: [collection_names]}；
+                       缺省时按 kb_scope 请求上下文解析（用户隔离），无上下文回退类级配置
         """
         self.persist_directory = persist_directory or str(self.BASE_DIR)
         self.collection_name = collection_name or "all"
+        self.extra_dbs = extra_dbs
 
         # 确保目录存在
         os.makedirs(self.persist_directory, exist_ok=True)
@@ -63,9 +67,28 @@ class VectorStore:
         self._collection = None
         self._embedder = None
 
+    def _effective_extra(self) -> dict:
+        """解析多库检索目标：显式参数 > kb_scope 请求上下文 > 类级默认。
+
+        共享库目录（BASE_DIR）的目标已由 QUERY_COLLECTIONS 覆盖，剔除避免重复。
+        """
+        if self.extra_dbs is not None:
+            return self.extra_dbs
+        try:
+            from app.services import kb_scope
+            targets = kb_scope.query_targets()
+            extra = {p: cs for p, cs in targets.items() if p != str(self.BASE_DIR)}
+            if extra:
+                return extra
+        except Exception:
+            pass
+        return self.EXTRA_DB_CONFIG
+
     @property
     def client(self):
-        """延迟初始化 ChromaDB 客户端"""
+        """延迟初始化 ChromaDB 客户端（个人库走独立目录客户端缓存）"""
+        if self.persist_directory != str(self.BASE_DIR):
+            return self._get_client_for_path(self.persist_directory)
         global _chroma_client
         if _chroma_client is None:
             _chroma_client = chromadb.PersistentClient(
@@ -220,7 +243,7 @@ class VectorStore:
 
         # 构建所有 (client, collection_name) 查询对
         query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
-        for db_path, coll_names in self.EXTRA_DB_CONFIG.items():
+        for db_path, coll_names in self._effective_extra().items():
             client = self._get_client_for_path(db_path)
             for name in coll_names:
                 query_targets.append((client, name))
@@ -293,7 +316,7 @@ class VectorStore:
 
         # 构建所有 (client, collection_name) 查询对
         query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
-        for db_path, coll_names in self.EXTRA_DB_CONFIG.items():
+        for db_path, coll_names in self._effective_extra().items():
             client = self._get_client_for_path(db_path)
             for name in coll_names:
                 query_targets.append((client, name))
@@ -678,7 +701,7 @@ class VectorStore:
                 total += coll.count()
             except Exception:
                 continue
-        for db_path, coll_names in self.EXTRA_DB_CONFIG.items():
+        for db_path, coll_names in self._effective_extra().items():
             try:
                 client = self._get_client_for_path(db_path)
                 for coll_name in coll_names:

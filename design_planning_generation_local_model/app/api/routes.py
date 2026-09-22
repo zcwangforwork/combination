@@ -5,7 +5,7 @@ API Routes - 文档生成接口（异步任务模式）+ 附件上传接口
 import uuid
 import asyncio
 import threading
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.services.generator import DocumentGenerator
@@ -14,7 +14,7 @@ from app.services.attachment_service import (
     validate_upload, submit_extract_task, get_extract_status
 )
 from app.services.conversation import conversation_manager
-from app.services.agent_auth import require_user, require_project_access
+from app.services.agent_auth import require_user, require_project_access, verify_token_identity
 import io
 import json
 import os
@@ -362,8 +362,19 @@ async def get_doc_types():
                 "category_key": cat_key,
                 "description": cat_info["description"]
             })
+    # DHF 文件清单类型（胰岛素泵-DHF清单.xlsx）：模板上传「目标文档类型」下拉
+    # 与公司实际 DHF 文件名称保持一致（value=label=清单名称，按阶段分组）
+    from app.services.doc_types import DHF_DOC_FILE_TYPES
+    dhf_types, dhf_cats = [], []
+    for _st, _name in DHF_DOC_FILE_TYPES:
+        if _st not in dhf_cats:
+            dhf_cats.append(_st)
+        dhf_types.append({"value": _name, "label": _name, "category": _st})
+
     return {
         "types": types,
+        "dhf_types": dhf_types,
+        "dhf_categories": dhf_cats,
         "categories": [
             {
                 "key": cat_key,
@@ -408,6 +419,35 @@ async def upload_attachment(
         "filename": file.filename,
         "status": "pending",
         "message": "文件已接收，正在后台提取文本..."
+    }
+
+
+@router.post("/kb/upload", dependencies=[Depends(require_user)])
+async def kb_upload(request: Request, file: UploadFile = File(...)):
+    """上传文件到**当前用户个人知识库**（用户隔离，2026-09-21 新增）。
+
+    与 /api/upload 的区别：入库目标为 chroma_db_users/<username>/ 而非共享库；
+    提取任务与状态轮询（extract-status）机制复用。
+    """
+    from app.services import kb_scope
+    username, _is_admin = verify_token_identity(request.headers.get("authorization"))
+    file_content = await file.read()
+    is_valid, error_msg = validate_upload(file.filename, len(file_content))
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    task_id = submit_extract_task(
+        file_content=file_content,
+        filename=file.filename,
+        persist=True,
+        doc_type="kb_upload",
+        kb_dir=kb_scope.user_kb_dir(username),
+    )
+    return {
+        "file_id": task_id,
+        "filename": file.filename,
+        "status": "pending",
+        "message": "文件已接收，正在提取并写入你的个人知识库..."
     }
 
 
@@ -462,13 +502,28 @@ async def delete_skill(skill_id: str):
     return {"success": True}
 
 
-@router.get("/kb/files")
-async def list_kb_files():
-    """列出上传知识库（qms_doc_uploads）中的所有文件及其统计信息"""
+@router.get("/kb/files", dependencies=[Depends(require_user)])
+async def list_kb_files(request: Request):
+    """列出知识库上传文件（用户隔离）：普通用户=本人个人库；ADMIN=全部个人库（附 owner 标注）"""
+    from app.services import kb_scope
+    from app.services.rag.vector_store import VectorStore
+    username, is_admin = verify_token_identity(request.headers.get("authorization"))
     try:
-        from app.services.rag.vector_store import VectorStore
-        store = VectorStore(collection_name="uploads")
-        files = store.list_uploaded_files()
+        files = []
+        if is_admin:
+            for d in kb_scope.list_user_kb_dirs():
+                owner = os.path.basename(d)
+                for f in VectorStore(
+                        collection_name="uploads", persist_directory=d).list_uploaded_files():
+                    f["owner"] = owner
+                    files.append(f)
+        else:
+            for f in VectorStore(
+                    collection_name="uploads",
+                    persist_directory=kb_scope.user_kb_dir(username)).list_uploaded_files():
+                f["owner"] = username
+                files.append(f)
+        files.sort(key=lambda x: x.get("ingested_at", 0) or 0, reverse=True)
         return {
             "status": "ok",
             "count": len(files),
@@ -481,6 +536,7 @@ async def list_kb_files():
 class KbFileDeleteRequest(BaseModel):
     """删除知识库文件请求"""
     source_file: str = Field(..., description="要删除的文件在知识库中的 source_file 标识")
+    owner: str = Field(default="", description="文件所属用户目录名（ADMIN 跨库删除时指定；普通用户忽略）")
 
 
 class KbToAttachmentRequest(BaseModel):
@@ -493,49 +549,83 @@ class KbToAttachmentRequest(BaseModel):
 class KbChatRequest(BaseModel):
     """知识库问答请求"""
     question: str = Field(..., description="用户对知识库文件提出的问题")
+    source_files: List[str] = Field(
+        default_factory=list,
+        description="限定检索范围的文件 source_file 列表（拖拽引用）；为空时检索用户作用域内全部文件")
 
 
-@router.post("/kb/chat")
-async def kb_chat(payload: KbChatRequest):
-    """知识库问答：检索 uploads 知识库相关片段，用本地 LLM 基于检索结果回答。
-
-    非流式返回 {answer, sources}，sources 为命中的来源文件及片段摘要，
-    供前端展示引用。
+@router.post("/kb/chat", dependencies=[Depends(require_user)])
+async def kb_chat(payload: KbChatRequest, request: Request):
+    """知识库问答（用户隔离）：在当前用户作用域内的 uploads 库检索相关片段，
+    用本地 LLM 基于检索结果回答。非流式返回 {answer, sources}。
     """
+    from app.services import kb_scope
+    from app.services.rag.vector_store import VectorStore
+    from app.services.minimax import _call_minimax_api_raw
+
     question = (payload.question or "").strip()
     if not question:
         raise HTTPException(status_code=400, detail="缺少 question 参数")
 
-    from app.services.rag.vector_store import VectorStore
-    from app.services.minimax import _call_minimax_api_raw
+    username, is_admin = verify_token_identity(request.headers.get("authorization"))
+    kb_scope.set_kb_user(username, is_admin)
 
-    # 1) 检索 uploads 知识库（与 search_kb 的 uploads 检索一致）
+    # 1) 检索作用域内的全部 uploads collection（普通用户=本人+共享；ADMIN=全部+共享）
+    #    若指定 source_files（拖拽引用），则限定检索范围为这些文件，提高 top_k
+    scoped_files = [f.strip() for f in (payload.source_files or []) if f.strip()]
     try:
         store = VectorStore(collection_name="uploads")
-        count = store.collection.count()
-        if count == 0:
-            return {"answer": "知识库中暂无文件，请先上传文件后再提问。", "sources": []}
         query_embedding = store.embedder.encode_single(question)
-        top_k = 6
-        # 超采样后精排：向量粗召回 12 条 → bge-reranker 精排留 top 6，定位更准
-        raw = store.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k * 2,
-            include=["documents", "metadatas", "distances"],
-        )
-        if not raw or not raw.get("ids") or not raw["ids"][0]:
-            return {"answer": "未在知识库中检索到相关内容，请换一种问法或补充相关文件。", "sources": []}
-
+        top_k = 10 if scoped_files else 6  # 文件级过滤后搜索空间缩小，多召回段落
         results = []
-        for i in range(len(raw["ids"][0])):
-            distance = raw["distances"][0][i]
-            similarity = max(0.0, 1.0 - distance / 2.0)
-            meta = raw["metadatas"][0][i] or {}
-            results.append({
-                "text": raw["documents"][0][i],
-                "source_file": meta.get("source_file", "用户上传文件"),
-                "score": round(similarity, 3),
-            })
+        total = 0
+        for db_path, coll_names in kb_scope.query_targets().items():
+            # 问答语义维持"上传文件"范围：仅查各库的 uploads collection
+            if kb_scope.UPLOADS_COLLECTION not in coll_names:
+                continue
+            try:
+                if db_path == str(VectorStore.BASE_DIR):
+                    client = store.client
+                else:
+                    client = VectorStore._get_client_for_path(db_path)
+                coll = client.get_collection(name=kb_scope.UPLOADS_COLLECTION)
+                total += coll.count()
+                # 构建 where 过滤：限定 source_file 范围（ChromaDB $in 语法）
+                where_filter = None
+                if scoped_files:
+                    where_filter = {"source_file": {"$in": scoped_files}}
+                # 超采样后精排：向量粗召回 → 汇总后 bge-reranker 精排留 top_k
+                query_kwargs = {
+                    "query_embeddings": [query_embedding],
+                    "n_results": top_k * 2,
+                    "include": ["documents", "metadatas", "distances"],
+                }
+                if where_filter:
+                    query_kwargs["where"] = where_filter
+                raw = coll.query(**query_kwargs)
+                if raw and raw.get("ids") and raw["ids"][0]:
+                    for i in range(len(raw["ids"][0])):
+                        distance = raw["distances"][0][i]
+                        similarity = max(0.0, 1.0 - distance / 2.0)
+                        meta = raw["metadatas"][0][i] or {}
+                        results.append({
+                            "text": raw["documents"][0][i],
+                            "source_file": meta.get("source_file", "用户上传文件"),
+                            "score": round(similarity, 3),
+                            "section_title": meta.get("section_title", ""),
+                            "chunk_index": meta.get("chunk_index", -1),
+                        })
+            except Exception:
+                continue
+        if total == 0:
+            return {"answer": "知识库中暂无文件，请先上传文件后再提问。", "sources": []}
+        if not results:
+            if scoped_files:
+                return {"answer": "未在引用的文件中检索到与问题相关的段落，请换一种问法或引用更多文件。", "sources": []}
+            return {"answer": "未在知识库中检索到相关内容，请换一种问法或补充相关文件。", "sources": []}
+        # 相关度排序取前 2*top_k 进入精排（多库汇总后统一截断）
+        results.sort(key=lambda r: -r["score"])
+        results = results[:top_k * 2]
 
         # Cross-Encoder 精排（失败时保留向量粗排结果，静默降级）
         try:
@@ -548,6 +638,8 @@ async def kb_chat(payload: KbChatRequest):
                         "text": r.get("text", ""),
                         "source_file": r.get("source_file", "用户上传文件"),
                         "score": round(float(r.get("rerank_score", r.get("score", 0))), 3),
+                        "section_title": r.get("section_title", ""),
+                        "chunk_index": r.get("chunk_index", -1),
                     }
                     for r in ranked
                 ]
@@ -560,15 +652,27 @@ async def kb_chat(payload: KbChatRequest):
     # 2) 组装上下文 + LLM 回答
     context_parts = []
     for i, r in enumerate(results, 1):
-        context_parts.append(f"[片段{i}·来源 {r['source_file']}·相关度 {r['score']}]\n{r['text']}")
+        loc = r.get("section_title") or (f"第{r['chunk_index'] + 1}段" if r.get("chunk_index", -1) >= 0 else "")
+        loc_str = f"·章节「{loc}」" if loc else ""
+        context_parts.append(
+            f"[片段{i}·来源 {r['source_file']}{loc_str}·相关度 {r['score']}]\n{r['text']}")
     context = "\n\n".join(context_parts)
 
-    system_prompt = (
-        "你是知识库问答助手。请基于用户提供的知识库检索片段回答用户问题，"
-        "回答准确、精炼，并注明结论来自哪个文件。"
-        "若检索片段不足以回答，请明确说明'知识库中暂未找到足够信息'，不要编造。"
-        "用中文回答。"
-    )
+    if scoped_files:
+        system_prompt = (
+            "你是知识库问答助手。用户已指定重点检索文件，请基于提供的检索片段精确回答问题。"
+            "要求：1) 精确定位相关段落，引用原文关键语句；"
+            "2) 注明结论来自哪个文件的哪个章节/段落；"
+            "3) 若片段不足以完整回答，明确指出哪些部分找到了、哪些部分未找到，不要编造。"
+            "用中文回答。"
+        )
+    else:
+        system_prompt = (
+            "你是知识库问答助手。请基于用户提供的知识库检索片段回答用户问题，"
+            "回答准确、精炼，并注明结论来自哪个文件。"
+            "若检索片段不足以回答，请明确说明'知识库中暂未找到足够信息'，不要编造。"
+            "用中文回答。"
+        )
     user_prompt = f"用户问题：{question}\n\n知识库检索到的相关片段：\n{context}\n\n请基于以上片段回答。"
 
     try:
@@ -583,33 +687,55 @@ async def kb_chat(payload: KbChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"知识库问答生成失败: {str(e)}")
 
-    # 去重来源文件（按原顺序保留）
+    # 来源列表：按文件去重，附带最佳匹配段落定位（章节/序号）
     seen = set()
     sources = []
     for r in results:
         if r["source_file"] not in seen:
             seen.add(r["source_file"])
-            sources.append({"source_file": r["source_file"], "score": r["score"]})
+            sources.append({
+                "source_file": r["source_file"],
+                "score": r["score"],
+                "section_title": r.get("section_title", ""),
+                "chunk_index": r.get("chunk_index", -1),
+            })
 
-    return {"answer": answer, "sources": sources}
+    return {"answer": answer, "sources": sources, "scoped": bool(scoped_files)}
 
 
-@router.post("/kb/files/delete")
-async def delete_kb_file(payload: KbFileDeleteRequest):
-    """从上传知识库（qms_doc_uploads）删除指定文件的所有分块。
+@router.post("/kb/files/delete", dependencies=[Depends(require_user)])
+async def delete_kb_file(payload: KbFileDeleteRequest, request: Request):
+    """从知识库删除指定文件的所有分块（用户隔离）。
 
-    删除键为 source_file（每个 chunk 的 metadata.source_file，list 接口已返回该字段）。
-    删除后使对应 collection 的 BM25 缓存失效，确保检索不再命中已删文件。
+    普通用户仅能删除本人个人库文件；ADMIN 可删除任意个人库
+    （owner 指定目标库，缺省全库扫描首个命中）。删除键为 source_file，
+    删除后使对应 collection 的 BM25 缓存失效。
     """
+    from app.services import kb_scope
+    from app.services.rag.vector_store import VectorStore
+    username, is_admin = verify_token_identity(request.headers.get("authorization"))
     source_file = (payload.source_file or "").strip()
     if not source_file:
         raise HTTPException(status_code=400, detail="缺少 source_file 参数")
+    if is_admin:
+        if payload.owner:
+            dirs = [str(kb_scope.USERS_KB_ROOT / kb_scope._safe_name(payload.owner))]
+        else:
+            dirs = kb_scope.list_user_kb_dirs()
+    else:
+        dirs = [kb_scope.user_kb_dir(username)]
     try:
-        from app.services.rag.vector_store import VectorStore
-        store = VectorStore(collection_name="uploads")
-        store.delete_by_source(source_file)
-        VectorStore.invalidate_bm25_cache("qms_doc_uploads")
-        return {"status": "ok", "deleted": source_file}
+        for d in dirs:
+            store = VectorStore(collection_name="uploads", persist_directory=d)
+            names = {f["source_file"] for f in store.list_uploaded_files()}
+            if source_file in names:
+                store.delete_by_source(source_file)
+                VectorStore.invalidate_bm25_cache("qms_doc_uploads")
+                return {"status": "ok", "deleted": source_file,
+                        "owner_dir": os.path.basename(d)}
+        raise HTTPException(status_code=404, detail="未找到该知识库文件（或无权操作）")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除知识库文件失败: {str(e)}")
 
@@ -719,6 +845,7 @@ def _sse_subscribe_response(stream, from_seq: int = 0):
 
 @router.post("/agent/projects/{project_id}/messages", dependencies=[Depends(require_project_access)])
 async def agent_send_message(
+    request: Request,
     project_id: str,
     message: str = Form(...),
 ):
@@ -735,6 +862,9 @@ async def agent_send_message(
     - done: 流结束
     - error: 异常，或该项目已有进行中的生成
     """
+    from app.services import kb_scope as _kbs
+    from app.services.agent_auth import verify_token_identity as _vti
+    _kbs.set_kb_user(*_vti(request.headers.get("authorization")))
     from app.services.agent_engine import stream_agent_events, get_agent
     from app.services.agent_state import create_initial_state
     from app.services import agent_streams
@@ -857,6 +987,7 @@ async def agent_set_generation_mode(
 
 @router.post("/agent/projects/{project_id}/resume", dependencies=[Depends(require_project_access)])
 async def agent_resume(
+    request: Request,
     project_id: str,
     decision: str = Form(...),
 ):
@@ -871,6 +1002,9 @@ async def agent_resume(
             - "reject" — 跳过不生成
             - "edit:修改后的指令" — 用修改后的指令重新生成
     """
+    from app.services import kb_scope as _kbs
+    from app.services.agent_auth import verify_token_identity as _vti
+    _kbs.set_kb_user(*_vti(request.headers.get("authorization")))
     from app.services.agent_engine import resume_agent, get_agent
     from app.services import agent_streams
 
@@ -1084,6 +1218,7 @@ async def agent_summarize(
 
 @router.post("/agent/projects/{project_id}/auto-generate", dependencies=[Depends(require_project_access)])
 async def agent_auto_generate(
+    request: Request,
     project_id: str,
     product_name: str = Form(...),
     product_classification: str = Form("III类有源医疗器械"),
@@ -1098,6 +1233,9 @@ async def agent_auto_generate(
     支持 doc_type 参数指定要生成的文档类型，默认为 design_development_plan（项目开发计划书）。
     设计策划阶段支持的文档类型参见 DOC_CATEGORIES['design_planning']['types']。
     """
+    from app.services import kb_scope as _kbs
+    from app.services.agent_auth import verify_token_identity as _vti
+    _kbs.set_kb_user(*_vti(request.headers.get("authorization")))
     from app.services.agent_engine import stream_agent_events, get_agent
     from app.services.agent_state import create_initial_state
     from app.services.doc_types import DOC_TYPE_LABELS
@@ -1167,6 +1305,7 @@ async def agent_auto_generate(
 
 @router.post("/agent/projects/{project_id}/batch-generate", dependencies=[Depends(require_project_access)])
 async def agent_batch_generate(
+    request: Request,
     project_id: str,
     product_name: str = Form(...),
     product_classification: str = Form("III类有源医疗器械"),
@@ -1178,6 +1317,9 @@ async def agent_batch_generate(
     每完成一个文档推送一条SSE事件，前端可实时展示进度。
     所有文档生成完毕后打包为ZIP下载。
     """
+    from app.services import kb_scope as _kbs
+    from app.services.agent_auth import verify_token_identity as _vti
+    _kbs.set_kb_user(*_vti(request.headers.get("authorization")))
     from app.services.doc_types import DOC_CATEGORIES, DOC_TYPE_LABELS
 
     # 获取设计策划阶段全部文档类型
@@ -1814,7 +1956,7 @@ async def agent_finalize_attachment(project_id: str, file_id: str):
 
 
 @router.post("/agent/projects/{project_id}/attachments/from-kb", dependencies=[Depends(require_project_access)])
-async def agent_add_attachment_from_kb(project_id: str, payload: KbToAttachmentRequest):
+async def agent_add_attachment_from_kb(project_id: str, payload: KbToAttachmentRequest, request: Request):
     """将知识库中已入库的文件直接加入当前会话附件。
 
     知识库文件在上传时已提取全文并写入 uploads 向量库，此处无需重新上传/提取，
@@ -1834,9 +1976,25 @@ async def agent_add_attachment_from_kb(project_id: str, payload: KbToAttachmentR
     file_id = (payload.file_id or "").strip() or source_file
 
     store = VectorStore(collection_name="uploads")
-    full_text = store.get_text_by_source(source_file)
+    # 用户隔离：知识库文件可能位于任一作用域目录（本人/ADMIN 全部/共享），逐库查找
+    from app.services import kb_scope as _kb_scope
+    from app.services.agent_auth import verify_token_identity as _vti
+    _u, _a = _vti(request.headers.get("authorization"))
+    _kb_scope.set_kb_user(_u, _a)
+    full_text = ""
+    for _db, _colls in _kb_scope.query_targets().items():
+        if _kb_scope.UPLOADS_COLLECTION not in _colls:
+            continue
+        try:
+            _store = (store if _db == str(VectorStore.BASE_DIR)
+                      else VectorStore(collection_name="uploads", persist_directory=_db))
+            full_text = _store.get_text_by_source(source_file)
+        except Exception:
+            full_text = ""
+        if full_text and full_text.strip():
+            break
     if not full_text.strip():
-        raise HTTPException(status_code=404, detail="知识库文件内容为空，无法添加为附件")
+        raise HTTPException(status_code=404, detail="知识库文件内容为空或不在你的知识库作用域内，无法添加为附件")
 
     char_count = len(full_text)
     preview = full_text[:500] + ("..." if len(full_text) > 500 else "")
@@ -1903,7 +2061,7 @@ class KbToAttachmentBatchRequest(BaseModel):
 
 
 @router.post("/agent/projects/{project_id}/attachments/from-kb/batch", dependencies=[Depends(require_project_access)])
-async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAttachmentBatchRequest):
+async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAttachmentBatchRequest, request: Request):
     """批量将知识库中已入库的文件加入当前会话附件。
 
     与单文件 /attachments/from-kb 等价（读回全文、按 file_id 去重），
@@ -1912,9 +2070,14 @@ async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAtta
     from app.services.agent_engine import get_agent
     from app.services.agent_state import create_initial_state
     from app.services.rag.vector_store import VectorStore
+    from app.services import kb_scope as _kb_scope
 
     if not payload.files:
         raise HTTPException(status_code=400, detail="files 列表为空")
+
+    # [KB-ISO] 设置用户作用域，使文件读回覆盖个人库+共享库
+    _u, _a = verify_token_identity(request.headers.get("authorization"))
+    _kb_scope.set_kb_user(_u, _a)
 
     agent = get_agent()
     config = {"configurable": {"thread_id": project_id}}
@@ -1930,7 +2093,18 @@ async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAtta
     attachments = list(state_values.get("attachments", []) or [])
     existing_ids = {a.get("file_id") for a in attachments}
 
-    store = VectorStore(collection_name="uploads")
+    # [KB-ISO] 构建作用域内全部 uploads store（与单文件 from-kb 同逻辑）
+    _scoped_stores = []
+    for _db, _colls in _kb_scope.query_targets().items():
+        if _kb_scope.UPLOADS_COLLECTION not in _colls:
+            continue
+        try:
+            _s = (VectorStore(collection_name="uploads") if _db == str(VectorStore.BASE_DIR)
+                  else VectorStore(collection_name="uploads", persist_directory=_db))
+            _scoped_stores.append(_s)
+        except Exception:
+            continue
+
     results = []
     added_count = 0
     for item in payload.files:
@@ -1945,15 +2119,18 @@ async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAtta
             results.append({"source_file": source_file, "filename": filename,
                             "status": "duplicate", "message": "已在附件列表中"})
             continue
-        try:
-            full_text = store.get_text_by_source(source_file)
-            if not full_text.strip():
-                results.append({"source_file": source_file, "filename": filename,
-                                "status": "empty", "message": "知识库文件内容为空"})
-                continue
-        except Exception as e:
+        # 逐作用域库查找文件全文
+        full_text = ""
+        for _s in _scoped_stores:
+            try:
+                full_text = _s.get_text_by_source(source_file)
+            except Exception:
+                full_text = ""
+            if full_text and full_text.strip():
+                break
+        if not full_text or not full_text.strip():
             results.append({"source_file": source_file, "filename": filename,
-                            "status": "error", "message": f"读取全文失败: {e}"})
+                            "status": "empty", "message": "知识库文件内容为空或不在你的作用域内"})
             continue
 
         attachments.append({

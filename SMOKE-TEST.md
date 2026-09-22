@@ -87,3 +87,9 @@ admin）；两个不同浏览器（或普通+隐身窗口）分别准备 admin/a
 - [ ] **token 过期表现**（可选，改 UM 库 token 或等 24h）：Agent 视图任一请求 401
       → 顶部红色横幅"登录状态无效或已过期…"，非静默失败
 - [ ] admin 登录：聊天列表可见迁移划入的存量项目（可正常打开/删除）
+- [ ] **知识库隔离**（2026-09-21）：zhangsan 在「知识库」页上传文件 A → zhangsan
+      检索问答可命中 A；admin 知识库页可见 A（标注 zhangsan）并可删除；
+      zhangsan 删除按钮对他人文件（admin 库）无效（404）；zhangsan 的 agent
+      对话中 search_kb 可检索到「自己上传的 A + 共享标准库内容」，但检索不到
+      admin 上传的文件；admin 的 agent 可检索全部。存量上传文件（迁移划归
+      admin）仅 admin 可检索

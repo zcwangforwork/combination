@@ -29,11 +29,16 @@
 
 ## P3（边界说明 / 远期）
 
-- [ ] **用户隔离边界**（明确记录，防误判"全部已隔离"）：当前隔离仅覆盖
-      `/api/agent/**`（对话历史/项目/附件/模板/下载）。`/api/kb/*`（知识库文件与
-      检索）、`/api/generate`、`/api/upload` 等非 agent 端点对所有调用方开放——
-      知识库为团队共享语料属有意设计；若未来需按部门/角色隔离知识库，需在
-      UM 侧引入资源权限模型后再扩展 `agent_auth` 的依赖体系。
-      **2026-09-20 源同步新增同边界项**：`skill_library`（用户技能库，跨项目/跨会话
-      共享的指导命令与生成规则，JSON 持久化）在多用户环境下为**全员共享**（用户
-      决策维持共享）；若需按用户隔离，存储需加 owner 字段并经 agent_auth 过滤。
+- [x] **知识库用户隔离**（2026-09-21 完成）：个人知识库（`chroma_db_users/<用户名>/`）
+      + 共享胰岛素泵库双层作用域；普通用户 RAG 检索=本人库+共享库，ADMIN=全部库；
+      `/api/kb/*` 全端点 JWT 鉴权（上传入个人库 / 删除仅本人 / ADMIN 跨库）；
+      agent 工具（search_kb / find_kb_reference_files / add_kb_files_as_attachment /
+      ingest_attachment_to_kb）经 kb_scope ContextVar 按请求作用域；
+      存量共享 uploads 已迁移划归 admin。测试 `tests/test_kb_isolation.py`。
+- [ ] **用户隔离边界**（明确记录，防误判"全部已隔离"）：当前隔离覆盖
+      `/api/agent/**`（对话历史/项目/附件/模板/下载）与 `/api/kb/**`（知识库）。
+      仍开放：`/api/generate`、`/api/upload`、`/api/extract-status` 等旧版表单端点；
+      且 Agent 会话附件仍摄入共享库 uploads collection（附件本身有项目归属校验，
+      但其向量内容经 search_attachment 全局可检——历史行为，待评估是否分库）。
+      **2026-09-20 源同步新增同边界项**：`skill_library`（用户技能库）在多用户环境
+      下为全员共享（用户决策维持）；若需按用户隔离，存储需加 owner 字段。

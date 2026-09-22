@@ -50,12 +50,27 @@ with io.open(SRC, 'r', encoding='utf-8') as f:
 with io.open(UM_CSS, 'r', encoding='utf-8') as f:
     UM_CSS_TEXT = f.read()
 
-# ── 源文件区段边界（1-based 行号；2026-09-20 源项目同步后重算：
-#    <style>@10 </style>@559 <body>@562 <style2>@844 </style2>@858 <script>@860 </script>@4616）──
-CSS1 = ''.join(lines[10:558])    # lines 11-558  主 <style>
-BODY = ''.join(lines[562:843])   # lines 563-843 <body> 内 HTML（止于第二个 <style> 前）
-CSS2 = ''.join(lines[844:857])   # lines 845-857 第二个 <style>（chat-reasoning）
-JS = ''.join(lines[860:4615])    # lines 861-4615 主 <script> 内容
+# ── 源文件区段边界：按标记自动定位（2026-09-21 根治——此前硬编码行号，
+#    源文件行数一变就要手工重算，已三次踩坑；现按标签精确定位，行数无关）──
+
+def _find_line(text_lines, marker, start=0):
+    for i in range(start, len(text_lines)):
+        if text_lines[i].rstrip() == marker:
+            return i
+    raise AssertionError('section marker not found: %r' % marker)
+
+_i_style1 = _find_line(lines, '    <style>')
+_i_style1e = _find_line(lines, '    </style>', _i_style1 + 1)
+_i_body = _find_line(lines, '<body>')
+_i_style2 = _find_line(lines, '    <style>', _i_body + 1)
+_i_style2e = _find_line(lines, '    </style>', _i_style2 + 1)
+_i_js = _find_line(lines, '    <script>', _i_style2 + 1)      # 裸 <script>（带 src 的 CDN/relay 标签不匹配）
+_i_jse = _find_line(lines, '    </script>', _i_js + 1)
+
+CSS1 = ''.join(lines[_i_style1 + 1:_i_style1e])               # 主 <style> 内容
+BODY = ''.join(lines[_i_body + 1:_i_style2])                  # <body> 内 HTML（止于第二个 <style> 前）
+CSS2 = ''.join(lines[_i_style2 + 1:_i_style2e])               # 第二个 <style>（chat-reasoning）
+JS = ''.join(lines[_i_js + 1:_i_jse])                         # 主 <script> 内容
 
 AGENT_CSS = CSS1 + '\n' + CSS2
 
@@ -869,6 +884,18 @@ def main():
         print('cache-bust: %s?v=%s (%d 处)' % (path, v, n_sub))
     with io.open(INDEX_HTML, 'w', encoding='utf-8') as f:
         f.write(idx)
+
+    # [PORT] 片段回填：重新生成的 fragment 必须同步替换 index.html 内嵌区块
+    # （AGENT-VIEW-START/END 标记；wire_spa 幂等，其余接线已存在则 SKIP。
+    #  2026-09-21 曾因漏此步导致源同步后的新 UI（技能库/清空对话/压缩上下文）
+    #  不出现在 SPA——生成链自此闭环：build → 回填 → cache-bust）
+    import subprocess as _sp
+    import sys as _sys
+    _r = _sp.run([_sys.executable, os.path.join(HERE, 'wire_spa.py')],
+                 capture_output=True, text=True, encoding='utf-8')
+    assert _r.returncode == 0, 'wire_spa failed: %s' % (_r.stderr or 'no stderr')
+    wired_line = [l for l in (_r.stdout or '').splitlines() if 'agent view' in l]
+    print('fragment wired: %s' % (wired_line[-1] if wired_line else 'ok'))
 
     print('=== build_agent_port OK ===')
     print('css: %d lines; keyframes renamed: %s' % (css.count('\n'), sorted(keyframes.values())))

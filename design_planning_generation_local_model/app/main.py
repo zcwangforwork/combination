@@ -84,6 +84,8 @@ app = FastAPI(
 )
 
 # [COMBINATION-PORT] CORS: 体系文档管理系统 SPA (http-server :3000) 跨源访问
+# expose Content-Disposition：SPA 的认证下载（fetch→blob→a.click）需跨源读取
+# 该头取文件名（产品名_文档类型.docx）；不暴露时 JS 读到 null，文件名退化为 URL 末段
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -92,6 +94,7 @@ app.add_middleware(
     ],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 # Include API routes

@@ -1047,6 +1047,11 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
 
     # 文档风格选择（用户选择后，仅影响文档内容生成，不影响聊天回复）
     # 默认（无特殊说明）为精炼简洁；用户上传模板时模板风格优先（write_chapter 模板分支处理）
+    # 字数预算块：默认口径（约10000字/上限15000）；用户明确提出字数要求时
+    # 由 get_word_budget_text 返回按用户要求生成的预算文本（惰性导入避免循环依赖）
+    from app.services.agent_tools import get_word_budget_text, get_user_word_budget_text
+    budget_block = get_word_budget_text()
+
     style_block = ""
     writing_style = state.get("writing_style", "concise") or "concise"
     if writing_style == "concise":
@@ -1060,11 +1065,7 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
 - 生成内容精炼、突出重点，直接给出关键条款、参数和依据
 - 删除冗余铺垫、重复表述和空泛套话；能用分点/表格表达的不用长段落
 
-## 全文档字数预算（重要）
-- design_outline 设计时即按**总字数约 10000 字**规划章节数量与小节密度，
-  严守上限 **15000 字**（含表格文字），据此决定每章篇幅分配
-- 各章生成后若累计明显超预算，立即收紧后续章节，或对已生成章节调用
-  summarize_section / summarize_document 精简收敛
+""" + budget_block + """
 
 ## 生成策略（自主选择其一，按文档复杂度决定）
 - 策略A（适合结构清晰的常规文档）：outline 直接按精炼密度设计，
@@ -1072,7 +1073,7 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
 - 策略B（适合内容密度高、易漏关键项的文档）：先按严谨详细风格完整生成，
   再用 summarize_section / summarize_document **多次循环精简**，
   逐步收敛到"精炼简洁但准确全面"，收敛时以字数预算为停止条件
-- 无论选哪种策略，最终交付物必须满足：字数约 10000 字（不超过 15000 字），
+- 无论选哪种策略，最终交付物必须满足上述「全文档字数预算」，
   且准确全面性不打折
 """
     else:
@@ -1086,6 +1087,10 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
 - 段落完整、逻辑严密、用语正式规范，符合 NMPA 注册申报正式文档的要求
 - 在不冗余重复的前提下尽量详实，宁可多写清楚也不省略关键细节
 """
+        # 严谨详细风格默认不设预算块，但用户明确提出字数要求时必须遵守
+        _user_budget = get_user_word_budget_text()
+        if _user_budget:
+            style_block += "\n" + _user_budget + "\n"
     # 风格切换提示：用户在聊天中要求换风格时，以最新要求为准并调用工具更新状态
     style_block += """
 若用户最新消息要求改变文档语言风格（与上述已选风格不一致），以用户最新要求为准：

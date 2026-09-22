@@ -114,6 +114,29 @@
         .btn-send:hover { background: #1565c0; }
         .btn-send:disabled { background: #bdbdbd; cursor: not-allowed; }
 
+
+        /* ── 对话参考文件 chips ── */
+        .chat-ref-bar {
+            display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px 0;
+            background: #fff; border-top: 1px solid #e0e0e0; min-height: 0;
+        }
+        .chat-ref-bar:empty { display: none; padding: 0; border-top: none; }
+        .ref-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;
+            border-radius: 14px; padding: 3px 10px; font-size: 12px; max-width: 220px;
+        }
+        .ref-chip .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ref-chip .chip-x {
+            cursor: pointer; font-size: 14px; line-height: 1; color: #1976d2;
+            margin-left: 2px; flex-shrink: 0;
+        }
+        .ref-chip .chip-x:hover { color: #c62828; }
+        .chat-ref-hint {
+            font-size: 11px; color: #999; padding: 4px 16px 0; background: #fff;
+        }
+        .chat-ref-hint:empty { display: none; }
+
         .toast {
             position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
             background: #323232; color: #fff; padding: 8px 18px; border-radius: 6px;
@@ -132,7 +155,7 @@
 <body>
     <div class="topbar">
         <h2>📚 知识库</h2>
-        <span style="font-size:12px;color:#999">上传文件入库后可在此检索提问；也可勾选文件添加到会话附件</span>
+        <span style="font-size:12px;color:#999">上传文件入库后可在此检索提问；点击「引用」将文件加入对话框重点检索范围</span>
         <span class="spacer"></span>
         <button id="kbUploadBtn" class="btn-upload" onclick="triggerKbUpload()">📤 上传文件到知识库</button>
         <a class="btn-back" href="/agent">返回 Agent 对话</a>
@@ -160,8 +183,10 @@
             <div class="chat-messages" id="chatMessages">
                 <div class="chat-msg agent">你好！这里是知识库问答。我已经读取了你上传到知识库的全部文件内容，可以直接就其中的标准、法规、参数、流程等提问，我会检索知识库并基于检索结果回答。</div>
             </div>
+            <div class="chat-ref-bar" id="chatRefBar"></div>
+            <div class="chat-ref-hint" id="chatRefHint"></div>
             <div class="chat-input-area">
-                <textarea id="chatInput" placeholder="对知识库文件提问，Enter 发送（Shift+Enter 换行）"
+                <textarea id="chatInput" placeholder="对知识库文件提问，Enter 发送（Shift+Enter 换行）；点击左侧「引用」按钮可限定检索范围"
                     onkeydown="handleChatKeydown(event)" oninput="autoGrow(this)"></textarea>
                 <button class="btn-send" id="btnSend" onclick="askKb()">提问</button>
             </div>
@@ -178,6 +203,17 @@
         // 从 agent 页跳转时带上 project，用于"批量添加到附件"
         const urlParams = new URLSearchParams(window.location.search);
         const PROJECT_ID = urlParams.get('project') || '';
+        // [KB-ISO] 当前登录用户名（JWT sub），用于 ADMIN 视角标注文件归属
+        let CURRENT_USER = '';
+        try {
+            const _t = sessionStorage.getItem('agent_token') || '';
+            const _p = _t.split('.')[1];
+            if (_p) {
+                let _b = _p.replace(/-/g, '+').replace(/_/g, '/');
+                while (_b.length % 4) _b += '=';
+                CURRENT_USER = JSON.parse(decodeURIComponent(escape(atob(_b)))).sub || '';
+            }
+        } catch (e) { /* ignore */ }
         let kbFiles = [];   // 缓存当前列表，供多选批量添加
         let asking = false;
 
@@ -333,10 +369,10 @@
             const err = validateKbFile(file);
             if (err) { showToast(err); return false; }
             try {
+                // [KB-ISO] 用户隔离：上传到当前用户个人知识库（服务端定向 chroma_db_users/<user>）
                 const fd = new FormData();
                 fd.append('file', file);
-                fd.append('persist', 'true');
-                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+                const resp = await fetch('/api/kb/upload', { method: 'POST', body: fd });
                 if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).detail || `HTTP ${resp.status}`);
                 const fileId = (await resp.json()).file_id;
                 const startedAt = Date.now();
@@ -371,10 +407,11 @@
                     const name = hasOrig ? f.original_filename : f.source_file;
                     const note = hasOrig ? '' : ' <span style="color:#ff9800;font-size:11px">(旧文件)</span>';
                     html += '<tr>';
-                    html += `<td style="text-align:center"><input type="checkbox" class="kb-file-check" data-source="${esc(f.source_file)}" data-file-id="${esc(f.file_id || '')}" data-name="${esc(name)}" onchange="updateSelectedCount()"></td>`;
-                    html += `<td style="word-break:break-all">${esc(name)}${note}</td>`;
+                    const ownerTag = (f.owner && f.owner !== CURRENT_USER) ? `<span style="color:#999;font-size:11px">（${esc(f.owner)}）</span>` : '';
+                    html += `<td style="text-align:center"><input type="checkbox" class="kb-file-check" data-source="${esc(f.source_file)}" data-file-id="${esc(f.file_id || '')}" data-name="${esc(name)}" data-owner="${esc(f.owner || '')}" onchange="updateSelectedCount()"></td>`;
+                    html += `<td style="word-break:break-all">${esc(name)}${note}${ownerTag}</td>`;
                     html += `<td style="text-align:right;color:#888">${f.chunk_count}</td>`;
-                    html += `<td style="text-align:center;white-space:nowrap"><button class="mini-btn" data-source="${esc(f.source_file)}" data-name="${esc(name)}" onclick="deleteKbFile(this)">删除</button></td>`;
+                    html += `<td style="text-align:center;white-space:nowrap"><button class="mini-btn" data-source="${esc(f.source_file)}" data-file-id="${esc(f.file_id || '')}" data-name="${esc(name)}" title="将此文件加入当前对话的参考资料（附件区）" onclick="referenceKbFile(this)">💬 引用</button> <button class="mini-btn danger" data-source="${esc(f.source_file)}" data-name="${esc(name)}" data-owner="${esc(f.owner || '')}" onclick="deleteKbFile(this)">删除</button></td>`;
                     html += '</tr>';
                 }
                 html += '</tbody></table>';
@@ -412,12 +449,13 @@
         async function deleteKbFile(btn) {
             const sourceFile = btn.getAttribute('data-source');
             const name = btn.getAttribute('data-name') || sourceFile;
+            const owner = btn.getAttribute('data-owner') || '';
             if (!confirm(`确定从知识库删除「${name}」吗？删除后不再参与检索。`)) return;
             btn.disabled = true;
             try {
                 const resp = await fetch('/api/kb/files/delete', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source_file: sourceFile }),
+                    body: JSON.stringify({ source_file: sourceFile, owner: owner }),
                 });
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
@@ -459,19 +497,73 @@
             }
         }
 
+        // ── 单文件引用到知识库对话框（点击「💬 引用」按钮）──
+        function referenceKbFile(btn) {
+            addChatRefFile({
+                source_file: btn.getAttribute('data-source'),
+                file_id: btn.getAttribute('data-file-id') || '',
+                filename: btn.getAttribute('data-name') || '',
+            });
+        }
+
+        // ── 对话参考文件（点击「引用」按钮加入，提问时限定检索范围）──
+        let chatRefFiles = [];   // [{source_file, file_id, filename}]
+
+        // ── 对话参考文件管理 ──
+        function addChatRefFile(file) {
+            if (chatRefFiles.some(f => f.source_file === file.source_file)) {
+                showToast(`「${file.filename || file.source_file}」已在参考列表中`);
+                return;
+            }
+            chatRefFiles.push(file);
+            renderRefChips();
+            showToast(`✓ 已引用「${file.filename || file.source_file}」，提问时将在该文件内精确检索`);
+        }
+
+        function removeChatRefFile(sourceFile) {
+            chatRefFiles = chatRefFiles.filter(f => f.source_file !== sourceFile);
+            renderRefChips();
+        }
+
+        function clearChatRefFiles() {
+            chatRefFiles = [];
+            renderRefChips();
+        }
+
+        function renderRefChips() {
+            const bar = document.getElementById('chatRefBar');
+            const hint = document.getElementById('chatRefHint');
+            if (!chatRefFiles.length) {
+                bar.innerHTML = '';
+                hint.textContent = '';
+                return;
+            }
+            bar.innerHTML = chatRefFiles.map(f =>
+                `<span class="ref-chip"><span class="chip-name" title="${esc(f.filename || f.source_file)}">📎 ${esc(f.filename || f.source_file)}</span><span class="chip-x" onclick="removeChatRefFile('${esc(f.source_file)}')" title="移除">×</span></span>`
+            ).join('') + `<span class="ref-chip" style="background:#fff3e0;border-color:#ffcc80;color:#e65100;cursor:pointer" onclick="clearChatRefFiles()" title="清空全部参考文件">清空</span>`;
+            hint.textContent = `💡 当前提问将在以上 ${chatRefFiles.length} 个文件内精确检索相关段落`;
+        }
+
         // ── 知识库问答 ──
         function handleChatKeydown(e) {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askKb(); }
         }
         function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; }
 
-        function appendMsg(role, text, sources) {
+        function appendMsg(role, text, sources, scoped) {
             const box = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = 'chat-msg ' + role;
             div.innerHTML = esc(text).replace(/\n/g, '<br>');
             if (sources && sources.length) {
-                div.innerHTML += '<div class="sources"><b>参考来源：</b>' + sources.map(s => esc(s.source_file)).join('、') + '</div>';
+                const label = scoped ? '📎 引用文件精确定位：' : '参考来源：';
+                const items = sources.map(s => {
+                    let loc = '';
+                    if (s.section_title) loc = `「${esc(s.section_title)}」`;
+                    else if (s.chunk_index >= 0) loc = `第${s.chunk_index + 1}段`;
+                    return `${esc(s.source_file)}${loc}`;
+                });
+                div.innerHTML += `<div class="sources"><b>${label}</b>${items.join('、')}</div>`;
             }
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
@@ -488,13 +580,18 @@
             asking = true;
             document.getElementById('btnSend').disabled = true;
             try {
+                const body = { question: q };
+                // 拖拽引用的文件 → 限定检索范围（精确定位段落）
+                if (chatRefFiles.length) {
+                    body.source_files = chatRefFiles.map(f => f.source_file);
+                }
                 const resp = await fetch('/api/kb/chat', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: q }),
+                    body: JSON.stringify(body),
                 });
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
-                appendMsg('agent', data.answer || '（无回答）', data.sources || []);
+                appendMsg('agent', data.answer || '（无回答）', data.sources || [], data.scoped);
             } catch (e) {
                 appendMsg('agent', '❌ 问答失败：' + e.message);
             } finally {

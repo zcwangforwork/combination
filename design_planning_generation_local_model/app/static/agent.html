@@ -1627,17 +1627,37 @@
                 noneOpt.value = '';
                 noneOpt.textContent = '不指定（通用模板）';
                 sel.appendChild(noneOpt);
-                for (const cat of data.categories) {
-                    const og = document.createElement('optgroup');
-                    og.label = cat.name + '（' + (cat.count || 0) + '）';
-                    const types = data.types.filter(t => t.category_key === cat.key);
-                    for (const t of types) {
-                        const opt = document.createElement('option');
-                        opt.value = t.value;
-                        opt.textContent = t.label;
-                        og.appendChild(opt);
+
+                if (Array.isArray(data.dhf_types) && data.dhf_types.length) {
+                    // [DHF] 模板上传「目标文档类型」与 胰岛素泵-DHF清单.xlsx 的文件名称
+                    // 保持一致：按设计开发阶段分组，value=label=清单文件名称
+                    for (const cat of data.dhf_categories) {
+                        const og = document.createElement('optgroup');
+                        const items = data.dhf_types.filter(t => t.category === cat);
+                        og.label = cat + '（' + items.length + '）';
+                        for (const t of items) {
+                            const opt = document.createElement('option');
+                            opt.value = t.value;
+                            opt.textContent = t.label;
+                            og.appendChild(opt);
+                            TPL_DOC_TYPE_LABELS[t.value] = t.label;
+                        }
+                        sel.appendChild(og);
                     }
-                    sel.appendChild(og);
+                } else {
+                    // 降级：DHF 清单不可用时按原 9 大生命周期分类填充
+                    for (const cat of data.categories) {
+                        const og = document.createElement('optgroup');
+                        og.label = cat.name + '（' + (cat.count || 0) + '）';
+                        const types = data.types.filter(t => t.category_key === cat.key);
+                        for (const t of types) {
+                            const opt = document.createElement('option');
+                            opt.value = t.value;
+                            opt.textContent = t.label;
+                            og.appendChild(opt);
+                        }
+                        sel.appendChild(og);
+                    }
                 }
                 sel.value = '';
             } catch (e) {
