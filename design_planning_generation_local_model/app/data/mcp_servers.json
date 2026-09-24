@@ -8,5 +8,16 @@
     "enabled": true,
     "search_priority": true,
     "description": "千问联网搜索增强版（EnhancedSearch）— 千问AI平台官方远程 MCP（One Key MCP，无需单独订阅）。鉴权：.env 的 DASHSCOPE_API_KEY（Bearer）；限流 15 RPS/账号；计费：前 2000 次免费，之后 29 元/千次。search_priority=true：对话联网搜索请求优先走本服务，失败回退内置 web_search。文档：platform.qianwenai.com/docs/agent-infra/mcp/external-invocation"
+  },
+  "github": {
+    "transport": "streamable_http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "headers": {
+      "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}",
+      "X-MCP-Toolsets": "repos,issues,pull_requests",
+      "X-MCP-Readonly": "true"
+    },
+    "enabled": true,
+    "description": "GitHub 官方远程 MCP Server（api.githubcopilot.com 托管）。鉴权：.env 的 GITHUB_PERSONAL_ACCESS_TOKEN（Bearer）。X-MCP-Toolsets 收窄工具集（default 全开工具过多，本地 122b 模型提示词吃紧）；X-MCP-Readonly=true 只读模式防误写，需建 issue/PR 时去掉。远程版含 create_pull_request_with_copilot 等专属工具；GHES 不支持远程版。文档：github/github-mcp-server docs/remote-server.md"
   }
 }
