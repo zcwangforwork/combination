@@ -8,5 +8,14 @@
     "enabled": true,
     "search_priority": true,
     "description": "千问联网搜索增强版（EnhancedSearch）— 千问AI平台官方远程 MCP（One Key MCP，无需单独订阅）。鉴权：.env 的 DASHSCOPE_API_KEY（Bearer）；限流 15 RPS/账号；计费：前 2000 次免费，之后 29 元/千次。search_priority=true：对话联网搜索请求优先走本服务，失败回退内置 web_search。文档：platform.qianwenai.com/docs/agent-infra/mcp/external-invocation"
+  },
+  "qianwen_web_fetch": {
+    "transport": "streamable_http",
+    "url": "https://dashscope.aliyuncs.com/api/v1/mcps/WebFetch/mcp",
+    "headers": {
+      "Authorization": "Bearer ${DASHSCOPE_API_KEY}"
+    },
+    "enabled": true,
+    "description": "千问联网抓取（WebFetch）— 千问AI平台官方远程 MCP，解析指定 URL 网页内容。鉴权：.env 的 DASHSCOPE_API_KEY（Bearer，与联网搜索共用同一密钥）。LLM 在需要读取特定网页原文时调用（与联网搜索互补：搜索找来源，WebFetch 读正文）。文档：platform.qianwenai.com/docs/agent-infra/mcp/external-invocation"
   }
 }
