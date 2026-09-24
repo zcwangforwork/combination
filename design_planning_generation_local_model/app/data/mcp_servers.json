@@ -17,5 +17,16 @@
     },
     "enabled": true,
     "description": "千问联网抓取（WebFetch）— 千问AI平台官方远程 MCP，解析指定 URL 网页内容。鉴权：.env 的 DASHSCOPE_API_KEY（Bearer，与联网搜索共用同一密钥）。LLM 在需要读取特定网页原文时调用（与联网搜索互补：搜索找来源，WebFetch 读正文）。文档：platform.qianwenai.com/docs/agent-infra/mcp/external-invocation"
+  },
+  "github": {
+    "transport": "streamable_http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "headers": {
+      "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}",
+      "X-MCP-Toolsets": "repos,issues,pull_requests",
+      "X-MCP-Readonly": "true"
+    },
+    "enabled": true,
+    "description": "GitHub 官方远程 MCP Server（api.githubcopilot.com 托管）。鉴权：.env 的 GITHUB_PERSONAL_ACCESS_TOKEN（Bearer）。X-MCP-Toolsets 收窄工具集（default 全开工具过多，本地 122b 模型提示词吃紧）；X-MCP-Readonly=true 只读模式防误写，需建 issue/PR 时去掉。远程版含 create_pull_request_with_copilot 等专属工具；GHES 不支持远程版。文档：github/github-mcp-server docs/remote-server.md"
   }
 }
