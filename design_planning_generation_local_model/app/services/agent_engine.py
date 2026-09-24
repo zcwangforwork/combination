@@ -50,6 +50,44 @@ from app.services.context_manager import maybe_compress_messages
 
 _agent_graph = None
 _model = None
+# MCP 热重载支撑：重建编译图需要复用 checkpointer/store；_mcp_tool_names 记录
+# 当前注入的 MCP 工具名（重载时从 PHASE1_TOOLS 摘除旧集合再挂新集合）
+_checkpointer = None
+_memory_store_ref = None
+_mcp_tool_names: set = set()
+
+
+def _tool_name(t) -> str:
+    """安全取工具名：PHASE1_TOOLS 混有 BaseTool（.name）与普通函数（.__name__）。"""
+    return getattr(t, "name", None) or getattr(t, "__name__", "") or ""
+
+
+def _pick_forced_search_tool(query: str) -> tuple:
+    """实时问题兜底时选择强制插入的搜索工具：优先 search_priority MCP 搜索
+    （如千问联网搜索），其参数名自适应映射查询词；不可映射或未挂载时回退内置 web_search。
+
+    Returns:
+        (tool_name, args_dict)
+    """
+    try:
+        from app.services.mcp_manager import get_priority_search_tools, get_mcp_tools
+        prio_names = {t["name"] for t in get_priority_search_tools()}
+        if prio_names:
+            for t in get_mcp_tools():
+                if t.name not in prio_names:
+                    continue
+                fields = getattr(t, "args", {}) or {}
+                # 常见搜索参数名优先；否则取第一个 string 类型参数
+                cand = next((k for k in ("query", "keyword", "keywords", "search_query",
+                                         "q", "text", "input", "question") if k in fields), None)
+                if cand is None:
+                    cand = next((k for k, spec in fields.items()
+                                 if isinstance(spec, dict) and spec.get("type") == "string"), None)
+                if cand:
+                    return t.name, {cand: query}
+    except Exception as e:
+        print(f"[agent_engine] 兜底搜索工具选择失败（回退 web_search）: {e}")
+    return "web_search", {"query": query}
 
 # 携带 doc_type 参数的文档生成相关工具：用于从工具调用参数中提取文档类型并持久化到 state
 _DOC_TYPE_TOOLS = (
@@ -121,7 +159,7 @@ def _get_model() -> ChatOpenAI:
             base_url=base_url,
             api_key=api_key,
             temperature=0.3,
-            max_tokens=4096,
+            max_tokens=8192,
         )
     return _model
 
@@ -227,16 +265,18 @@ async def _agent_node(state: AgentState, config: RunnableConfig = None) -> dict:
         resp_text = str(getattr(response, "content", "")) or ""
         if _user_asks_realtime(user_text) and _looks_like_realtime_refusal(resp_text):
             query = user_text.strip()[:200] or resp_text[:80]
+            # 优先 search_priority MCP 搜索工具（如千问联网搜索），未挂载/不可映射时回退 web_search
+            _search_tool, _search_args = _pick_forced_search_tool(query)
             forced = AIMessage(
                 content="",  # 仅携带工具调用，触发真实网络搜索
                 tool_calls=[{
-                    "name": "web_search",
-                    "args": {"query": query},
+                    "name": _search_tool,
+                    "args": _search_args,
                     "id": f"call_backstop_{int(time.time() * 1000)}",
                     "type": "tool_call",
                 }],
             )
-            print(f"[agent_engine] 代码兜底: 强制触发 web_search (query={query[:40]})")
+            print(f"[agent_engine] 代码兜底: 强制触发 {_search_tool} (query={query[:40]})")
             return {"messages": [forced]}
 
         # ── 代码级兜底：用户要求处理上传附件（修改/补全/精简），但 LLM 未调用任何工具 ──
@@ -1278,6 +1318,20 @@ async def init_agent(db_path: Optional[str] = None):
     else:
         print("[agent_engine] OpenViking not available (non-fatal)")
 
+    # ── MCP 外部服务工具：启动时加载并合入 PHASE1_TOOLS（失败非致命，逐服务器隔离）──
+    # 必须在 _build_graph() 之前：ToolNode 构造时固化工具映射
+    global _checkpointer, _memory_store_ref, _mcp_tool_names
+    try:
+        from app.services.mcp_manager import load_mcp_tools
+        mcp_tools = await load_mcp_tools(exclude_names={_tool_name(t) for t in PHASE1_TOOLS})
+        if mcp_tools:
+            PHASE1_TOOLS.extend(mcp_tools)
+            _mcp_tool_names = {t.name for t in mcp_tools}
+            print(f"[agent_engine] MCP tools loaded: {len(mcp_tools)} 个 "
+                  f"({', '.join(sorted(_mcp_tool_names))})")
+    except Exception as e:
+        print(f"[agent_engine] MCP tools load failed (non-fatal): {e}")
+
     checkpointer = await get_checkpointer(db_path)
 
     # 初始化 PostgreSQL 长期记忆存储（pgvector 语义检索；静默降级，失败不影响 Agent）
@@ -1287,6 +1341,10 @@ async def init_agent(db_path: Optional[str] = None):
         memory_store = await get_memory_store()
     except Exception as e:
         print(f"[agent_engine] Long-term memory store init failed (non-fatal): {e}")
+
+    # 保存引用：MCP 配置热重载（reload_mcp_tools）重建编译图时复用
+    _checkpointer = checkpointer
+    _memory_store_ref = memory_store
 
     workflow = _build_graph()
     _agent_graph = workflow.compile(checkpointer=checkpointer, store=memory_store)
@@ -1304,6 +1362,42 @@ def get_agent():
     if _agent_graph is None:
         raise RuntimeError("Agent not initialized. Call init_agent() first.")
     return _agent_graph
+
+
+async def reload_mcp_tools() -> dict:
+    """MCP 配置热重载：重新加载外部工具 → 同步 PHASE1_TOOLS → 重建编译图。
+
+    ToolNode 在构造时固化工具映射，无法原地增删，因此重建 StateGraph 并用
+    init_agent 保存的 checkpointer/store 重新编译（会话状态不丢失）。
+    进行中的流式请求持有旧图引用继续跑完，新轮次自动使用新图。
+
+    Returns:
+        {"loaded": [工具名], "removed": [被移除的旧工具名], "status": {各服务器状态}}
+    """
+    global _agent_graph, _mcp_tool_names
+    from app.services.mcp_manager import load_mcp_tools, get_server_status
+
+    removed = sorted(_mcp_tool_names)
+    # 摘除旧 MCP 工具（原地修改，_get_model_with_tools 每轮 bind 的即为新列表）
+    PHASE1_TOOLS[:] = [t for t in PHASE1_TOOLS if _tool_name(t) not in _mcp_tool_names]
+    try:
+        mcp_tools = await load_mcp_tools(exclude_names={_tool_name(t) for t in PHASE1_TOOLS})
+    except Exception as e:
+        print(f"[agent_engine] MCP reload failed: {e}")
+        mcp_tools = []
+    if mcp_tools:
+        PHASE1_TOOLS.extend(mcp_tools)
+    _mcp_tool_names = {t.name for t in mcp_tools}
+
+    # 重建编译图（服务未初始化完成时跳过，init_agent 会用最新工具列表构建）
+    if _agent_graph is not None and _checkpointer is not None:
+        workflow = _build_graph()
+        _agent_graph = workflow.compile(checkpointer=_checkpointer, store=_memory_store_ref)
+        print(f"[agent_engine] 图已重建（MCP 热重载）: 共 {len(PHASE1_TOOLS)} 个工具，"
+              f"其中 MCP {len(_mcp_tool_names)} 个")
+
+    return {"loaded": sorted(_mcp_tool_names), "removed": removed,
+            "status": get_server_status()}
 
 
 # ── Agent 调用接口 ──
@@ -1663,10 +1757,14 @@ async def stream_agent_events(
             tool_input = event["data"].get("input", {})
             # 过滤敏感参数
             safe_input = {k: v for k, v in tool_input.items() if k not in ("api_key",)}
+            # MCP 外部工具标注来源服务器（如千问联网搜索），前端定向展示
+            from app.services.mcp_manager import get_tool_server as _gts
+            _mcp_srv = _gts(tool_name)
             yield {
                 "type": "tool_start",
                 "tool": tool_name,
                 "input": safe_input,
+                **({"mcp_server": _mcp_srv} if _mcp_srv else {}),
             }
             # ── OpenViking 工具调用：前端以记忆图标高亮展示 ──
             if tool_name.startswith("viking_"):
@@ -1695,10 +1793,13 @@ async def stream_agent_events(
             tool_name = event.get("name", "unknown")
             output = str(event["data"].get("output", ""))
             leak_filter.add_tool_output(output)
+            from app.services.mcp_manager import get_tool_server as _gts
+            _mcp_srv = _gts(tool_name)
             yield {
                 "type": "tool_end",
                 "tool": tool_name,
                 "output_preview": output[:200],
+                **({"mcp_server": _mcp_srv} if _mcp_srv else {}),
             }
             # search_kb / search_attachment 完成时，推送完整检索结果到前端
             if tool_name in ("search_kb", "search_attachment"):
@@ -1902,9 +2003,13 @@ async def resume_agent(
         elif event_type == "on_tool_start":
             tool_name = event.get("name", "unknown")
             tool_input = event["data"].get("input", {})
+            # MCP 外部工具标注来源服务器（如千问联网搜索），前端定向展示
+            from app.services.mcp_manager import get_tool_server as _gts
+            _mcp_srv = _gts(tool_name)
             yield {
                 "type": "tool_start",
                 "tool": tool_name,
+                **({"mcp_server": _mcp_srv} if _mcp_srv else {}),
             }
             # ── OpenViking 工具调用：前端以记忆图标高亮展示 ──
             if tool_name.startswith("viking_"):
@@ -1934,10 +2039,13 @@ async def resume_agent(
             tool_name = event.get("name", "unknown")
             output = str(event["data"].get("output", ""))
             leak_filter.add_tool_output(output)
+            from app.services.mcp_manager import get_tool_server as _gts
+            _mcp_srv = _gts(tool_name)
             yield {
                 "type": "tool_end",
                 "tool": tool_name,
                 "output_preview": output[:200],
+                **({"mcp_server": _mcp_srv} if _mcp_srv else {}),
             }
             # search_kb / search_attachment 完成时，推送完整检索结果到前端
             if tool_name in ("search_kb", "search_attachment"):

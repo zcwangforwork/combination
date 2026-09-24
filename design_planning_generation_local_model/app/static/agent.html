@@ -927,7 +927,7 @@
             _lastStatusType = t;
             switch (t) {
                 case 'tool_start':
-                    setAgentStatus(`🔧 ${toolLabel(data.tool) || data.tool}执行中…`, true);
+                    setAgentStatus(`${data.mcp_server ? '🌐' : '🔧'} ${toolLabel(data.tool, data.mcp_server) || data.tool}执行中…`, true);
                     break;
                 case 'subagent_start':
                     setAgentStatus(data.message || '正在处理…', true);
@@ -2331,6 +2331,7 @@
 
             let agentDiv = null;
             let currentTool = null;
+            let currentMcpServer = null;  // 当前工具的 MCP 来源服务器（千问联网搜索等外部工具定向展示）
             let thinkingShown = true;
             appendThinkingIndicator();
 
@@ -2381,7 +2382,8 @@
 
                             case 'tool_start':
                                 currentTool = data.tool;
-                                appendToolIndicator(data.tool, true);
+                                currentMcpServer = data.mcp_server || null;
+                                appendToolIndicator(data.tool, true, currentMcpServer);
                                 break;
 
                             case 'openviking_recall_start':
@@ -2410,10 +2412,11 @@
                                 if (currentTool) {
                                     const el = document.getElementById(`tool-${currentTool}`);
                                     if (el) {
-                                        el.innerHTML = `<div class="icon">✅</div>${toolLabel(currentTool)}完成`;
+                                        el.innerHTML = `<div class="icon">✅</div>${toolLabel(currentTool, currentMcpServer)}完成`;
                                     }
                                 }
                                 currentTool = null;
+                                currentMcpServer = null;
                                 break;
 
                             case 'rag_results':
@@ -2669,7 +2672,15 @@
             }
         }
 
-        function toolLabel(tool) {
+        // MCP 外部服务器 → 展示名（tool_start/tool_end 事件带 mcp_server 字段时生效）
+        const MCP_SERVER_LABELS = {
+            'qianwen_enhanced_search': '千问联网搜索',
+        };
+
+        function toolLabel(tool, mcpServer) {
+            if (mcpServer) {
+                return MCP_SERVER_LABELS[mcpServer] || `MCP 工具 ${tool}`;
+            }
             if (tool === 'search_kb') return '检索知识库';
             if (tool === 'search_attachment') return '检索附件';
             if (tool === 'generate_section') return '生成章节';
@@ -2712,14 +2723,17 @@
             if (el) el.remove();
         }
 
-        function appendToolIndicator(tool, isStart) {
+        function appendToolIndicator(tool, isStart, mcpServer) {
             const area = document.getElementById('chatArea');
             const div = document.createElement('div');
             div.className = 'tool-indicator';
             div.id = `tool-${tool}`;
-            const label = toolLabel(tool);
+            const label = toolLabel(tool, mcpServer);
             if (isStart) {
-                div.innerHTML = `<div class="spinner"></div>🔧 Agent 正在${label}...`;
+                // MCP 外部工具用 🌐 图标区分（如千问联网搜索），内置工具保持 🔧
+                div.innerHTML = mcpServer
+                    ? `<div class="spinner"></div>🌐 ${label}...`
+                    : `<div class="spinner"></div>🔧 Agent 正在${label}...`;
             } else {
                 div.innerHTML = `<div class="icon">✅</div>${label}完成`;
             }
@@ -3551,7 +3565,7 @@ function editAndResume() {
             }
         }
 
-        const COLLAPSE_THRESHOLD = 500;  // chars
+        const COLLAPSE_THRESHOLD = 10000;  // chars —— 默认详尽回复不自动折叠，完整显示
 
         function autoCollapseLongMessage(div) {
             const text = div.textContent || '';
@@ -3607,6 +3621,7 @@ function editAndResume() {
 
             let agentDiv = null;
             let currentTool = null;
+            let currentMcpServer = null;  // 当前工具的 MCP 来源服务器（千问联网搜索等外部工具定向展示）
             let busyQueued = false;   // 遇到 busy 时置真，finally 里启动排队重发
 
             // 创建 AbortController，供撤回消息时中止流
@@ -3668,7 +3683,8 @@ function editAndResume() {
 
                             case 'tool_start':
                                 currentTool = data.tool;
-                                appendToolIndicator(data.tool, true);
+                                currentMcpServer = data.mcp_server || null;
+                                appendToolIndicator(data.tool, true, currentMcpServer);
                                 break;
 
                             case 'openviking_recall_start':
@@ -3697,10 +3713,11 @@ function editAndResume() {
                                 if (currentTool) {
                                     const el = document.getElementById(`tool-${currentTool}`);
                                     if (el) {
-                                        el.innerHTML = `<div class="icon">✅</div>${toolLabel(currentTool)}完成`;
+                                        el.innerHTML = `<div class="icon">✅</div>${toolLabel(currentTool, currentMcpServer)}完成`;
                                     }
                                 }
                                 currentTool = null;
+                                currentMcpServer = null;
                                 break;
 
                             case 'rag_results':
@@ -3854,7 +3871,7 @@ function editAndResume() {
                                 showToast('🧹 对话历史较长，已自动压缩较早内容以节省上下文', 'info');
                                 break;
                             case 'tool_start':
-                                appendToolIndicator(data.tool, true);
+                                appendToolIndicator(data.tool, true, data.mcp_server);
                                 break;
                             case 'openviking_recall_start':
                                 appendOpenVikingIndicator('recall_start', data);
@@ -3989,7 +4006,7 @@ function editAndResume() {
                                 area.scrollTop = area.scrollHeight;
                                 break;
                             case 'tool_start':
-                                appendToolIndicator(data.tool, true);
+                                appendToolIndicator(data.tool, true, data.mcp_server);
                                 break;
                             case 'openviking_recall_start':
                                 appendOpenVikingIndicator('recall_start', data);
@@ -4015,7 +4032,7 @@ function editAndResume() {
                             case 'tool_end':
                                 const el = document.getElementById(`tool-${data.tool}`);
                                 if (el) {
-                                    el.innerHTML = `<div class="icon">✅</div>${toolLabel(data.tool)}完成`;
+                                    el.innerHTML = `<div class="icon">✅</div>${toolLabel(data.tool, data.mcp_server)}完成`;
                                 }
                                 break;
                             case 'sections_ready':

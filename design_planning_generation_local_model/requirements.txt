@@ -30,3 +30,4 @@ langchain-mineru>=0.1.0
 mineru-open-sdk
 # OpenViking 集成（Phase 1 capture-only，评审决策 #7 锁定版本）
 langchain-openviking[langgraph]==0.1.0
+langchain-mcp-adapters>=0.3.0

@@ -42,3 +42,8 @@
       但其向量内容经 search_attachment 全局可检——历史行为，待评估是否分库）。
       **2026-09-20 源同步新增同边界项**：`skill_library`（用户技能库）在多用户环境
       下为全员共享（用户决策维持）；若需按用户隔离，存储需加 owner 字段。
+      **2026-09-22 MCP 集成同边界项**：`mcp_manager`（MCP 服务器配置）为全局配置，
+      加载的工具对全部用户会话生效；缓解：写操作端点（增删改/重载）仅 ADMIN，
+      stdio 配置=宿主机命令执行能力。Windows 限制：服务进程用 SelectorEventLoop
+      （psycopg 必需），stdio 传输无法在服务内拉起子进程，Windows 部署应使用
+      streamable_http/sse 传输的 MCP 服务器。

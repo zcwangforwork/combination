@@ -748,11 +748,27 @@ flowchart TD
 - 测量数据用逗号/空格/分号分隔的字符串传入（如 "12.3, 12.5, 12.4"），不要传入非数字文本
 - 不要凭空编写测试数据或统计结论——要么调用工具计算，要么引用知识库/附件中的真实数据
 - 工具返回含公式与代入值，写文档时保留计算依据（公式 + 关键参数），便于评审追溯
+
+## 外部 MCP 服务工具（随配置动态挂载，可能不存在）
+管理员可在 MCP 服务管理中挂载外部工具服务器，挂载后其工具会与上述内置工具一起
+出现在你的可用工具列表中（名称与用途以工具定义为准，如网络搜索、文件系统、数据库等）。
+使用规则:
+- 仅在任务确需该外部能力时调用（如用户明确要求联网查询、读写外部系统数据）
+- MCP 工具的结果与内置工具同等对待：真实数据可直接写入文档并标注来源，
+  返回错误时如实告知用户，不得编造结果
+- 文档写作核心流程（大纲/章节生成/修改/导出）始终使用上述内置工具，
+  MCP 工具不能替代它们
 """
 
 # ── Section 4: 回复风格 ──
 
 REPLY_STYLE = """# 回复风格
+
+## 默认详尽回答（总原则，适用于所有对话回复）
+- 用户没有特殊说明（如"简短回答/一句话/只要结论/简单说说"）时，回答一律**详尽充分**：
+  把问题讲透——覆盖相关维度、给出依据与适用条件、补充背景与注意事项，内容尽量丰富
+- 仅当用户明确要求简短时才收敛篇幅；用户的明确要求优先于本原则
+- 详尽 ≠ 冗余：用分点/分段/小标题组织结构，每部分都有实质内容，不堆砌套话
 
 ## 文档生成/修改后的回复（最重要 — 必须提炼总结）
 - 调用 write_chapter / generate_section / revise_section / revise_paragraph 等文档工具完成后，
@@ -1103,12 +1119,32 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
     # 包含跨会话相关的历史记忆（设计决策、文档结构、用户偏好等）。
     memory_section = (memory_context + "\n") if memory_context else ""
 
+    # ── 联网搜索优先级（动态）：挂载了 search_priority MCP 服务器（如千问联网搜索）
+    # 时覆盖 TOOL_RULES「2b. web_search 必须先调用」的默认口径；失败回退内置通道 ──
+    search_priority_note = ""
+    try:
+        from app.services.mcp_manager import get_priority_search_tools
+        _prio_tools = get_priority_search_tools()
+        if _prio_tools:
+            _names = "、".join(t["name"] for t in _prio_tools)
+            _server = _prio_tools[0]["server"]
+            search_priority_note = (
+                "\n## 联网搜索优先级（动态规则，覆盖 2b. web_search 中\"必须先调用 web_search\"的口径）\n"
+                f"当前已挂载外部搜索工具：**{_names}**（来自 MCP 服务 {_server}，商业搜索 API，结果稳定可靠）。\n"
+                "- 凡联网搜索/最新动态/实时信息类请求（含文档生成前的联网检索），**一律优先调用上述外部搜索工具**\n"
+                "- 外部工具调用失败、报错或返回空结果 → 回退调用内置 web_search 工具完成检索，并在回复中简要说明已回退\n"
+                "- 两个通道都失败 → 如实告知用户检索失败，禁止编造搜索结果\n"
+            )
+    except Exception:
+        pass
+
     return (
         ROLE_DEFINITION + "\n"
         + DOMAIN_PRIMING + "\n"
         + memory_section
         + SOP_KNOWLEDGE + "\n"
         + TOOL_RULES + "\n"
+        + search_priority_note
         + REPLY_STYLE + "\n"
         + style_block
         + product_info

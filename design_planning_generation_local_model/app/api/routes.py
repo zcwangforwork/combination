@@ -502,6 +502,92 @@ async def delete_skill(skill_id: str):
     return {"success": True}
 
 
+# ── MCP 外部服务集成：服务器配置管理 + 工具热重载 ──
+# 安全：stdio 配置 = 宿主机任意命令执行能力，写操作（增删改/重载）仅 ADMIN；
+# 读操作（列表/已加载工具）登录用户可见。工具加载状态逐服务器隔离，
+# 单个服务器宕机不影响 Agent 其他能力。
+
+class McpServerPayload(BaseModel):
+    """MCP 服务器配置载荷：name 仅 POST 用；config 为连接配置
+    （transport/command/args/cwd/env/url/headers/enabled/description）"""
+    name: str = ""
+    config: dict = {}
+
+
+def _require_mcp_admin(request: Request) -> str:
+    """校验 ADMIN 身份（MCP 管理端点专用）。返回用户名；非管理员抛 403。"""
+    username, is_admin = verify_token_identity(request.headers.get("authorization"))
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="MCP 服务管理需要管理员权限")
+    return username
+
+
+async def _safe_mcp_reload() -> dict:
+    """配置变更后热重载 MCP 工具并重建 Agent 图（失败不使 CRUD 操作失败）。"""
+    try:
+        from app.services.agent_engine import reload_mcp_tools
+        return await reload_mcp_tools()
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+
+
+@router.get("/mcp/servers", dependencies=[Depends(require_user)])
+async def mcp_list_servers():
+    """列出全部 MCP 服务器配置 + 运行状态 + 已加载工具"""
+    from app.services import mcp_manager
+    return {
+        "success": True,
+        "servers": mcp_manager.list_servers(),
+        "loaded_tools": mcp_manager.list_loaded_tools(),
+    }
+
+
+@router.post("/mcp/servers", dependencies=[Depends(require_user)])
+async def mcp_add_server(request: Request, payload: McpServerPayload):
+    """新增 MCP 服务器（仅 ADMIN）。保存后立即热重载工具。"""
+    _require_mcp_admin(request)
+    from app.services import mcp_manager
+    try:
+        server = mcp_manager.add_server(payload.name, payload.config or {})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    reload_result = await _safe_mcp_reload()
+    return {"success": True, "server": server, "reload": reload_result}
+
+
+@router.put("/mcp/servers/{name}", dependencies=[Depends(require_user)])
+async def mcp_update_server(name: str, request: Request, payload: McpServerPayload):
+    """更新 MCP 服务器配置（仅 ADMIN）。保存后立即热重载工具。"""
+    _require_mcp_admin(request)
+    from app.services import mcp_manager
+    try:
+        server = mcp_manager.update_server(name, payload.config or {})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if server is None:
+        raise HTTPException(status_code=404, detail="服务器不存在")
+    reload_result = await _safe_mcp_reload()
+    return {"success": True, "server": server, "reload": reload_result}
+
+
+@router.delete("/mcp/servers/{name}", dependencies=[Depends(require_user)])
+async def mcp_delete_server(name: str, request: Request):
+    """删除 MCP 服务器（仅 ADMIN）。删除后立即热重载（其工具从 Agent 摘除）。"""
+    _require_mcp_admin(request)
+    from app.services import mcp_manager
+    if not mcp_manager.delete_server(name):
+        raise HTTPException(status_code=404, detail="服务器不存在")
+    reload_result = await _safe_mcp_reload()
+    return {"success": True, "reload": reload_result}
+
+
+@router.post("/mcp/reload", dependencies=[Depends(require_user)])
+async def mcp_reload(request: Request):
+    """手动重载 MCP 工具（仅 ADMIN）：重连全部启用服务器并重建 Agent 图"""
+    _require_mcp_admin(request)
+    return {"success": True, "reload": await _safe_mcp_reload()}
+
+
 @router.get("/kb/files", dependencies=[Depends(require_user)])
 async def list_kb_files(request: Request):
     """列出知识库上传文件（用户隔离）：普通用户=本人个人库；ADMIN=全部个人库（附 owner 标注）"""
@@ -660,16 +746,20 @@ async def kb_chat(payload: KbChatRequest, request: Request):
 
     if scoped_files:
         system_prompt = (
-            "你是知识库问答助手。用户已指定重点检索文件，请基于提供的检索片段精确回答问题。"
-            "要求：1) 精确定位相关段落，引用原文关键语句；"
+            "你是知识库问答助手。用户已指定重点检索文件，请基于提供的检索片段回答问题。"
+            "除非用户明确要求简短，回答要尽可能详尽："
+            "1) 精确定位相关段落，完整引用原文关键语句；"
             "2) 注明结论来自哪个文件的哪个章节/段落；"
-            "3) 若片段不足以完整回答，明确指出哪些部分找到了、哪些部分未找到，不要编造。"
+            "3) 展开解释相关背景、适用条件与关联内容，把检索片段中与问题相关的信息充分利用，"
+            "覆盖问题涉及的各个维度，不要只挑一两点回答；"
+            "4) 若片段不足以完整回答，明确指出哪些部分找到了、哪些部分未找到，不要编造。"
             "用中文回答。"
         )
     else:
         system_prompt = (
-            "你是知识库问答助手。请基于用户提供的知识库检索片段回答用户问题，"
-            "回答准确、精炼，并注明结论来自哪个文件。"
+            "你是知识库问答助手。请基于用户提供的知识库检索片段回答用户问题。"
+            "除非用户明确要求简短，回答要准确、详尽全面：充分利用检索片段中的相关信息，"
+            "展开说明背景、细节与适用条件，并注明结论来自哪个文件。"
             "若检索片段不足以回答，请明确说明'知识库中暂未找到足够信息'，不要编造。"
             "用中文回答。"
         )
@@ -680,8 +770,8 @@ async def kb_chat(payload: KbChatRequest, request: Request):
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.3,
-            max_tokens=2048,
-            timeout=(30, 120),
+            max_tokens=4096,
+            timeout=(30, 180),
         )
         answer = (answer or "").strip() or "知识库问答生成失败，请稍后重试。"
     except Exception as e:
