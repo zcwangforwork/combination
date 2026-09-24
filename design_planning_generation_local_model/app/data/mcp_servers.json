@@ -14,10 +14,10 @@
     "url": "https://api.githubcopilot.com/mcp/",
     "headers": {
       "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}",
-      "X-MCP-Toolsets": "repos,issues,pull_requests",
+      "X-MCP-Tools": "get_file_contents,search_repositories,search_code,search_issues,issue_read,list_releases,get_latest_release,pull_request_read",
       "X-MCP-Readonly": "true"
     },
     "enabled": true,
-    "description": "GitHub 官方远程 MCP Server（api.githubcopilot.com 托管）。鉴权：.env 的 GITHUB_PERSONAL_ACCESS_TOKEN（Bearer）。X-MCP-Toolsets 收窄工具集（default 全开工具过多，本地 122b 模型提示词吃紧）；X-MCP-Readonly=true 只读模式防误写，需建 issue/PR 时去掉。远程版含 create_pull_request_with_copilot 等专属工具；GHES 不支持远程版。文档：github/github-mcp-server docs/remote-server.md"
+    "description": "GitHub 官方远程 MCP Server（api.githubcopilot.com 托管）。鉴权：.env 的 GITHUB_PERSONAL_ACCESS_TOKEN（Bearer）。X-MCP-Tools 白名单收窄到 8 个文档调研核心工具（agent 已有 40 内置工具，全量 22 个提示词吃紧且易误路由）；实测：X-MCP-Tools 与 X-MCP-Toolsets 同传为并集不收窄，须仅保留 Tools 头；X-MCP-Readonly=true 只读防误写。远程版工具名与本地版不同（issue_read/pull_request_read 等），扩白名单前先实测枚举（名字写错服务端拒绝启动）。GHES 不支持远程版。文档：github/github-mcp-server docs/remote-server.md"
   }
 }
