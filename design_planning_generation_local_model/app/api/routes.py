@@ -955,7 +955,7 @@ async def agent_send_message(
     from app.services import kb_scope as _kbs
     from app.services.agent_auth import verify_token_identity as _vti
     _kbs.set_kb_user(*_vti(request.headers.get("authorization")))
-    from app.services.agent_engine import stream_agent_events, get_agent
+    from app.services.agent_engine import stream_agent_events, get_agent, _IMAGE_BLOCK_EXTS as _IMAGE_EXTS
     from app.services.agent_state import create_initial_state
     from app.services import agent_streams
 
@@ -974,11 +974,46 @@ async def agent_send_message(
     initial_state = create_initial_state() if not has_checkpoint else None
     history_count = _count_history_messages(existing.values if has_checkpoint else {})
 
+    # ── 多模态注入：图片附件双通道（MinerU OCR 已提取文字入库；此处再让大模型直接看图）──
+    # 检测会话中未注入过的图片附件 → base64 data URL → 随本轮用户消息以 image_url blocks
+    # 送入视觉模型。ENABLE_IMAGE_INPUT=false 关闭；注入后记入 state.images_seen 防重复。
+    image_blocks = []
+    if os.getenv("ENABLE_IMAGE_INPUT", "true").lower() != "false":
+        try:
+            state_vals = existing.values if has_checkpoint else {}
+            atts = state_vals.get("attachments", []) or []
+            seen = set(state_vals.get("images_seen", []) or [])
+            import base64 as _b64
+            import mimetypes as _mtype
+            for a in atts:
+                fid = a.get("file_id", "")
+                fname = (a.get("filename") or "").lower()
+                if fid in seen or not fname.endswith(_IMAGE_EXTS):
+                    continue
+                img_path = a.get("original_path", "")
+                if not (img_path and os.path.exists(img_path)):
+                    continue
+                mime = _mtype.guess_type(fname)[0] or "image/png"
+                with open(img_path, "rb") as f:
+                    b64 = _b64.b64encode(f.read()).decode()
+                image_blocks.append((a.get("filename", "图片"), f"data:{mime};base64,{b64}"))
+                seen.add(fid)
+            if image_blocks:
+                await agent.aupdate_state(
+                    config, {"images_seen": sorted(seen)}, as_node="after_tools")
+                print(f"[agent_send_message] 多模态注入: {len(image_blocks)} 张图片"
+                      f"（{', '.join(n for n, _ in image_blocks)}）")
+        except Exception as e:
+            image_blocks = []
+            print(f"[agent_send_message] 图片注入失败（按纯文本继续）: {e}")
+
+    _image_blocks = image_blocks
     stream = agent_streams.start_stream(
         project_id,
         kind="message",
         source_factory=lambda: stream_agent_events(
             user_message=message,
+            image_blocks=_image_blocks,
             thread_id=project_id,
             initial_state=initial_state,
         ),
@@ -2766,15 +2801,33 @@ async def agent_get_history(project_id: str):
 
     messages = state.values.get("messages", []) or []
     history = []
+
+    def _blocks_to_text(content) -> str:
+        """多模态 blocks → 友好文本（历史展示）：拼接文本块，图片块转占位符。"""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for b in content:
+                if isinstance(b, dict):
+                    if b.get("type") == "text":
+                        parts.append(b.get("text", ""))
+                    elif b.get("type") == "image_url":
+                        parts.append("[📷 已向大模型展示图片]")
+                else:
+                    parts.append(str(b))
+            return "\n".join(p for p in parts if p)
+        return str(content)
+
     for msg in messages:
         # 消息时间戳（agent_engine 创建消息时写入 additional_kwargs["ts"]，随 checkpoint 持久化）
         ts = ((getattr(msg, "additional_kwargs", None) or {}).get("ts")) or ""
         if isinstance(msg, HumanMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _blocks_to_text(msg.content)
             if content and content.strip():
                 history.append({"role": "user", "content": content, "ts": ts})
         elif isinstance(msg, AIMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _blocks_to_text(msg.content)
             if content and content.strip():
                 history.append({"role": "assistant", "content": content, "ts": ts})
 

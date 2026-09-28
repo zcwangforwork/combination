@@ -208,7 +208,9 @@ async def _agent_node(state: AgentState, config: RunnableConfig = None) -> dict:
 
     # 构建并注入System Prompt（含记忆上下文）
     system_prompt = build_system_prompt(state, memory_context=combined_memory)
-    full_messages = [SystemMessage(content=system_prompt)] + messages
+    # 图像预算：历史多模态消息只保留最近 2 张图的 base64，更早的换占位文本
+    # （防每轮上下文重放被历史图像撑爆；副本操作不影响 state）
+    full_messages = [SystemMessage(content=system_prompt)] + _cap_image_blocks(messages)
 
     # 调用LLM（流式：逐 chunk 累积，同时把正文 + 思维链手动推入 sink）。
     # 注意：真实 ChatOpenAI Runnable 在节点内 astream 时，on_chat_model_stream 也会经
@@ -1400,12 +1402,67 @@ async def reload_mcp_tools() -> dict:
             "status": get_server_status()}
 
 
+# ── 多模态图像注入（图片附件双通道：MinerU OCR 提取文字 + 大模型直接看图）──
+
+_IMAGE_BLOCK_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
+
+
+def _multimodal_content(user_message: str, image_blocks: list) -> object:
+    """构建用户消息 content：有图片时用多模态 blocks（OpenAI 兼容格式，
+    Ollama qwen3.5 等视觉模型直接看图），无图返回原文本。"""
+    if not image_blocks:
+        return user_message
+    blocks = [{"type": "text", "text": (user_message or "").strip() or "（请查看以下图片）"}]
+    for _name, url in image_blocks:
+        blocks.append({"type": "image_url", "image_url": {"url": url}})
+    return blocks
+
+
+def _cap_image_blocks(messages: list, max_images: int = 2) -> list:
+    """图像预算：多模态消息中的 image_url 块只保留最近 max_images 张，
+    更早的替换为占位文本——防止历史图像 base64 在每轮上下文重放中撑爆窗口。
+
+    在喂给模型的副本上操作（model_copy），不修改 state 中的原消息。
+    """
+    total = 0
+    for m in messages:
+        c = getattr(m, "content", None)
+        if isinstance(c, list):
+            total += sum(1 for b in c if isinstance(b, dict) and b.get("type") == "image_url")
+    if total <= max_images:
+        return messages
+    remaining = max_images
+    out = []
+    for m in reversed(messages):  # 从最新往回保留
+        c = getattr(m, "content", None)
+        if isinstance(c, list):
+            new_blocks = []
+            for b in c:
+                if isinstance(b, dict) and b.get("type") == "image_url":
+                    if remaining > 0:
+                        remaining -= 1
+                        new_blocks.append(b)
+                    else:
+                        new_blocks.append({"type": "text", "text": "[较早的图片已省略，上文已分析过]"})
+                else:
+                    new_blocks.append(b)
+            try:
+                m = m.model_copy(update={"content": new_blocks})
+            except Exception:
+                m = copy.copy(m)
+                m.content = new_blocks
+        out.append(m)
+    out.reverse()
+    return out
+
+
 # ── Agent 调用接口 ──
 
 async def invoke_agent(
     user_message: str,
     thread_id: str,
     initial_state: Optional[AgentState] = None,
+    image_blocks: Optional[list] = None,
 ) -> dict:
     """发送消息到Agent，获取完整回复 (非流式)
 
@@ -1427,13 +1484,13 @@ async def invoke_agent(
     if initial_state:
         state = dict(initial_state)
         state["messages"] = [HumanMessage(
-            content=user_message,
+            content=_multimodal_content(user_message, image_blocks),
             # 消息时间戳（随 checkpoint 持久化，历史接口透出给前端显示）
             additional_kwargs={"ts": time.strftime("%Y-%m-%dT%H:%M:%S")},
         )]
     else:
         state = {"messages": [HumanMessage(
-            content=user_message,
+            content=_multimodal_content(user_message, image_blocks),
             additional_kwargs={"ts": time.strftime("%Y-%m-%dT%H:%M:%S")},
         )]}
 
@@ -1627,6 +1684,7 @@ async def stream_agent_events(
     user_message: str,
     thread_id: str,
     initial_state: Optional[AgentState] = None,
+    image_blocks: Optional[list] = None,
 ):
     """发送消息到Agent，返回SSE事件流
 

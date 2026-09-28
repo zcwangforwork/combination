@@ -1577,8 +1577,21 @@
         // 仅用于展示，历史消息不附「撤回」按钮（撤回只支持回滚最新一轮）
         // limitCount: 可选，只渲染前 N 条（重连续播时排除本轮生成已写入 checkpoint 的消息，
         //             本轮内容由回放事件渲染，避免重复）
-        // 历史回顾仅显示最近 HISTORY_LIMIT 条，更早的在顶部给省略提示
-        const HISTORY_LIMIT = 20;
+        // 历史回顾显示最近 HISTORY_ROUND_LIMIT 轮对话（1 轮 = 1 条用户消息 + 1 条 Agent 回复），
+        // 更早的在顶部给省略提示
+        const HISTORY_ROUND_LIMIT = 20;
+
+        // 截取最近 roundLimit 轮：从末尾往前数第 roundLimit 条用户消息即保留起点（不足则全保留）
+        function recentRoundsStart(msgs, roundLimit) {
+            let rounds = 0;
+            for (let i = msgs.length - 1; i >= 0; i--) {
+                if (msgs[i].role === 'user') {
+                    rounds++;
+                    if (rounds >= roundLimit) return i;
+                }
+            }
+            return 0;
+        }
 
         async function loadHistory(limitCount) {
             if (!_hasHistory) return;  // [PORT] 原 !existingProject
@@ -1593,12 +1606,13 @@
                 let msgs = (typeof limitCount === 'number' && limitCount >= 0)
                     ? data.messages.slice(0, limitCount)
                     : data.messages;
-                if (msgs.length > HISTORY_LIMIT) {
-                    const omitted = msgs.length - HISTORY_LIMIT;
-                    msgs = msgs.slice(-HISTORY_LIMIT);
+                const start = recentRoundsStart(msgs, HISTORY_ROUND_LIMIT);
+                if (start > 0) {
+                    const omitted = start;
+                    msgs = msgs.slice(start);
                     const hint = document.createElement('div');
                     hint.className = 'history-omit-hint';
-                    hint.textContent = `⋯ 已省略更早的 ${omitted} 条消息（显示最近 ${HISTORY_LIMIT} 条）`;
+                    hint.textContent = `⋯ 已省略更早的 ${omitted} 条消息（显示最近 ${HISTORY_ROUND_LIMIT} 轮对话）`;
                     document.getElementById('chatArea').appendChild(hint);
                 }
                 for (const m of msgs) {
@@ -1990,6 +2004,7 @@
         const MCP_SERVER_LABELS = {
             'qianwen_enhanced_search': '千问联网搜索',
             'qianwen_web_fetch': '千问网页解析',
+            'qianwen_code_interpreter': '千问代码解释器',
         };
 
         function toolLabel(tool, mcpServer) {

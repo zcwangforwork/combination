@@ -128,6 +128,8 @@ class AgentState(TypedDict, total=False):
     # build_docx 与「下载文档」导出时经 format_overrides 应用。
     # 键: body_font / heading_font / body_size_pt / heading_size_pt / line_spacing / margin_cm
     document_format: Optional[dict]
+    # 多模态：已注入过大模型直看（image_url blocks）的图片附件 file_id 列表
+    images_seen: list
 
 
 # ── 默认初始状态 ──
@@ -157,6 +159,7 @@ def create_initial_state() -> AgentState:
         current_chapter=None,
         chapter_write_queue=[],
         attachments=[],
+        images_seen=[],  # 已注入过大模型直看的图片附件 file_id（防重复注入）
         attachment_modifications=[],
         undo_stack=[],
         templates=[],
