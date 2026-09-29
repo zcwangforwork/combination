@@ -85,6 +85,11 @@ const app = createApp({
         const confAccessList = ref([]);
         const confAccessForm = reactive({ level: '', mode: 'READ_ONLY' });
 
+        // ===== [SEC 2026-09-29] Sec Level State（保密密级 0-3，知识库检索可见范围） =====
+        const showSecLevelDialog = ref(false);
+        const secLevelTargetUser = ref(null);
+        const secLevelForm = reactive({ level: null, reason: '' });
+
         // ===== Category Access (RESEARCH 资料分类授权) =====
         // 注：researchCategories 复用研发资料模块的声明（第 151 行），此处不重复声明
         const showCategoryAccessDialog = ref(false);
@@ -795,6 +800,45 @@ const app = createApp({
                 await loadConfAccess(confAccessTargetUser.value.id);
             } catch (e) {
                 ElementPlus.ElMessage.error(e.response?.data?.message || '撤销失败');
+            }
+        };
+
+        // ===== [SEC 2026-09-29] Sec Level（保密密级调整）=====
+        // 密级 ≠ 保密授权：密级决定知识库问答可检索的资料范围（RAG 侧 sec_level 0-3）；
+        // 保密授权是研发资料模块的按等级查看他人数据权限，两者独立。
+        const secLevelLabel = (l) => {
+            if (l === null || l === undefined) return '未设置';
+            return ['公开', '内部', '秘密', '机密'][l] || `L${l}`;
+        };
+        const secLevelTagType = (l) => {
+            return { 0: 'info', 1: 'primary', 2: 'warning', 3: 'danger' }[l] || 'info';
+        };
+
+        const openSecLevelDialog = (user) => {
+            secLevelTargetUser.value = user;
+            secLevelForm.level = null;
+            secLevelForm.reason = '';
+            showSecLevelDialog.value = true;
+        };
+
+        const handleSecLevelSubmit = async () => {
+            if (secLevelForm.level === null || secLevelForm.level === undefined) {
+                ElementPlus.ElMessage.warning('请选择新密级');
+                return;
+            }
+            if (!secLevelForm.reason.trim()) {
+                ElementPlus.ElMessage.warning('请填写变更原因（审计留痕）');
+                return;
+            }
+            try {
+                const res = await api.put(
+                    `/employees/${secLevelTargetUser.value.id}/sec-level`,
+                    { newLevel: secLevelForm.level, reason: secLevelForm.reason.trim() });
+                ElementPlus.ElMessage.success(res.data?.message || '密级变更成功');
+                showSecLevelDialog.value = false;
+                await loadEmployees();
+            } catch (e) {
+                ElementPlus.ElMessage.error(e.response?.data?.message || '密级变更失败');
             }
         };
 
@@ -2446,6 +2490,8 @@ const app = createApp({
             // Confidentiality access
             showConfAccessDialog, confAccessTargetUser, confAccessList, confAccessForm,
             openConfAccessDialog, loadConfAccess, handleGrantConfAccess, handleRevokeConfAccess,
+            showSecLevelDialog, secLevelTargetUser, secLevelForm,
+            openSecLevelDialog, handleSecLevelSubmit, secLevelLabel, secLevelTagType,
             handleToggleConfAccessMode,
             // Category access (researchCategories 复用研发资料模块的声明)
             showCategoryAccessDialog, categoryAccessTargetUser, categoryAccessList,

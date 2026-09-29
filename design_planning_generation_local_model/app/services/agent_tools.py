@@ -1513,24 +1513,45 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
             本方法仍独立检索一次，用于控制 uploads 配额 (uploads_n) 并打上
             [附件] 来源标注；主库结果中的 uploads chunk 会在后续被剔除，避免重复。
             直接走 self.collection.query 即可，无需 Reranker 或 BM25 二次召回。
+
+            [SEC 2026-09-28] 本方法为直查旁路，密级过滤必须与 VectorStore 主链路
+            同口径（§5.6 旁路封堵）：enforce 注入 sec where；shadow 无 where 逐条
+            复核标记；off 回退上线前行为。
             """
             try:
                 # [KB-ISO] 用户隔离：uploads 检索遍历当前作用域（本人+共享 / ADMIN 全部）
                 from app.services import kb_scope as _kbs
+                from app.services.rag import sec_filter
                 scoped = _kbs.scoped_kb_stores()
                 if not scoped:
                     return []
                 query_embedding = scoped[0].embedder.encode_single(query)
+                sec_where = sec_filter.effective_query_where()
+                sec_mode = sec_filter.get_mode()
+                user_sec = sec_filter.current_user_sec_level()
                 # uploads 集合独立检索，给予与主库同等的配额（各库分别取，汇总后由调用方截断）
-                uploads_n = max(top_k, 5)
+                uploads_n = max(top_k, 5) if sec_mode == "off" else sec_filter.overfetch_n(
+                    max(top_k, 5))
                 merged = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
                 for store in scoped:
                     try:
-                        raw = store.collection.query(
+                        coll = store.collection
+                        raw = coll.query(
                             query_embeddings=[query_embedding],
                             n_results=uploads_n,
+                            where=sec_where,
                             include=["documents", "metadatas", "distances"],
                         )
+                        # [SEC] shadow：无 where → 复核标记；enforce：探针取 denied 样本
+                        if raw and raw.get("ids") and raw["ids"][0]:
+                            if sec_mode == "shadow":
+                                sec_filter.mark_denied_batch(
+                                    raw["documents"][0], raw["metadatas"][0],
+                                    "qms_doc_uploads", user_sec)
+                            elif sec_mode == "enforce":
+                                sec_filter.probe_denied(
+                                    coll, query_embedding, uploads_n,
+                                    "qms_doc_uploads", user_sec)
                     except Exception:
                         continue
                     if raw and raw.get("ids") and raw["ids"][0]:
@@ -1555,7 +1576,14 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
                         "similarity": similarity,
                         "distance": distance,
                         "chunk_id": raw["ids"][0][i],
+                        "sec_level": sec_filter.chunk_sec_level(meta),
+                        "sec_label": meta.get("sec_label", ""),
                     })
+                # [SEC] 检索审计（off 模式不审计）
+                if sec_mode != "off":
+                    sec_filter.audit_retrieval(
+                        query=query, scope_summary="search_kb:uploads",
+                        results=results)
                 return results
             except Exception as e:
                 print(f"[search_kb] uploads 检索异常: {e}")
@@ -1683,6 +1711,8 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
                 "source": source,
                 "source_collection": r.get("source_collection", "unknown"),
                 "score": round(score, 3),
+                # [SEC L2] 密级标签随检索结果透出（§6 引用可见性）
+                "sec_label": r.get("sec_label", ""),
             })
 
         # 本地结果不足时补充的网络结果：置于列表最前（网络字段结构与本地不同，
@@ -2116,11 +2146,27 @@ async def search_attachment(query: str, top_k: int = 10, filename: str = "") -> 
             store = VectorStore(collection_name="uploads")
             if store.collection.count() > 0:
                 query_embedding = store.embedder.encode_single(query)
+                # [SEC 2026-09-28] 旁路封堵（§5.6）：兜底直查同样过密级收口，不得无 where 裸查
+                from app.services.rag import sec_filter
+                sec_where = sec_filter.effective_query_where()
+                sec_mode = sec_filter.get_mode()
+                user_sec = sec_filter.current_user_sec_level()
+                fetch_n = top_k if sec_mode == "off" else sec_filter.overfetch_n(top_k)
                 raw = store.collection.query(
                     query_embeddings=[query_embedding],
-                    n_results=top_k,
+                    n_results=fetch_n,
+                    where=sec_where,
                     include=["documents", "metadatas", "distances"],
                 )
+                if raw and raw.get("ids") and raw["ids"][0]:
+                    # [SEC] shadow：复核标记 denied；enforce：探针取 denied 样本（供 L3）
+                    if sec_mode == "shadow":
+                        sec_filter.mark_denied_batch(
+                            raw["documents"][0], raw["metadatas"][0], "uploads", user_sec)
+                    elif sec_mode == "enforce":
+                        sec_filter.probe_denied(
+                            store.collection, query_embedding, fetch_n,
+                            "uploads", user_sec)
                 formatted = []
                 if raw and raw.get("ids") and raw["ids"][0]:
                     for i in range(len(raw["ids"][0])):
@@ -6331,16 +6377,32 @@ async def find_kb_reference_files(doc_type: str = "", instruction: str = "", top
                 "candidates": [],
             }, ensure_ascii=False)
         query_embedding = scoped[0].embedder.encode_single(goal)
+        # [SEC 2026-09-28] 旁路封堵（§5.6）：参考文件检索同样过密级收口，不得无 where 裸查
+        from app.services.rag import sec_filter
+        sec_where = sec_filter.effective_query_where()
+        sec_mode = sec_filter.get_mode()
+        user_sec = sec_filter.current_user_sec_level()
+        ref_n = 24 if sec_mode == "off" else sec_filter.overfetch_n(24)
         raw = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
         for _st in scoped:
             try:
                 _r = _st.collection.query(
-                    query_embeddings=[query_embedding], n_results=24,
+                    query_embeddings=[query_embedding], n_results=ref_n,
+                    where=sec_where,
                     include=["documents", "metadatas", "distances"],
                 )
             except Exception:
                 continue
             if _r and _r.get("ids") and _r["ids"][0]:
+                # [SEC] shadow：复核标记 denied；enforce：探针取 denied 样本（供 L3）
+                if sec_mode == "shadow":
+                    sec_filter.mark_denied_batch(
+                        _r["documents"][0], _r["metadatas"][0],
+                        _st.collection_name, user_sec)
+                elif sec_mode == "enforce":
+                    sec_filter.probe_denied(
+                        _st.collection, query_embedding, ref_n,
+                        _st.collection_name, user_sec)
                 raw["ids"][0].extend(_r["ids"][0])
                 raw["documents"][0].extend(_r["documents"][0])
                 raw["metadatas"][0].extend(_r["metadatas"][0])
@@ -7229,7 +7291,8 @@ async def ingest_attachment_to_kb(file_id: str = "") -> str:
         try:
             from app.services import kb_scope as _kbs3
             vector_store = _kbs3.personal_kb_store()
-            vector_store.add_chunks(chunks)
+            # [SEC] 显式密级（上传时指定）透传；缺省由 add_chunks 按上传者密级判定
+            vector_store.add_chunks(chunks, sec_level=att.get("sec_level"))
             # 使 BM25 缓存失效
             VectorStore.invalidate_bm25_cache()
 

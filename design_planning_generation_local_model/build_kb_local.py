@@ -14,6 +14,19 @@ sys.path.insert(0, str(project_root))
 from dotenv import load_dotenv
 load_dotenv()
 
+# [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+# 本脚本直连 chromadb（不经 VectorStore.add_chunks），密级 metadata 经
+# sec_filter.stamp_sec_meta 收口打标，保持全项目唯一打标出口（§4.2）。
+_sec_level = 3
+if "--sec-level" in sys.argv:
+    try:
+        _sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+    except (IndexError, ValueError):
+        print("用法: python build_kb_local.py [--sec-level 0-3]")
+        sys.exit(1)
+from app.services.rag.sec_filter import stamp_sec_meta
+print(f"[SEC] 本批次摄入密级: {_sec_level}（0公开/1内部/2秘密/3机密）")
+
 import chromadb
 from chromadb.config import Settings
 from typing import List, Dict, Any
@@ -199,12 +212,13 @@ for file_path in supported_files:
         ids.append(chunk_id)
         docs.append(chunk)
         texts.append(chunk)
-        metas.append({
+        # [SEC 2026-09-28] 密级五字段收口打标（sec_level/sec_label/sec_source/acl_version/sec_updated_at）
+        metas.append(stamp_sec_meta({
             'doc_type': doc_type,
             'source_file': str(rel_path),
             'section_title': '',
             'chunk_index': i
-        })
+        }, sec_level=_sec_level))
 
     # 生成 embeddings
     print(f"  正在生成 embeddings...")

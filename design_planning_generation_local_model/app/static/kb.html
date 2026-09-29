@@ -74,6 +74,21 @@
             border-radius: 4px; padding: 3px 10px; font-size: 12px; cursor: pointer; margin-right: 4px;
         }
         .mini-btn.danger { border-color: #e57373; color: #e53935; }
+        /* [SEC 2026-09-29] 密级徽章（上传选择 + 文件列表） */
+        .kb-sec-badge {
+            display: inline-block; padding: 1px 9px; border-radius: 9px;
+            font-size: 11px; font-weight: 600; white-space: nowrap;
+        }
+        .kb-sec-0 { background: #e8f5e9; color: #2e7d32; }
+        .kb-sec-1 { background: #e3f2fd; color: #1565c0; }
+        .kb-sec-2 { background: #fff3e0; color: #e65100; }
+        .kb-sec-3 { background: #ffebee; color: #c62828; }
+        .kb-sec-null { background: #f5f5f5; color: #999; }
+        .kb-sec-mixed { background: #ffebee; color: #c62828; border: 1px dashed #e57373; }
+        .kb-sec-select {
+            border: 1px solid #d5d5d5; border-radius: 6px; padding: 6px 8px;
+            font-size: 12px; background: #fff; color: #444; max-width: 190px;
+        }
         .files-footer { padding: 8px 16px; border-top: 1px solid #e0e0e0; font-size: 11px; color: #999; display: flex; align-items: center; gap: 8px; }
         .btn-batch-add {
             border: none; background: #00897b; color: #fff;
@@ -157,7 +172,12 @@
         <h2>📚 知识库</h2>
         <span style="font-size:12px;color:#999">上传文件入库后可在此检索提问；点击「引用」将文件加入对话框重点检索范围</span>
         <span class="spacer"></span>
+        <!-- [SEC 2026-09-29] 上传密级选择：缺省继承上传者密级；普通用户不可标注高于本人密级（服务端 403 双重校验） -->
+        <select id="kbSecSelect" class="kb-sec-select"
+            title="上传文件的保密密级。默认自动继承你的密级；标注高于本人密级需管理员权限"></select>
         <button id="kbUploadBtn" class="btn-upload" onclick="triggerKbUpload()">📤 上传文件到知识库</button>
+        <!-- [SEC 2026-09-29] 保密管理入口（仅 ADMIN 可见） -->
+        <button id="kbSecAdminBtn" class="btn-back" style="display:none" onclick="openSecAdmin()">🔐 保密管理</button>
         <a class="btn-back" href="/agent">返回 Agent 对话</a>
     </div>
     <div class="main">
@@ -204,14 +224,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         const PROJECT_ID = urlParams.get('project') || '';
         // [KB-ISO] 当前登录用户名（JWT sub），用于 ADMIN 视角标注文件归属
+        // [SEC 2026-09-29] 同时解析 role / sec_level claim（上传密级选择 + 保密管理入口）
         let CURRENT_USER = '';
+        let KB_IS_ADMIN = false;
+        let KB_MY_SEC = null;   // 无 claim（旧 token）时为 null → 视同 0（fail-closed）
         try {
             const _t = sessionStorage.getItem('agent_token') || '';
             const _p = _t.split('.')[1];
             if (_p) {
                 let _b = _p.replace(/-/g, '+').replace(/_/g, '/');
                 while (_b.length % 4) _b += '=';
-                CURRENT_USER = JSON.parse(decodeURIComponent(escape(atob(_b)))).sub || '';
+                const _claims = JSON.parse(decodeURIComponent(escape(atob(_b))));
+                CURRENT_USER = _claims.sub || '';
+                KB_IS_ADMIN = (_claims.role === 'ADMIN');
+                if (typeof _claims.sec_level === 'number' && _claims.sec_level >= 0 && _claims.sec_level <= 3) {
+                    KB_MY_SEC = _claims.sec_level;
+                }
             }
         } catch (e) { /* ignore */ }
         let kbFiles = [];   // 缓存当前列表，供多选批量添加
@@ -365,6 +393,39 @@
             return '';
         }
 
+        // ── [SEC 2026-09-29] 密级工具：徽章渲染 / 上传下拉初始化 / 保密管理入口 ──
+        const SEC_LABELS = ['公开', '内部', '秘密', '机密'];
+
+        function secBadgeHtml(f) {
+            if (f.mixed_sec) return '<span class="kb-sec-badge kb-sec-mixed" title="各分块密级不一致，请在保密管理中修复">不一致</span>';
+            const lvl = f.sec_level;
+            if (lvl === null || lvl === undefined) {
+                return '<span class="kb-sec-badge kb-sec-null" title="未标注，按机密处理">未标注</span>';
+            }
+            return `<span class="kb-sec-badge kb-sec-${lvl}">${SEC_LABELS[lvl]}</span>`;
+        }
+
+        (function initSecSelect() {
+            const sel = document.getElementById('kbSecSelect');
+            let html = '<option value="">密级：自动（继承我的密级）</option>';
+            for (let i = 0; i <= 3; i++) {
+                // 防投毒：普通用户只能标注到本人密级（服务端 403 双重校验）
+                const disabled = (!KB_IS_ADMIN && (KB_MY_SEC === null || i > KB_MY_SEC)) ? ' disabled title="高于本人密级，需管理员"' : '';
+                html += `<option value="${i}"${disabled}>${i} ${SEC_LABELS[i]}</option>`;
+            }
+            sel.innerHTML = html;
+            sel.title = KB_MY_SEC !== null
+                ? `上传文件的保密密级。默认继承你的密级（当前 L${KB_MY_SEC} ${SEC_LABELS[KB_MY_SEC]}）`
+                : '上传文件的保密密级。当前凭证未携带密级信息（旧令牌），如需指定请重新登录';
+        })();
+
+        function openSecAdmin() {
+            // 凭证经 #jwt= 片段中转到新标签页（与 review/kb 页同机制）
+            const t = sessionStorage.getItem('agent_token') || '';
+            window.open('/sec-admin' + (t ? '#jwt=' + encodeURIComponent(t) : ''), '_blank');
+        }
+        if (KB_IS_ADMIN) document.getElementById('kbSecAdminBtn').style.display = '';
+
         async function uploadFileToKb(file) {
             const err = validateKbFile(file);
             if (err) { showToast(err); return false; }
@@ -372,6 +433,9 @@
                 // [KB-ISO] 用户隔离：上传到当前用户个人知识库（服务端定向 chroma_db_users/<user>）
                 const fd = new FormData();
                 fd.append('file', file);
+                // [SEC] 显式密级（下拉选择；空=继承上传者密级）
+                const secVal = document.getElementById('kbSecSelect').value;
+                if (secVal !== '') fd.append('sec_level', secVal);
                 const resp = await fetch('/api/kb/upload', { method: 'POST', body: fd });
                 if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).detail || `HTTP ${resp.status}`);
                 const fileId = (await resp.json()).file_id;
@@ -401,7 +465,7 @@
                     updateBatchAddBtn();
                     return;
                 }
-                let html = '<table><thead><tr><th style="width:30px;text-align:center"><input type="checkbox" id="kbSelectAll" onchange="toggleSelectAll(this)"></th><th>文件名</th><th style="text-align:right;width:70px">分块</th><th style="text-align:center;width:90px">操作</th></tr></thead><tbody>';
+                let html = '<table><thead><tr><th style="width:30px;text-align:center"><input type="checkbox" id="kbSelectAll" onchange="toggleSelectAll(this)"></th><th>文件名</th><th style="width:86px">密级</th><th style="text-align:right;width:70px">分块</th><th style="text-align:center;width:90px">操作</th></tr></thead><tbody>';
                 for (const f of kbFiles) {
                     const hasOrig = f.original_filename && f.original_filename !== f.source_file;
                     const name = hasOrig ? f.original_filename : f.source_file;
@@ -410,6 +474,7 @@
                     const ownerTag = (f.owner && f.owner !== CURRENT_USER) ? `<span style="color:#999;font-size:11px">（${esc(f.owner)}）</span>` : '';
                     html += `<td style="text-align:center"><input type="checkbox" class="kb-file-check" data-source="${esc(f.source_file)}" data-file-id="${esc(f.file_id || '')}" data-name="${esc(name)}" data-owner="${esc(f.owner || '')}" onchange="updateSelectedCount()"></td>`;
                     html += `<td style="word-break:break-all">${esc(name)}${note}${ownerTag}</td>`;
+                    html += `<td>${secBadgeHtml(f)}</td>`;
                     html += `<td style="text-align:right;color:#888">${f.chunk_count}</td>`;
                     html += `<td style="text-align:center;white-space:nowrap"><button class="mini-btn" data-source="${esc(f.source_file)}" data-file-id="${esc(f.file_id || '')}" data-name="${esc(name)}" title="将此文件加入当前对话的参考资料（附件区）" onclick="referenceKbFile(this)">💬 引用</button> <button class="mini-btn danger" data-source="${esc(f.source_file)}" data-name="${esc(name)}" data-owner="${esc(f.owner || '')}" onclick="deleteKbFile(this)">删除</button></td>`;
                     html += '</tr>';

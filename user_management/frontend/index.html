@@ -203,12 +203,22 @@
                                     </el-tag>
                                 </template>
                             </el-table-column>
+                            <!-- [SEC 2026-09-29] 保密密级列（知识库检索可见范围 0-3） -->
+                            <el-table-column label="密级" width="80">
+                                <template #default="{row}">
+                                    <el-tag :type="secLevelTagType(row.secLevel)" size="small">
+                                        {{ secLevelLabel(row.secLevel) }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="createTime" label="入职时间" width="170"></el-table-column>
-                            <el-table-column label="操作" width="400" fixed="right"
+                            <el-table-column label="操作" width="450" fixed="right"
                                 v-if="currentRole === 'ADMIN'">
                                 <template #default="{row}">
                                     <el-button type="primary" size="small" text @click="showEditDialog(row)">
                                         编辑</el-button>
+                                    <el-button type="warning" size="small" text @click="openSecLevelDialog(row)">
+                                        调整密级</el-button>
                                     <el-button type="warning" size="small" text @click="openConfAccessDialog(row)">
                                         保密授权</el-button>
                                     <el-button type="warning" size="small" text @click="openCategoryAccessDialog(row)">
@@ -1144,6 +1154,36 @@
                         </el-select>
                         <el-button type="primary" @click="handleGrantConfAccess">授权</el-button>
                     </div>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+        <!-- [SEC 2026-09-29] Sec Level Dialog (保密密级调整 0-3，知识库检索可见范围) -->
+        <el-dialog v-model="showSecLevelDialog" :title="'保密密级调整 - ' + (secLevelTargetUser?.realName || '')" width="440px">
+            <el-alert type="info" :closable="false" style="margin-bottom:15px">
+                密级决定该用户在知识库问答中可检索到的资料范围（0 公开 → 3 机密）。变更立即落库并留审计；
+                已登录用户的旧凭证仍携带原密级，重新登录后完全生效。
+            </el-alert>
+            <el-form label-width="80px">
+                <el-form-item label="当前密级">
+                    <el-tag :type="secLevelTagType(secLevelTargetUser?.secLevel)" size="small">
+                        {{ secLevelLabel(secLevelTargetUser?.secLevel) }}
+                    </el-tag>
+                </el-form-item>
+                <el-form-item label="新密级">
+                    <el-select v-model="secLevelForm.level" placeholder="选择新密级" style="width:100%">
+                        <el-option label="0 · 公开（全员可见）" :value="0"></el-option>
+                        <el-option label="1 · 内部（登录用户）" :value="1"></el-option>
+                        <el-option label="2 · 秘密（L2 及以上可见）" :value="2"></el-option>
+                        <el-option label="3 · 机密（L3 及以上可见）" :value="3"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="变更原因">
+                    <el-input v-model="secLevelForm.reason" type="textarea" :rows="2"
+                        placeholder="必填（审计留痕），例：岗位调整，升为秘密级"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="warning" @click="handleSecLevelSubmit">确认调整</el-button>
                 </el-form-item>
             </el-form>
         </el-dialog>

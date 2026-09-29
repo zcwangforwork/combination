@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保密密级管理 — 知识库</title>
+    <!-- [COMBINATION-PORT] 凭证中转：从知识库页/SPA 经 URL #jwt= 片段或同源 sessionStorage 获取 token -->
+    <script src="/static/token-relay.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Roboto, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+        .topbar {
+            padding: 10px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .topbar h2 { font-size: 16px; color: #333; }
+        .topbar .spacer { flex: 1; }
+        .topbar a {
+            text-decoration: none; font-size: 13px; cursor: pointer;
+            border: none; padding: 6px 14px; border-radius: 6px;
+            background: #f5f5f5; color: #555;
+        }
+        .topbar a:hover { background: #e0e0e0; }
+        .tabs { display: flex; gap: 4px; padding: 10px 24px 0; background: #fff; border-bottom: 1px solid #e0e0e0; }
+        .tab-btn {
+            border: none; background: none; cursor: pointer; font-size: 14px;
+            padding: 8px 18px; color: #666; border-bottom: 2px solid transparent;
+        }
+        .tab-btn:hover { color: #1976d2; }
+        .tab-btn.active { color: #1976d2; border-bottom-color: #1976d2; font-weight: 600; }
+        .main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ── 通用控件 ── */
+        .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .toolbar input[type="text"], .toolbar input[type="date"], .toolbar select {
+            border: 1px solid #d5d5d5; border-radius: 6px; padding: 6px 10px;
+            font-size: 13px; background: #fff;
+        }
+        .toolbar input[type="text"] { width: 220px; }
+        .toolbar label { font-size: 12px; color: #777; }
+        .btn {
+            border: none; border-radius: 6px; padding: 7px 16px; font-size: 13px;
+            cursor: pointer; color: #fff; background: #1976d2;
+        }
+        .btn:hover { background: #1565c0; }
+        .btn:disabled { background: #bdbdbd; cursor: not-allowed; }
+        .btn.warn { background: #f57c00; }
+        .btn.warn:hover { background: #e65100; }
+        .btn.danger { background: #c62828; }
+        .btn.danger:hover { background: #b71c1c; }
+        .btn.plain { background: #fff; color: #1976d2; border: 1px solid #90caf9; }
+        .btn.plain:hover { background: #e3f2fd; }
+
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 0; overflow: hidden; }
+        .card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .card th {
+            text-align: left; padding: 9px 12px; color: #666; font-weight: 600;
+            border-bottom: 2px solid #e0e0e0; background: #fafafa; white-space: nowrap;
+        }
+        .card td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; word-break: break-all; }
+        .card tr:hover td { background: #f8fbff; }
+        .empty-hint { color: #999; text-align: center; padding: 40px 0; font-size: 13px; }
+
+        /* ── 密级徽章 ── */
+        .sec-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 10px;
+            font-size: 12px; font-weight: 600; white-space: nowrap;
+        }
+        .sec-0 { background: #e8f5e9; color: #2e7d32; }
+        .sec-1 { background: #e3f2fd; color: #1565c0; }
+        .sec-2 { background: #fff3e0; color: #e65100; }
+        .sec-3 { background: #ffebee; color: #c62828; }
+        .sec-null { background: #f5f5f5; color: #999; }
+        .state-tag { font-size: 11px; padding: 1px 8px; border-radius: 8px; }
+        .state-ok { background: #e8f5e9; color: #2e7d32; }
+        .state-mixed { background: #ffebee; color: #c62828; }
+        .state-unlabeled { background: #fff3e0; color: #e65100; }
+
+        .mini-btn {
+            border: 1px solid #1976d2; background: #fff; color: #1976d2;
+            border-radius: 4px; padding: 3px 10px; font-size: 12px; cursor: pointer;
+        }
+        .mini-btn:hover { background: #e3f2fd; }
+
+        /* ── 模式管理 ── */
+        .mode-banner {
+            display: flex; align-items: center; gap: 12px; background: #fff;
+            border: 1px solid #e0e0e0; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px;
+        }
+        .mode-now { font-size: 18px; font-weight: 700; padding: 4px 16px; border-radius: 8px; }
+        .mode-shadow { background: #fff3e0; color: #e65100; }
+        .mode-enforce { background: #ffebee; color: #c62828; }
+        .mode-off { background: #f5f5f5; color: #666; }
+        .mode-meta { font-size: 12px; color: #999; line-height: 1.8; }
+        .mode-cards { display: flex; gap: 14px; flex-wrap: wrap; }
+        .mode-card {
+            flex: 1; min-width: 240px; max-width: 360px; background: #fff;
+            border: 2px solid #e0e0e0; border-radius: 10px; padding: 16px 18px; cursor: pointer;
+        }
+        .mode-card:hover { border-color: #90caf9; }
+        .mode-card.current { border-color: #1976d2; background: #f5faff; }
+        .mode-card h3 { font-size: 15px; margin-bottom: 8px; }
+        .mode-card p { font-size: 12px; color: #777; line-height: 1.7; }
+        .mode-card .cur-mark { font-size: 11px; color: #1976d2; font-weight: 600; }
+
+        /* ── 弹窗 ── */
+        .modal-mask {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-mask.show { display: flex; }
+        .modal {
+            background: #fff; border-radius: 12px; width: 460px; max-width: 92vw;
+            padding: 20px 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+        }
+        .modal h3 { font-size: 15px; margin-bottom: 14px; }
+        .modal .field { margin-bottom: 12px; }
+        .modal .field > span { display: block; font-size: 12px; color: #777; margin-bottom: 5px; }
+        .modal select, .modal input[type="text"], .modal textarea {
+            width: 100%; border: 1px solid #d5d5d5; border-radius: 6px;
+            padding: 7px 10px; font-size: 13px; font-family: inherit;
+        }
+        .modal textarea { min-height: 64px; resize: vertical; }
+        .modal .modal-tip { font-size: 12px; color: #c62828; background: #ffebee; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; line-height: 1.6; }
+        .modal .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+        .admin-only-gate {
+            display: none; margin: 60px auto; max-width: 460px; text-align: center;
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 40px 30px;
+        }
+        .admin-only-gate.show { display: block; }
+        body.not-admin .app-body { display: none; }
+
+        .toast {
+            position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+            background: #323232; color: #fff; padding: 8px 18px; border-radius: 6px;
+            font-size: 13px; z-index: 300; opacity: 0; transition: opacity 0.25s;
+            pointer-events: none; max-width: 80%;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <h2>🔐 保密密级管理</h2>
+        <span style="font-size:12px;color:#999">密级台账 · 高频拦截 · 检索审计 · 过滤模式（仅管理员）</span>
+        <span class="spacer"></span>
+        <span id="modeChip" style="font-size:12px;color:#999">模式加载中…</span>
+        <a href="/kb">返回知识库</a>
+    </div>
+
+    <div class="admin-only-gate" id="adminGate">
+        <div style="font-size:40px;margin-bottom:12px">⛔</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">需要管理员权限</div>
+        <div style="font-size:13px;color:#777">保密密级管理页面仅对 ADMIN 角色开放，请使用管理员账号从体系管理系统进入。</div>
+    </div>
+
+    <div class="app-body">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="ledger" onclick="switchTab('ledger')">📋 密级台账</button>
+            <button class="tab-btn" data-tab="denied" onclick="switchTab('denied')">🚫 高频拦截</button>
+            <button class="tab-btn" data-tab="audit" onclick="switchTab('audit')">📜 检索审计</button>
+            <button class="tab-btn" data-tab="mode" onclick="switchTab('mode')">🎚️ 过滤模式</button>
+        </div>
+        <div class="main">
+
+            <!-- ═══ 台账 ═══ -->
+            <div class="panel active" id="panel-ledger">
+                <div class="toolbar">
+                    <input type="text" id="ledgerSearch" placeholder="搜索文件名…" oninput="renderLedger()">
+                    <label>密级
+                        <select id="ledgerLevel" onchange="renderLedger()">
+                            <option value="">全部</option>
+                            <option value="0">公开</option>
+                            <option value="1">内部</option>
+                            <option value="2">秘密</option>
+                            <option value="3">机密</option>
+                            <option value="unlabeled">未标注</option>
+                        </select>
+                    </label>
+                    <label>状态
+                        <select id="ledgerState" onchange="renderLedger()">
+                            <option value="">全部</option>
+                            <option value="ok">正常</option>
+                            <option value="mixed">不一致（需修复）</option>
+                            <option value="unlabeled">未标注</option>
+                        </select>
+                    </label>
+                    <span style="font-size:12px;color:#999" id="ledgerCount"></span>
+                    <span class="spacer" style="flex:1"></span>
+                    <button class="btn warn" id="batchLevelBtn" disabled onclick="openLevelModal(null)">批量修改密级</button>
+                    <button class="btn plain" onclick="loadLedger()">刷新</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr>
+                            <th style="width:30px;text-align:center"><input type="checkbox" id="ledgerSelAll" onchange="toggleLedgerSelAll(this)"></th>
+                            <th>文件</th><th style="width:80px">密级</th><th style="width:70px">来源</th>
+                            <th style="width:70px;text-align:right">分块</th><th style="width:110px">状态</th>
+                            <th style="width:150px">更新时间</th><th style="width:90px">操作</th>
+                        </tr></thead>
+                        <tbody id="ledgerBody"><tr><td colspan="8" class="empty-hint">加载中…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ 高频拦截 ═══ -->
+            <div class="panel" id="panel-denied">
+                <div class="toolbar">
+                    <label>条数
+                        <select id="deniedLimit" onchange="loadDeniedTop()">
+                            <option value="20">Top 20</option>
+                            <option value="50">Top 50</option>
+                            <option value="100">Top 100</option>
+                        </select>
+                    </label>
+                    <span style="font-size:12px;color:#999">被密级过滤排除次数最多的文件（shadow 观测 / enforce 运行期数据）</span>
+                    <span class="spacer" style="flex:1"></span>
+                    <button class="btn plain" onclick="loadDeniedTop()">刷新</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr><th style="width:60px">排名</th><th>文件</th><th style="width:90px">拦截次数</th><th style="width:170px">最近拦截时间</th></tr></thead>
+                        <tbody id="deniedBody"><tr><td colspan="4" class="empty-hint">加载中…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ 检索审计 ═══ -->
+            <div class="panel" id="panel-audit">
+                <div class="toolbar">
+                    <input type="text" id="auditUser" placeholder="用户名（精确）" style="width:130px">
+                    <label>起 <input type="date" id="auditStart"></label>
+                    <label>止 <input type="date" id="auditEnd"></label>
+                    <label>命中密级≥
+                        <select id="auditMinLevel">
+                            <option value="-1">不限</option>
+                            <option value="0">公开</option><option value="1">内部</option>
+                            <option value="2">秘密</option><option value="3">机密</option>
+                        </select>
+                    </label>
+                    <label>泄漏拦截
+                        <select id="auditLeak">
+                            <option value="-1">全部</option>
+                            <option value="1">仅拦截</option>
+                        </select>
+                    </label>
+                    <button class="btn" onclick="loadAudit()">查询</button>
+                    <span style="font-size:12px;color:#999" id="auditCount"></span>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr>
+                            <th style="width:150px">时间</th><th style="width:100px">用户</th><th style="width:60px">用户密级</th>
+                            <th>查询内容</th><th style="width:70px">模式</th><th style="width:60px;text-align:right">返回</th>
+                            <th style="width:60px;text-align:right">被滤</th><th style="width:70px">最高命中</th><th style="width:60px">泄漏拦截</th>
+                        </tr></thead>
+                        <tbody id="auditBody"><tr><td colspan="9" class="empty-hint">点击「查询」加载</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ 模式管理 ═══ -->
+            <div class="panel" id="panel-mode">
+                <div class="mode-banner">
+                    <span style="font-size:13px;color:#777">当前模式</span>
+                    <span class="mode-now mode-shadow" id="modeNowBig">—</span>
+                    <span class="mode-meta" id="modeMeta"></span>
+                </div>
+                <div class="mode-cards">
+                    <div class="mode-card" id="modeCard-shadow" onclick="openModeModal('shadow')">
+                        <h3>👀 shadow 影子模式 <span class="cur-mark"></span></h3>
+                        <p>不实际过滤，仅后台记录"本应拦截"的内容。用于上线前评估误伤面与拦截规模，对用户零影响。</p>
+                    </div>
+                    <div class="mode-card" id="modeCard-enforce" onclick="openModeModal('enforce')">
+                        <h3>🛡️ enforce 强制模式 <span class="cur-mark"></span></h3>
+                        <p>检索强制注入密级过滤（无权限内容对模型不可见）+ L3 输出兜底拦截。正式运行模式。</p>
+                    </div>
+                    <div class="mode-card" id="modeCard-off" onclick="openModeModal('off')">
+                        <h3>🔓 off 关闭 <span class="cur-mark"></span></h3>
+                        <p>完全回退到改造前行为（不过滤不记录）。仅作紧急回滚通道，长期停留需说明原因。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ 密级变更弹窗（单个/批量共用） ═══ -->
+    <div class="modal-mask" id="levelModalMask">
+        <div class="modal">
+            <h3 id="levelModalTitle">修改密级</h3>
+            <div class="modal-tip">变更将原子作用于该文件全部分块（方差校验保证一致），并自动生成新 acl_version、留审计记录。</div>
+            <div class="field">
+                <span>新密级</span>
+                <select id="levelModalSelect">
+                    <option value="0">0 · 公开 — 全员可见</option>
+                    <option value="1">1 · 内部 — 登录用户可见</option>
+                    <option value="2">2 · 秘密 — 密级≥2 可见</option>
+                    <option value="3">3 · 机密 — 密级≥3 可见</option>
+                </select>
+            </div>
+            <div class="field">
+                <span>变更原因（审计留痕，建议填写）</span>
+                <textarea id="levelModalReason" placeholder="例：文件定密复核，由内部调整为秘密"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn plain" onclick="closeLevelModal()">取消</button>
+                <button class="btn warn" id="levelModalSubmit" onclick="submitLevelChange()">确认变更</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ 模式切换弹窗 ═══ -->
+    <div class="modal-mask" id="modeModalMask">
+        <div class="modal">
+            <h3 id="modeModalTitle">切换过滤模式</h3>
+            <div class="modal-tip" id="modeModalTip"></div>
+            <div class="field">
+                <span>切换原因（审计留痕）</span>
+                <textarea id="modeModalReason" placeholder="例：shadow 观察一周无误伤，切换 enforce"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn plain" onclick="closeModeModal()">取消</button>
+                <button class="btn danger" id="modeModalSubmit" onclick="submitModeSwitch()">确认切换</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── 常量与工具 ──────────────────────────────────────────
+        const SEC_LABELS = ['公开', '内部', '秘密', '机密'];
+        const MODE_LABELS = { shadow: 'shadow 影子', enforce: 'enforce 强制', off: 'off 关闭' };
+
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function fmtTs(ts) { return ts ? String(ts).slice(0, 19).replace('T', ' ') : '—'; }
+
+        let toastTimer = null;
+        function showToast(text, ms = 3500) {
+            const t = document.getElementById('toast');
+            t.textContent = text;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+        }
+
+        async function apiFetch(url, options) {
+            const resp = await fetch(url, options);
+            let data = {};
+            try { data = await resp.json(); } catch (e) { /* 非 JSON */ }
+            if (!resp.ok) {
+                const msg = (resp.status === 403)
+                    ? (data.detail || '无管理员权限') : (data.detail || `HTTP ${resp.status}`);
+                throw new Error(msg);
+            }
+            return data;
+        }
+
+        // ── 管理员门禁（客户端提示；服务端 /api/sec/* 仍强制 403） ──
+        let IS_ADMIN = false;
+        try {
+            const _t = sessionStorage.getItem('agent_token') || '';
+            const _p = _t.split('.')[1];
+            if (_p) {
+                let _b = _p.replace(/-/g, '+').replace(/_/g, '/');
+                while (_b.length % 4) _b += '=';
+                IS_ADMIN = (JSON.parse(decodeURIComponent(escape(atob(_b)))).role === 'ADMIN');
+            }
+        } catch (e) { /* ignore */ }
+        if (!IS_ADMIN) {
+            document.body.classList.add('not-admin');
+            document.getElementById('adminGate').classList.add('show');
+        }
+
+        // ── Tab 切换 ────────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.tab === name));
+            document.querySelectorAll('.panel').forEach(p =>
+                p.classList.toggle('active', p.id === 'panel-' + name));
+            if (name === 'ledger' && !ledgerCache) loadLedger();
+            if (name === 'denied' && !deniedLoaded) loadDeniedTop();
+            if (name === 'mode') loadMode();
+        }
+
+        function secBadge(lvl) {
+            if (lvl === null || lvl === undefined) {
+                return '<span class="sec-badge sec-null">未标注</span>';
+            }
+            return `<span class="sec-badge sec-${lvl}">${lvl} ${SEC_LABELS[lvl]}</span>`;
+        }
+
+        // ── Tab 1：密级台账 ─────────────────────────────────────
+        let ledgerCache = null;   // 全量缓存，筛选在前端做
+
+        async function loadLedger() {
+            const body = document.getElementById('ledgerBody');
+            body.innerHTML = '<tr><td colspan="8" class="empty-hint">加载中…</td></tr>';
+            try {
+                const data = await apiFetch('/api/sec/ledger');
+                ledgerCache = data.files || [];
+                renderLedger();
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="8" class="empty-hint" style="color:#c62828">加载失败: ${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        function ledgerFiltered() {
+            if (!ledgerCache) return [];
+            const kw = document.getElementById('ledgerSearch').value.trim().toLowerCase();
+            const lv = document.getElementById('ledgerLevel').value;
+            const st = document.getElementById('ledgerState').value;
+            return ledgerCache.filter(f => {
+                if (kw && !(f.source_file || '').toLowerCase().includes(kw)) return false;
+                const unlabeled = (f.sec_label === '未标注' || f.sec_level === null || f.sec_level === undefined);
+                if (lv === 'unlabeled' ? !unlabeled : (lv !== '' && String(f.sec_level) !== lv)) return false;
+                if (st === 'mixed' && !f.mixed) return false;
+                if (st === 'unlabeled' && !unlabeled) return false;
+                if (st === 'ok' && (f.mixed || unlabeled)) return false;
+                return true;
+            });
+        }
+
+        function renderLedger() {
+            const body = document.getElementById('ledgerBody');
+            if (!ledgerCache) return;
+            const rows = ledgerFiltered();
+            document.getElementById('ledgerCount').textContent = `共 ${rows.length} / ${ledgerCache.length} 个文件`;
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="8" class="empty-hint">无匹配文件</td></tr>';
+                updateBatchBtn();
+                return;
+            }
+            let html = '';
+            for (const f of rows) {
+                const unlabeled = (f.sec_label === '未标注' || f.sec_level === null || f.sec_level === undefined);
+                const state = f.mixed
+                    ? '<span class="state-tag state-mixed">不一致·需修复</span>'
+                    : (unlabeled ? '<span class="state-tag state-unlabeled">未标注</span>' : '<span class="state-tag state-ok">正常</span>');
+                const src = { manual: '手动', inherit: '继承', script: '脚本' }[f.sec_source] || (f.sec_source || '—');
+                const cols = Array.isArray(f.collections) ? f.collections.join('、') : (f.collections || '');
+                html += `<tr>
+                    <td style="text-align:center"><input type="checkbox" class="ledger-check" value="${esc(f.source_file)}" onchange="updateBatchBtn()"></td>
+                    <td title="${esc(cols)}">${esc(f.source_file)}</td>
+                    <td>${secBadge(unlabeled ? null : f.sec_level)}</td>
+                    <td>${esc(src)}</td>
+                    <td style="text-align:right;color:#888">${f.chunk_count}</td>
+                    <td>${state}</td>
+                    <td style="color:#888;white-space:nowrap">${fmtTs(f.sec_updated_at)}</td>
+                    <td><button class="mini-btn" onclick="openLevelModal('${esc(f.source_file)}')">修改密级</button></td>
+                </tr>`;
+            }
+            body.innerHTML = html;
+            updateBatchBtn();
+        }
+
+        function toggleLedgerSelAll(master) {
+            document.querySelectorAll('.ledger-check').forEach(cb => cb.checked = master.checked);
+            updateBatchBtn();
+        }
+        function selectedLedgerFiles() {
+            return Array.from(document.querySelectorAll('.ledger-check:checked')).map(cb => cb.value);
+        }
+        function updateBatchBtn() {
+            const n = selectedLedgerFiles().length;
+            const btn = document.getElementById('batchLevelBtn');
+            btn.disabled = n === 0;
+            btn.textContent = n ? `批量修改密级（${n} 个文件）` : '批量修改密级';
+        }
+
+        // ── 密级变更弹窗（target=null 表示批量） ──
+        let levelModalTarget = null;   // 单个 source_file 或 null=批量
+
+        function openLevelModal(sourceFile) {
+            levelModalTarget = sourceFile || null;
+            document.getElementById('levelModalTitle').textContent = sourceFile
+                ? `修改密级 — ${sourceFile}` : `批量修改密级（已选 ${selectedLedgerFiles().length} 个文件）`;
+            document.getElementById('levelModalSelect').value = '3';
+            document.getElementById('levelModalReason').value = '';
+            document.getElementById('levelModalMask').classList.add('show');
+        }
+        function closeLevelModal() { document.getElementById('levelModalMask').classList.remove('show'); }
+
+        async function submitLevelChange() {
+            const files = levelModalTarget ? [levelModalTarget] : selectedLedgerFiles();
+            if (!files.length) { closeLevelModal(); return; }
+            const payload = {
+                source_files: files,
+                new_level: parseInt(document.getElementById('levelModalSelect').value, 10),
+                reason: document.getElementById('levelModalReason').value.trim(),
+            };
+            const btn = document.getElementById('levelModalSubmit');
+            btn.disabled = true;
+            try {
+                const data = await apiFetch('/api/sec/level', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const okN = (data.ok || []).length, failN = (data.failed || []).length;
+                if (failN) showToast(`完成：成功 ${okN} 个，失败 ${failN} 个（${(data.failed[0] || {}).error || ''}）`, 6000);
+                else showToast(`✓ 已将 ${okN} 个文件密级变更为 ${payload.new_level} ${SEC_LABELS[payload.new_level]}`);
+                closeLevelModal();
+                await loadLedger();
+            } catch (e) {
+                showToast(`变更失败: ${e.message}`, 5000);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ── Tab 2：高频拦截 ─────────────────────────────────────
+        let deniedLoaded = false;
+
+        async function loadDeniedTop() {
+            const body = document.getElementById('deniedBody');
+            body.innerHTML = '<tr><td colspan="4" class="empty-hint">加载中…</td></tr>';
+            try {
+                const limit = document.getElementById('deniedLimit').value;
+                const data = await apiFetch(`/api/sec/denied-top?limit=${limit}`);
+                const items = data.items || [];
+                deniedLoaded = true;
+                if (!items.length) {
+                    body.innerHTML = '<tr><td colspan="4" class="empty-hint">暂无拦截记录（shadow/enforce 模式下使用后产生）</td></tr>';
+                    return;
+                }
+                let html = '';
+                items.forEach((it, i) => {
+                    html += `<tr>
+                        <td style="color:#999">${i + 1}</td>
+                        <td>${esc(it.source_file)}</td>
+                        <td style="text-align:right"><b style="color:#c62828">${it.denied_count}</b></td>
+                        <td style="color:#888;white-space:nowrap">${fmtTs(it.last_denied_at)}</td>
+                    </tr>`;
+                });
+                body.innerHTML = html;
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="4" class="empty-hint" style="color:#c62828">加载失败: ${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        // ── Tab 3：检索审计 ─────────────────────────────────────
+        async function loadAudit() {
+            const body = document.getElementById('auditBody');
+            body.innerHTML = '<tr><td colspan="9" class="empty-hint">查询中…</td></tr>';
+            const q = new URLSearchParams();
+            const u = document.getElementById('auditUser').value.trim();
+            if (u) q.set('username', u);
+            const s = document.getElementById('auditStart').value;
+            if (s) q.set('start', s);
+            const e2 = document.getElementById('auditEnd').value;
+            if (e2) q.set('end', e2 + 'T23:59:59');
+            const ml = document.getElementById('auditMinLevel').value;
+            if (ml !== '-1') q.set('min_level', ml);
+            const lk = document.getElementById('auditLeak').value;
+            if (lk !== '-1') q.set('leak_blocked', lk);
+            q.set('limit', '200');
+            try {
+                const data = await apiFetch('/api/sec/audit?' + q.toString());
+                const items = data.items || [];
+                document.getElementById('auditCount').textContent = `${items.length} 条`;
+                if (!items.length) {
+                    body.innerHTML = '<tr><td colspan="9" class="empty-hint">无匹配审计记录</td></tr>';
+                    return;
+                }
+                let html = '';
+                for (const r of items) {
+                    html += `<tr>
+                        <td style="color:#888;white-space:nowrap">${fmtTs(r.ts)}</td>
+                        <td>${esc(r.username)}</td>
+                        <td>L${r.sec_level_at_query ?? '—'}</td>
+                        <td title="${esc(r.scope_summary || '')}">${esc(r.query_preview || '')}</td>
+                        <td>${esc(r.mode)}</td>
+                        <td style="text-align:right">${r.returned_count}</td>
+                        <td style="text-align:right;color:#c62828">${r.denied_count}</td>
+                        <td>${r.max_hit_level !== null && r.max_hit_level !== undefined ? secBadge(r.max_hit_level) : '—'}</td>
+                        <td>${r.leak_blocked ? '✅ 已拦' : ''}</td>
+                    </tr>`;
+                }
+                body.innerHTML = html;
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="9" class="empty-hint" style="color:#c62828">查询失败: ${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        // ── Tab 4：模式管理 ─────────────────────────────────────
+        let currentMode = '';
+
+        async function loadMode() {
+            try {
+                const data = await apiFetch('/api/sec/mode');
+                currentMode = data.mode;
+                renderMode(data);
+            } catch (e) {
+                document.getElementById('modeNowBig').textContent = '加载失败';
+                document.getElementById('modeMeta').textContent = e.message;
+            }
+        }
+
+        function renderMode(data) {
+            const big = document.getElementById('modeNowBig');
+            big.textContent = MODE_LABELS[data.mode] || data.mode;
+            big.className = 'mode-now mode-' + data.mode;
+            const over = data.runtime_override_by
+                ? `运行时覆盖（由 ${data.runtime_override_by} 切换）` : '未设置运行时覆盖';
+            document.getElementById('modeMeta').innerHTML =
+                `环境变量缺省：<b>${esc(data.env_default)}</b><br>${esc(over)}`;
+            ['shadow', 'enforce', 'off'].forEach(m => {
+                const card = document.getElementById('modeCard-' + m);
+                card.classList.toggle('current', m === data.mode);
+                card.querySelector('.cur-mark').textContent = m === data.mode ? '·当前' : '';
+            });
+        }
+
+        const MODE_TIPS = {
+            shadow: '切换到 shadow：不实际过滤，仅记录本应拦截的内容。用于观察评估。',
+            enforce: '⚠ 切换到 enforce 后立即生效：无权限用户检索将直接过滤掉保密内容，输出侧启用 L3 兜底拦截。请确认已完成存量回填与精标，避免未标注内容（按机密处理）大面积不可见。',
+            off: '⚠ 切换到 off 将完全关闭密级过滤（回退改造前行为）。仅用于紧急回滚，请填写原因。',
+        };
+
+        function openModeModal(mode) {
+            if (mode === currentMode) { showToast('当前已是该模式'); return; }
+            document.getElementById('modeModalTitle').textContent = `切换到 ${MODE_LABELS[mode] || mode}`;
+            document.getElementById('modeModalTip').textContent = MODE_TIPS[mode] || '';
+            document.getElementById('modeModalReason').value = '';
+            document.getElementById('modeModalMask').classList.add('show');
+            window._pendingMode = mode;
+        }
+        function closeModeModal() { document.getElementById('modeModalMask').classList.remove('show'); }
+
+        async function submitModeSwitch() {
+            const mode = window._pendingMode;
+            if (!mode) return;
+            const reason = document.getElementById('modeModalReason').value.trim();
+            if ((mode === 'enforce' || mode === 'off') && !reason) {
+                showToast('切换到 enforce/off 必须填写原因（审计留痕）', 4000);
+                return;
+            }
+            const btn = document.getElementById('modeModalSubmit');
+            btn.disabled = true;
+            try {
+                const data = await apiFetch('/api/sec/mode', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode, reason }),
+                });
+                showToast(`✓ 模式已切换：${data.previous} → ${data.mode}`);
+                closeModeModal();
+                await loadMode();
+                await refreshModeChip();
+            } catch (e) {
+                showToast(`切换失败: ${e.message}`, 5000);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ── 顶栏模式徽章 ──
+        async function refreshModeChip() {
+            try {
+                const data = await apiFetch('/api/sec/mode');
+                const chip = document.getElementById('modeChip');
+                const color = { shadow: '#e65100', enforce: '#c62828', off: '#666' }[data.mode] || '#999';
+                chip.innerHTML = `当前过滤模式：<b style="color:${color}">${MODE_LABELS[data.mode] || data.mode}</b>`;
+            } catch (e) { /* 顶栏徽章失败不阻断 */ }
+        }
+
+        // ── Init ──
+        if (IS_ADMIN) {
+            loadLedger();
+            refreshModeChip();
+        }
+    </script>
+</body>
+</html>

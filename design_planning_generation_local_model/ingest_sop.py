@@ -18,6 +18,16 @@ def main():
     print("作业指导书知识库摄入工具")
     print("=" * 60)
 
+    # [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+    sec_level = 3
+    if "--sec-level" in sys.argv:
+        try:
+            sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+        except (IndexError, ValueError):
+            print("用法: python ingest_sop.py [--sec-level 0-3]")
+            return
+    print(f"\n[SEC] 本批次摄入密级: {sec_level}（0公开/1内部/2秘密/3机密）")
+
     # 作业指导书目录
     sop_dirs = [
         project_root / "develop_documents" / "作业指导书",
@@ -53,7 +63,8 @@ def main():
         result = ingest_files(
             file_paths=files,
             collection_name="all",
-            force_doc_type="sop"
+            force_doc_type="sop",
+            sec_level=sec_level
         )
 
         print(f"\n摄入结果:")

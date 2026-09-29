@@ -23,6 +23,16 @@ def main():
     print("医械标准库 增量摄入工具")
     print("=" * 60)
 
+    # [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+    sec_level = 3
+    if "--sec-level" in sys.argv:
+        try:
+            sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+        except (IndexError, ValueError):
+            print("用法: python ingest_std_incremental.py [--sec-level 0-3]")
+            return
+    print(f"\n[SEC] 本批次摄入密级: {sec_level}（0公开/1内部/2秘密/3机密）")
+
     std_dir = project_root / "医械标准库"
     if not std_dir.exists():
         print(f"目录不存在: {std_dir}")
@@ -85,7 +95,8 @@ def main():
             chunks_added = ingest_document(
                 file_path=file_path,
                 vector_store=vs,
-                force_doc_type="standard"
+                force_doc_type="standard",
+                sec_level=sec_level
             )
             if chunks_added > 0:
                 total_docs += 1

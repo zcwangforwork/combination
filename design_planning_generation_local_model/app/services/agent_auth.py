@@ -124,8 +124,12 @@ def verify_token(authorization: Optional[str]) -> str:
 
 
 def verify_token_identity(authorization: Optional[str]) -> tuple:
-    """校验凭证并返回 (username, is_admin)（role claim == 'ADMIN' 判定管理员）。
+    """校验凭证并返回 (username, is_admin, sec_level)。
 
+    - role claim == 'ADMIN' 判定管理员（管理身份 ≠ 高密级查看权，§8.3）
+    - sec_level 为用户保密密级（0-3），解析顺序（§5.1 fail-closed）：
+      JWT claim sec_level →（缺/非法）查 PG t_user.sec_level（带 TTL 缓存）
+      →（再缺）按 0(public)
     知识库作用域等需要角色信息的调用方使用；仅认证场景用 verify_token。
     """
     if not authorization or not authorization.startswith("Bearer "):
@@ -140,7 +144,10 @@ def verify_token_identity(authorization: Optional[str]) -> tuple:
     username = payload.get("sub")
     if not username:
         raise HTTPException(status_code=401, detail="登录凭证缺少用户标识，请重新登录")
-    return username, payload.get("role") == "ADMIN"
+    # 密级解析（兼容期旧 token 无 claim → 查库回退 → 0）
+    from app.services.rag import sec_filter
+    sec_level = sec_filter.resolve_identity_sec_level(username, payload.get("sec_level"))
+    return username, payload.get("role") == "ADMIN", sec_level
 
 
 async def require_user(request: Request) -> str:

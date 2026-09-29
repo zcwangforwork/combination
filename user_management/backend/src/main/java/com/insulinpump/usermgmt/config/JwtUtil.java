@@ -21,7 +21,7 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(String username, Long userId, String roleCode) {
+    public String generateToken(String username, Long userId, String roleCode, Integer secLevel) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
@@ -29,6 +29,9 @@ public class JwtUtil {
                 .subject(username)
                 .claim("userId", userId)
                 .claim("role", roleCode)
+                // [SEC 2026-09-28] 保密密级 claim：Python 侧 verify_token_identity
+                // 解析后用于 RAG 密级过滤（方案 §5.1 快路径）
+                .claim("sec_level", secLevel)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
@@ -45,6 +48,11 @@ public class JwtUtil {
 
     public String getRoleFromToken(String token) {
         return parseClaims(token).get("role", String.class);
+    }
+
+    /** [SEC 2026-09-28] 从 token 取保密密级；旧 token 无此 claim 时返回 null */
+    public Integer getSecLevelFromToken(String token) {
+        return parseClaims(token).get("sec_level", Integer.class);
     }
 
     public boolean validateToken(String token) {

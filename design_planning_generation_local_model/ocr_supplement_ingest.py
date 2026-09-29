@@ -32,6 +32,19 @@ from app.services.rag.ingest import (
     MAX_CHUNKS_PER_DOC,
 )
 from app.services.rag.embedder import Embedder
+from app.services.rag.sec_filter import stamp_sec_meta
+
+# [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+# 本脚本直连 chromadb（不经 VectorStore.add_chunks），密级 metadata 经
+# sec_filter.stamp_sec_meta 收口打标，保持全项目唯一打标出口（§4.2）。
+_sec_level = 3
+if "--sec-level" in sys.argv:
+    try:
+        _sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+    except (IndexError, ValueError):
+        print("用法: python ocr_supplement_ingest.py [--sec-level 0-3]")
+        sys.exit(1)
+print(f"[SEC] 本批次摄入密级: {_sec_level}（0公开/1内部/2秘密/3机密）")
 
 # 配置
 KB_SOURCE_DIR = project_root / "贴敷式胰岛素泵知识库"
@@ -214,14 +227,15 @@ def main():
             ids.append(chunk_id)
             docs.append(chunk["text"])
             texts_for_embed.append(chunk["text"])
-            metas.append({
+            # [SEC 2026-09-28] 密级五字段收口打标
+            metas.append(stamp_sec_meta({
                 "doc_type": doc_type,
                 "source_file": source_file,
                 "source_subdir": os.path.dirname(rel_path),
                 "section_title": chunk.get("section_title", ""),
                 "chunk_index": i,
                 "ocr": True,  # 标记为 OCR 提取
-            })
+            }, sec_level=_sec_level))
 
         # 生成 embeddings
         print(f"  生成 {len(texts_for_embed)} 个 embedding...")

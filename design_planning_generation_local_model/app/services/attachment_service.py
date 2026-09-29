@@ -19,7 +19,7 @@ from app.services.rag.ingest import extract_text_from_file, chunk_text, ingest_d
 extract_tasks: Dict[str, dict] = {}
 
 
-def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str, kb_dir: str = None):
+def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str, kb_dir: str = None, sec_level=None):
     """后台线程：执行文本提取和可选入库"""
     try:
         extract_tasks[task_id]["status"] = "extracting"
@@ -94,6 +94,7 @@ def _do_extract(task_id: str, file_path: str, persist: bool, doc_type: str, kb_d
                     pre_parsed_paragraphs=paragraphs,
                     file_id=task_id,
                     original_filename=extract_tasks[task_id].get("filename", ""),
+                    sec_level=sec_level,
                 )
                 extract_tasks[task_id]["persisted"] = True
                 extract_tasks[task_id]["chunk_count"] = chunk_count
@@ -211,7 +212,8 @@ def submit_extract_task(
     filename: str,
     persist: bool = False,
     doc_type: str = "unknown",
-    kb_dir: str = None
+    kb_dir: str = None,
+    sec_level=None
 ) -> str:
     """
     提交附件提取任务
@@ -222,6 +224,8 @@ def submit_extract_task(
         persist: 是否写入向量库
         doc_type: 文档类型标签
         kb_dir: 知识库目标目录（用户隔离：个人库目录；缺省共享库）
+        sec_level: [SEC 2026-09-28] 显式密级（0-3，上传表单指定）；
+            缺省由 add_chunks 按上传者上下文密级判定（§4.1）
 
     Returns:
         task_id
@@ -290,7 +294,7 @@ def submit_extract_task(
     # 启动后台提取线程
     thread = threading.Thread(
         target=_do_extract,
-        args=(task_id, temp_path, persist, doc_type, kb_dir),
+        args=(task_id, temp_path, persist, doc_type, kb_dir, sec_level),
         daemon=True
     )
     thread.start()

@@ -61,4 +61,18 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok(ApiResponse.success("删除成功", null));
     }
+
+    /**
+     * [SEC 2026-09-28] 单独变更用户保密密级（升密/降密），方案 §5.4 / §12 R2。
+     * 变更前后值与原因经 @Auditable 切面写入审计日志。
+     */
+    @PutMapping("/{id}/sec-level")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<User>> updateSecLevel(
+            @PathVariable Long id,
+            @Valid @RequestBody SecLevelChangeRequest request) {
+        User user = employeeService.updateSecLevel(id, request.getNewLevel(), request.getReason());
+        user.setPassword(null);
+        return ResponseEntity.ok(ApiResponse.success("密级变更成功", user));
+    }
 }

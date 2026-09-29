@@ -118,3 +118,45 @@ cd .. && python tools/migrate_project_owners.py admin
    同一浏览器刷新/重登后自动恢复最后一次的项目（跨浏览器/隐身模式不共享）。
 7. 强依赖本地 Ollama(:11435) + PostgreSQL + ChromaDB 就绪；模板/知识库页（`/kb`、
    `/agent/review/`）以新标签页打开原版页面，未做 Vue 移植（评审决策，功能完整可用）。
+
+## 保密数据权限受控 RAG（2026-09-28）
+
+依据《combination 保密数据权限受控 RAG 详细技术方案》完成的后端改造：**保密等级较高的资料
+可入索引库参与检索，但无查看权限的员工在问答中获取不到其内容**。三层防线（纵深防御）：
+
+| 层 | 机制 | 位置 |
+|----|------|------|
+| L1 | 检索前置过滤：`chunk.sec_level ≤ user.sec_level`（Chroma `$lte` where，超额召回×3 封顶 50 + BM25 候选逐条复核） | `app/services/rag/sec_filter.py`（唯一收口）→ `vector_store.py` / `agent_tools.py` / `routes.py` 全部检索出口注入 |
+| L3 | 输出兜底检测：回答 vs denied 集合的确定性 8-gram 词级重叠（阈值 0.15，白名单豁免法规原文），kb_chat 整答拦截、agent 流末补发 `sec_blocked` 事件 | `app/services/sec_leak.py` |
+| 审计 | SQLite 三表（retrieval_audit / sec_denied_detail / sec_admin_audit），守护线程异步落盘，失败降级 JSONL，保留≥1 年 | `app/services/sec_audit.py` |
+
+**密级模型**：0 公开 / 1 内部 / 2 秘密 / 3 机密。fail-closed：无用户上下文→0；密级非法→0 并告警；
+chunk 未标注→按 3 对所有人不可见（倒逼回填）。ADMIN 角色不等于高密级查看权。
+
+**用户密级来源**（§5.1）：Spring 登录 JWT `sec_level` claim（快路径）→ PG `t_user.sec_level`
+回退（TTL 300s 缓存）→ 0。管理端 `PUT /api/employees/{id}/sec-level` 单独变更（带审计快照）。
+
+**灰度模式**（`SEC_FILTER_MODE`，env 缺省 + 运行时覆盖仅经管理端）：
+- `off`——上线前行为，紧急回滚通道
+- `shadow`——**默认**。不过滤，但 denied/max_hit_level 照常计算入审计（评估误伤面）
+- `enforce`——where 注入 + L3 拦截生效
+
+| 关键模块 | 说明 |
+|------|------|
+| `app/services/rag/sec_filter.py` | 唯一收口：where 构造（`build_sec_where`/`combine_where`）、密级解析、denied 登记簿、入库打标（`stamp_sec_meta`）、防投毒 |
+| `app/services/sec_admin.py` | 密级台账 / 单文件与批量变更（方差校验+重试）/ 存量回填（幂等、断点续传） |
+| `tools/backfill_sec_level.py` | 存量回填 CLI：`python tools/backfill_sec_level.py --acl-version v1 --level 3 [--dry-run]` |
+| `app/services/sec_leak.py`、`app/services/sec_audit.py` | L3 检测与审计落盘（配置项见 `.env.example` SEC_* 段） |
+| `tests/test_sec_filter.py` 等 4 个 | fail-closed 矩阵 / L3 检测 / 台账变更回填 / **旁路静态守卫**（AST 扫描全部 `.query(` 必须携带密级 where，防未来新出口漏带） |
+| `user_management/backend` | `User.secLevel` 列（ddl-auto 自动迁移）、JWT claim、`PUT /api/employees/{id}/sec-level` |
+
+**管理前端**（2026-09-29）：保密管理页 `GET /sec-admin`（`app/static/sec-admin.html`，仅 ADMIN——
+知识库页右上「🔐 保密管理」进入），四标签页：密级台账（筛选/搜索/单个与批量修改密级）、高频拦截
+TopN、检索审计流水（用户/时间段/命中密级/泄漏拦截过滤）、过滤模式切换（切 enforce/off 强制填写原因，
+全程审计留痕）。知识库页（`kb.html`）上传增加密级下拉（缺省继承上传者密级，普通用户不可标注高于
+本人密级）、文件列表显示密级徽章（不一致/未标注高亮）。员工管理端（`user_management/frontend`）增加
+密级列与「调整密级」弹窗（必填原因，调 `PUT /api/employees/{id}/sec-level`）。
+
+**上线顺序**（§7）：shadow 观察审计（误伤面评估）→ 跑回填脚本补齐存量密级 → 批量精标降级 →
+切 enforce（可在保密管理页切换，运行时生效免重启）。存量未回填 chunk 在 enforce 下对所有人不可见
+（fail-closed），先回填再切换。

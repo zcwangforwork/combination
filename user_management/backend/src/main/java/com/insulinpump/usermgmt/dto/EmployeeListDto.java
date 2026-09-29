@@ -13,10 +13,13 @@ public class EmployeeListDto {
     private String departmentName;
     private Boolean enabled;
     private String createTime;
+    /** [SEC 2026-09-28] 保密密级 0-3 */
+    private Integer secLevel;
 
     public EmployeeListDto(Long id, String username, String realName, String employeeNo,
                            String email, String phone, String roleName, String roleCode,
-                           String departmentName, Boolean enabled, String createTime) {
+                           String departmentName, Boolean enabled, String createTime,
+                           Integer secLevel) {
         this.id = id;
         this.username = username;
         this.realName = realName;
@@ -28,6 +31,7 @@ public class EmployeeListDto {
         this.departmentName = departmentName;
         this.enabled = enabled;
         this.createTime = createTime;
+        this.secLevel = secLevel;
     }
 
     public Long getId() { return id; }
@@ -41,4 +45,5 @@ public class EmployeeListDto {
     public String getDepartmentName() { return departmentName; }
     public Boolean getEnabled() { return enabled; }
     public String getCreateTime() { return createTime; }
+    public Integer getSecLevel() { return secLevel; }
 }

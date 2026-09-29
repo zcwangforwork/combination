@@ -38,14 +38,19 @@ def build_rag_prompt(
     for chunk in retrieved_chunks:
         source = chunk.get("source_file", "未知来源")
         section = chunk.get("section_title", "")
+        sec_label = chunk.get("sec_label", "")
         text = chunk.get("text", "").strip()[:MAX_CHUNK_LENGTH]
 
         if not text:
             continue
 
+        # [SEC 2026-09-28 L2 引用可见性（§6）]：引用头携带密级标签，
+        # 供模型区分受限内容并约束复述方式（辅助防线，主防线为 L1 前置过滤）
         header = f"[来源：{source}"
         if section:
             header += f" | 章节：{section}"
+        if sec_label:
+            header += f" | 密级：{sec_label}"
         header += "]"
 
         block = f"{header}\n{text}"
@@ -85,6 +90,7 @@ def build_rag_prompt(
 8. 专业术语使用：要使用专业、规范的医疗器械行业术语
 9. 可操作性：生成的文档要像正式发布的文件一样，具有可操作性和可执行性
 10. 格式规范性：参照参考范文的格式，包括标题层级、表格样式、段落组织等
+11. 【保密要求】参考范文中标注"密级：秘密/机密"的内容仅供本次内部参考：请以改写概述方式吸收其要点，不要逐字照抄其中大段原文；生成结果中也不要出现"密级"字样或任何保密标识
 
 请生成与参考范文同等详细程度的文档内容，确保质量达到注册申报或正式使用的水平，并且全部使用中文表达。
 """
