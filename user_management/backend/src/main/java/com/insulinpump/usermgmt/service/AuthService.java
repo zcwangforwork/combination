@@ -46,7 +46,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId(),
-                user.getRole().getCode());
+                user.getRole().getCode(), user.getSecLevel());
 
         return new LoginResponse(
                 token, user.getId(), user.getUsername(), user.getRealName(),
@@ -86,10 +86,13 @@ public class AuthService {
         user.setRole(role);
         user.setDepartment(department);
         user.setEnabled(dto.getEnabled() != null ? dto.getEnabled() : true);
+        // [SEC 2026-09-28] 注册缺省密级 0（公开，fail-closed），DTO 显式指定时校验范围
+        user.setSecLevel(dto.getSecLevel() != null ? dto.getSecLevel() : 0);
 
         user = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getId(), role.getCode());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getId(), role.getCode(),
+                user.getSecLevel());
         return new LoginResponse(token, user.getId(), user.getUsername(), user.getRealName(),
                 user.getEmployeeNo(), role.getName(), role.getCode(), role.getPermissions());
     }

@@ -680,6 +680,8 @@ def ingest_document(
     pre_parsed_paragraphs: Optional[List[Tuple[str, str]]] = None,
     file_id: Optional[str] = None,
     original_filename: Optional[str] = None,
+    sec_level=None,
+    acl_version: str = None,
 ) -> int:
     """
     摄入单个文档到向量库
@@ -692,6 +694,9 @@ def ingest_document(
             避免对同一文件重复解析（尤其是 MinerU 等耗时解析器）
         file_id: 文件唯一标识（用于追溯和删除）
         original_filename: 用户上传的原始文件名（用于展示）
+        sec_level: [SEC 2026-09-28] 显式密级（0-3）；缺省由 add_chunks 按
+            上传者上下文密级 / 脚本缺省 SEC_DEFAULT_LEVEL 判定（§4.1）
+        acl_version: [SEC 2026-09-28] ACL 版本号（批量回填/整批重标时标识批次）
 
     Returns:
         成功摄入的 chunk 数量
@@ -734,8 +739,8 @@ def ingest_document(
         if original_filename:
             chunks[i]["original_filename"] = original_filename
 
-    # 批量添加到向量库
-    vector_store.add_chunks(chunks)
+    # 批量添加到向量库（[SEC] 密级五字段由 add_chunks 收口打标）
+    vector_store.add_chunks(chunks, sec_level=sec_level, acl_version=acl_version)
 
     print(f"  [OK] {source_file}: {len(chunks)} chunks (doc_type: {doc_type})")
     return len(chunks)
@@ -744,7 +749,9 @@ def ingest_document(
 def ingest_files(
     file_paths: List[str],
     collection_name: str = "all",
-    force_doc_type: Optional[str] = None
+    force_doc_type: Optional[str] = None,
+    sec_level=None,
+    acl_version: str = None
 ) -> dict:
     """
     摄入指定文件列表到向量库
@@ -753,6 +760,8 @@ def ingest_files(
         file_paths: 文件路径列表
         collection_name: collection 名称
         force_doc_type: 强制指定文档类型
+        sec_level: [SEC 2026-09-28] 批次密级（脚本入库用；缺省 3=机密，倒逼精标）
+        acl_version: [SEC 2026-09-28] ACL 版本号（批量回填/整批重标时标识批次）
 
     Returns:
         统计信息字典
@@ -763,7 +772,8 @@ def ingest_files(
     total_docs = 0
 
     for file_path in sorted(file_paths):
-        count = ingest_document(file_path, vector_store, force_doc_type)
+        count = ingest_document(file_path, vector_store, force_doc_type,
+                                sec_level=sec_level, acl_version=acl_version)
         if count > 0:
             total_chunks += count
             total_docs += 1
@@ -782,7 +792,9 @@ def ingest_files(
 def ingest_all(
     source_dir: str,
     collection_name: str = "all",
-    rebuild: bool = False
+    rebuild: bool = False,
+    sec_level=None,
+    acl_version: str = None
 ) -> dict:
     """
     摄入目录下所有文档到向量库
@@ -791,6 +803,8 @@ def ingest_all(
         source_dir: 参考文档目录路径
         collection_name: collection 名称
         rebuild: 是否先清空现有数据
+        sec_level: [SEC 2026-09-28] 批次密级（脚本入库用；缺省 3=机密，倒逼精标）
+        acl_version: [SEC 2026-09-28] ACL 版本号（批量回填/整批重标时标识批次）
 
     Returns:
         统计信息字典
@@ -809,7 +823,8 @@ def ingest_all(
     total_docs = 0
 
     for file_path in sorted(supported_files):
-        count = ingest_document(file_path, vector_store)
+        count = ingest_document(file_path, vector_store, sec_level=sec_level,
+                                acl_version=acl_version)
         if count > 0:
             total_chunks += count
             total_docs += 1
@@ -859,6 +874,18 @@ def main():
         "--doc-type",
         help="强制指定文档类型"
     )
+    parser.add_argument(
+        "--sec-level",
+        type=int,
+        default=3,
+        choices=[0, 1, 2, 3],
+        help="[SEC] 本批次摄入密级 0-3（缺省 3=机密，倒逼管理员精标）"
+    )
+    parser.add_argument(
+        "--acl-version",
+        default=None,
+        help="[SEC] ACL 版本号（批量回填/整批重标时标识批次）"
+    )
 
     args = parser.parse_args()
 
@@ -881,24 +908,30 @@ def main():
         print(f"Collection: {args.collection}")
         if args.doc_type:
             print(f"强制文档类型: {args.doc_type}")
+        print(f"[SEC] 摄入密级: {args.sec_level}，ACL 版本: {args.acl_version or '(live)'}")
         print()
 
         result = ingest_files(
             file_paths=args.files,
             collection_name=args.collection,
-            force_doc_type=args.doc_type
+            force_doc_type=args.doc_type,
+            sec_level=args.sec_level,
+            acl_version=args.acl_version
         )
     else:
         # 摄入整个目录
         print(f"参考文档目录: {args.source}")
         print(f"Collection: {args.collection}")
         print(f"重建模式: {args.rebuild}")
+        print(f"[SEC] 摄入密级: {args.sec_level}，ACL 版本: {args.acl_version or '(live)'}")
         print()
 
         result = ingest_all(
             source_dir=args.source,
             collection_name=args.collection,
-            rebuild=args.rebuild
+            rebuild=args.rebuild,
+            sec_level=args.sec_level,
+            acl_version=args.acl_version
         )
 
     print()

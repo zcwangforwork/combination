@@ -182,22 +182,32 @@ class VectorStore:
             embeddings=[embedding]
         )
 
-    def add_chunks(self, chunks: list[dict]):
+    def add_chunks(self, chunks: list[dict], sec_level=None, acl_version: str = None):
         """
         批量添加文档块
 
+        [SEC] 2026-09-28 统一打标收口（§4.1/§4.2）：入库 chunk 的密级五字段
+        一律经 sec_filter.stamp_sec_meta 注入，调用方不得自行拼密级 metadata。
+        sec_level 缺省时按 resolve_ingest_sec_level 判定（显式 > 上传者密级
+        > 脚本缺省 SEC_DEFAULT_LEVEL=3）。
+
         Args:
             chunks: 块列表，每项包含 chunk_id, text, doc_type, source_file 等
+            sec_level: 显式密级（0-3，管理端/上传表单指定）
+            acl_version: 批次版本标记（回填/变更脚本传入）
         """
         if not chunks:
             return
+
+        from app.services.rag import sec_filter
 
         ids = [c["chunk_id"] for c in chunks]
         texts = [c["text"] for c in chunks]
         # 记录入库时间戳，供知识库文件列表按"最新上传优先"排序
         ingested_at = time.time()
-        metadatas = [
-            {
+        metadatas = []
+        for c in chunks:
+            meta = {
                 "doc_type": c.get("doc_type", ""),
                 "source_file": c.get("source_file", ""),
                 "section_title": c.get("section_title", ""),
@@ -206,8 +216,9 @@ class VectorStore:
                 "original_filename": c.get("original_filename", ""),
                 "ingested_at": ingested_at,
             }
-            for c in chunks
-        ]
+            meta = sec_filter.stamp_sec_meta(
+                meta, sec_level=sec_level, acl_version=acl_version)
+            metadatas.append(meta)
 
         # 使用我们的嵌入器批量生成向量
         embeddings = self.embedder.encode(texts)
@@ -229,6 +240,10 @@ class VectorStore:
         """
         语义检索 - 从多个 collection 检索并合并结果
 
+        [SEC] 2026-09-28 密级前置过滤（方案 §5.3）：enforce 模式下 coll.query
+        携带 sec_filter 构造的密级 where；shadow 模式不注入 where、仅逐条
+        复核标记 denied（不剔除）；off 回退上线前行为。超额召回 ×SEC_OVERFETCH。
+
         Args:
             query: 查询文本（产品信息）
             doc_type: 文档类型过滤（可选）
@@ -238,8 +253,15 @@ class VectorStore:
         Returns:
             检索结果列表，每项包含 text, source_file, section_title, distance
         """
+        from app.services.rag import sec_filter
         query_embedding = self.embedder.encode_single(query)
         all_results = []
+
+        # [SEC] 密级过滤上下文（唯一出口 sec_filter，收口原则 §5.2）
+        sec_where = sec_filter.effective_query_where()
+        sec_mode = sec_filter.get_mode()
+        user_sec = sec_filter.current_user_sec_level()
+        n_fetch = sec_filter.overfetch_n(top_k)
 
         # 构建所有 (client, collection_name) 查询对
         query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
@@ -253,10 +275,20 @@ class VectorStore:
                 coll = client.get_collection(name=coll_name)
                 results = coll.query(
                     query_embeddings=[query_embedding],
-                    n_results=top_k,
+                    n_results=n_fetch,
+                    where=sec_where,
                     include=["documents", "metadatas", "distances"]
                 )
                 if results["ids"]:
+                    # [SEC] shadow：无 where 查询 → 逐条密级复核标记 denied（不剔除）
+                    if sec_mode == "shadow":
+                        self._sec_mark_denied(
+                            results["documents"][0], results["metadatas"][0],
+                            coll_name, user_sec)
+                    # [SEC] enforce：另跑同规模无 where 探针，仅为 denied 统计与 L3 样本
+                    elif sec_mode == "enforce":
+                        self._sec_probe_denied(
+                            coll, query_embedding, n_fetch, coll_name, user_sec)
                     for i in range(len(results["ids"][0])):
                         distance = results["distances"][0][i]
                         similarity = max(0.0, 1.0 - distance / 2.0)
@@ -273,7 +305,9 @@ class VectorStore:
                             "doc_type": meta.get("doc_type", ""),
                             "chunk_index": meta.get("chunk_index", 0),
                             "similarity": similarity,
-                            "distance": distance
+                            "distance": distance,
+                            "sec_level": sec_filter.chunk_sec_level(meta),
+                            "sec_label": meta.get("sec_label", ""),
                         })
             except Exception as e:
                 print(f"    [VectorStore] 查询 collection '{coll_name}' 失败: {e}")
@@ -281,7 +315,26 @@ class VectorStore:
 
         # 按相似度排序并返回 top_k
         all_results.sort(key=lambda x: x["similarity"], reverse=True)
-        return all_results[:top_k]
+        final = all_results[:top_k]
+        # [SEC] 检索审计（异步落盘，不阻塞主链路；off 模式不审计）
+        if sec_mode != "off":
+            sec_filter.audit_retrieval(
+                query=query, scope_summary=f"retrieve:{len(query_targets)}colls",
+                results=final)
+        return final
+
+    def _sec_mark_denied(self, documents: list, metadatas: list,
+                         coll_name: str, user_sec: int) -> None:
+        """shadow 模式：对无 where 查询结果逐条密级复核，标记 denied（不剔除）"""
+        from app.services.rag import sec_filter
+        sec_filter.mark_denied_batch(documents, metadatas, coll_name, user_sec)
+
+    def _sec_probe_denied(self, coll, query_embedding, n_fetch: int,
+                          coll_name: str, user_sec: int) -> None:
+        """enforce 模式探针：同规模无 where 查询，仅为获取 denied 统计与
+        L3 兜底样本（§5.5）；不影响主结果集（主查询已由 where 前置过滤）。"""
+        from app.services.rag import sec_filter
+        sec_filter.probe_denied(coll, query_embedding, n_fetch, coll_name, user_sec)
 
     def retrieve_hybrid(
         self,
@@ -314,6 +367,14 @@ class VectorStore:
         query_embedding = self.embedder.encode_single(query)
         print(f"    [VectorStore] embedding done ({time.time() - t_embed_start:.1f}s)")
 
+        # [SEC] 密级过滤上下文（§5.2 收口；off 模式完全回退上线前行为）
+        from app.services.rag import sec_filter
+        sec_where = sec_filter.effective_query_where()
+        sec_mode = sec_filter.get_mode()
+        user_sec = sec_filter.current_user_sec_level()
+        n_fetch = top_k * 2 if sec_mode == "off" else max(
+            top_k * 2, sec_filter.overfetch_n(top_k))
+
         # 构建所有 (client, collection_name) 查询对
         query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
         for db_path, coll_names in self._effective_extra().items():
@@ -328,10 +389,19 @@ class VectorStore:
                 coll = client.get_collection(name=coll_name)
                 vector_results = coll.query(
                     query_embeddings=[query_embedding],
-                    n_results=top_k * 2,
+                    n_results=n_fetch,
+                    where=sec_where,
                     include=["documents", "metadatas", "distances"]
                 )
                 if vector_results["ids"]:
+                    # [SEC] shadow：无 where → 逐条复核标记 denied；enforce：探针取 denied 样本
+                    if sec_mode == "shadow":
+                        self._sec_mark_denied(
+                            vector_results["documents"][0],
+                            vector_results["metadatas"][0], coll_name, user_sec)
+                    elif sec_mode == "enforce":
+                        self._sec_probe_denied(
+                            coll, query_embedding, n_fetch, coll_name, user_sec)
                     for i in range(len(vector_results["ids"][0])):
                         chunk_id = vector_results["ids"][0][i]
                         distance = vector_results["distances"][0][i]
@@ -357,13 +427,16 @@ class VectorStore:
                                     "similarity": similarity,
                                     "vector_score": similarity,
                                     "bm25_score": 0.0,
-                                    "source_collection": coll_name
+                                    "source_collection": coll_name,
+                                    "sec_level": sec_filter.chunk_sec_level(meta),
+                                    "sec_label": meta.get("sec_label", ""),
                                 }
             except Exception as e:
                 print(f"    [VectorStore] 混合检索 collection '{coll_name}' 失败: {e}")
                 continue
 
         # 如果 doc_type 过滤后无结果，忽略过滤重新检索
+        # [SEC] 红线：回退的只是 doc_type，密级 where 必须原样携带（§5 红线1）
         if not vector_dict and doc_type:
             print(f"    [RAG] doc_type='{doc_type}' 过滤无结果，忽略类型过滤")
             for client, coll_name in query_targets:
@@ -371,10 +444,15 @@ class VectorStore:
                     coll = client.get_collection(name=coll_name)
                     vector_results = coll.query(
                         query_embeddings=[query_embedding],
-                        n_results=top_k * 2,
+                        n_results=n_fetch,
+                        where=sec_where,
                         include=["documents", "metadatas", "distances"]
                     )
                     if vector_results["ids"]:
+                        if sec_mode == "shadow":
+                            self._sec_mark_denied(
+                                vector_results["documents"][0],
+                                vector_results["metadatas"][0], coll_name, user_sec)
                         for i in range(len(vector_results["ids"][0])):
                             chunk_id = vector_results["ids"][0][i]
                             distance = vector_results["distances"][0][i]
@@ -392,7 +470,9 @@ class VectorStore:
                                         "similarity": similarity,
                                         "vector_score": similarity,
                                         "bm25_score": 0.0,
-                                        "source_collection": coll_name
+                                        "source_collection": coll_name,
+                                        "sec_level": sec_filter.chunk_sec_level(meta),
+                                        "sec_label": meta.get("sec_label", ""),
                                     }
                 except Exception:
                     continue
@@ -401,20 +481,36 @@ class VectorStore:
         print(f"    [VectorStore] vector search done — {len(vector_dict)} results ({t_vector_done - t_embed_start:.1f}s from embed start)")
 
         # 2. BM25 关键词检索 - 仅对小 collection 执行（<5万条）
-        bm25_scores = {}
+        # [SEC] §5.4 缓存不变、候选复核：BM25 索引仍按全量语料构建（缓存复用），
+        # 对返回候选逐条密级复核——enforce 剔除并登记，shadow 仅登记不剔除。
+        bm25_hits = {}
         for client, coll_name in query_targets:
             try:
                 coll = client.get_collection(name=coll_name)
                 coll_count = coll.count()
                 if coll_count < 50000:
-                    scores = self._bm25_search_collection(client, coll_name, query, None, top_k * 2)
-                    for cid, score in scores.items():
-                        if cid not in bm25_scores or score > bm25_scores[cid]:
-                            bm25_scores[cid] = score
+                    hits = self._bm25_search_collection(client, coll_name, query, None, top_k * 2)
+                    for cid, hit in hits.items():
+                        prev = bm25_hits.get(cid)
+                        if prev is None or hit["score"] > prev["score"]:
+                            bm25_hits[cid] = hit
                 else:
                     print(f"    [VectorStore] 跳过 BM25 检索（{coll_name} 有 {coll_count} 条，超过 5 万阈值）")
             except Exception:
                 continue
+
+        # [SEC] BM25 候选密级复核（§5.4）
+        bm25_scores = {}
+        for cid, hit in bm25_hits.items():
+            if sec_mode == "off":
+                bm25_scores[cid] = hit["score"]
+                continue
+            if not sec_filter.candidate_visible(hit.get("meta"), user_sec):
+                sec_filter.note_denied(hit.get("doc", ""), hit.get("meta"),
+                                       hit.get("collection", ""))
+                if sec_mode == "enforce":
+                    continue  # 剔除：BM25 命中但密级不可见
+            bm25_scores[cid] = hit["score"]
 
         t_bm25_done = time.time()
         print(f"    [VectorStore] BM25 done — {len(bm25_scores)} results ({t_bm25_done - t_vector_done:.1f}s)")
@@ -438,24 +534,37 @@ class VectorStore:
                 continue
 
             chunk_info = vector_dict.get(chunk_id, {})
+            bm_hit = bm25_hits.get(chunk_id, {})
+            bm_meta = bm_hit.get("meta") or {}
             merged.append({
-                "text": chunk_info.get("text", ""),
-                "source_file": chunk_info.get("source_file", ""),
-                "section_title": chunk_info.get("section_title", ""),
-                "doc_type": chunk_info.get("doc_type", ""),
-                "chunk_index": chunk_info.get("chunk_index", 0),
+                # bm25-only 命中（向量段未召回）时从 BM25 载荷补全文与元数据
+                "text": chunk_info.get("text") or bm_hit.get("doc", ""),
+                "source_file": chunk_info.get("source_file") or bm_meta.get("source_file", ""),
+                "section_title": chunk_info.get("section_title") or bm_meta.get("section_title", ""),
+                "doc_type": chunk_info.get("doc_type") or bm_meta.get("doc_type", ""),
+                "chunk_index": chunk_info.get("chunk_index", bm_meta.get("chunk_index", 0)),
                 "similarity": combined_score,
                 "vector_score": vec_score,
                 "bm25_score": bm_score,
-                "source_collection": chunk_info.get("source_collection", "")
+                "source_collection": chunk_info.get("source_collection") or bm_hit.get("collection", ""),
+                "sec_level": chunk_info.get("sec_level")
+                if chunk_info.get("sec_level") is not None
+                else sec_filter.chunk_sec_level(bm_meta),
+                "sec_label": chunk_info.get("sec_label") or bm_meta.get("sec_label", ""),
             })
 
         # 按综合分数排序
         merged.sort(key=lambda x: x["similarity"], reverse=True)
 
-        print(f"    [VectorStore] retrieve_hybrid done — {len(merged[:top_k])} results, total {time.time() - t_start:.1f}s")
+        final = merged[:top_k]
+        print(f"    [VectorStore] retrieve_hybrid done — {len(final)} results, total {time.time() - t_start:.1f}s")
 
-        return merged[:top_k]
+        # [SEC] 检索审计（异步落盘；off 模式不审计）
+        if sec_mode != "off":
+            sec_filter.audit_retrieval(
+                query=query, scope_summary=f"hybrid:{len(query_targets)}colls",
+                results=final)
+        return final
 
     @classmethod
     def _get_or_build_bm25(cls, collection_name: str, docs: List[str]):
@@ -516,7 +625,7 @@ class VectorStore:
         BM25 关键词检索 - 从默认 collection 检索
 
         Returns:
-            {chunk_id: bm25_score, ...}
+            {chunk_id: {"score", "doc", "meta", "collection"}, ...}
         """
         full_name = f"{self.COLLECTION_NAME_PREFIX}{self.collection_name}"
         return self._bm25_search_collection(self.client, full_name, query, doc_type, top_k)
@@ -536,6 +645,8 @@ class VectorStore:
         1. str.split() → jieba.cut_for_search() 中文分词
         2. 增加 BM25 索引缓存，避免每次查询重新构建
         3. doc_type 过滤后若为空，直接返回空字典（避免无效分词）
+        4. [SEC 2026-09-28] 返回值携带 doc/meta/collection，供调用方做密级
+           候选复核（§5.4：缓存不变、候选复核）与 bm25-only 结果合并
 
         Args:
             client: ChromaDB 客户端
@@ -545,7 +656,8 @@ class VectorStore:
             top_k: 返回数量
 
         Returns:
-            {chunk_id: bm25_score, ...}
+            {chunk_id: {"score": bm25_score, "doc": text, "meta": meta,
+                        "collection": collection_name}, ...}
         """
         try:
             from rank_bm25 import BM25Okapi
@@ -563,11 +675,12 @@ class VectorStore:
                     return {}
 
                 # doc_type 过滤
-                ids, docs = [], []
+                ids, docs, metas = [], [], []
                 for i, meta in enumerate(result["metadatas"]):
                     if meta and meta.get("doc_type") == doc_type:
                         ids.append(result["ids"][i])
                         docs.append(result["documents"][i])
+                        metas.append(meta)
 
                 if not docs:
                     return {}
@@ -590,6 +703,7 @@ class VectorStore:
 
                 ids = result["ids"]
                 docs = result["documents"]
+                metas = result["metadatas"]
 
                 bm25, _tokenized_corpus = self._get_or_build_bm25(collection_name, docs)
 
@@ -610,7 +724,12 @@ class VectorStore:
             )[:top_k]
 
             return {
-                ids[i]: scores[i]
+                ids[i]: {
+                    "score": scores[i],
+                    "doc": docs[i],
+                    "meta": metas[i] or {},
+                    "collection": collection_name,
+                }
                 for i in top_indices
                 if scores[i] > 0
             }
@@ -783,6 +902,17 @@ class VectorStore:
                         "chunk_count": 0,
                     }
                 files[sf]["chunk_count"] += 1
+                # [SEC 2026-09-29] 聚合该文件各 chunk 的密级（fail-closed：缺失按 3）
+                lvl = meta.get("sec_level")
+                if not isinstance(lvl, int) or lvl < 0 or lvl > 3:
+                    lvl = 3
+                    files[sf]["_sec_missing"] = True
+                if lvl > files[sf].get("sec_level", -1):
+                    files[sf]["sec_level"] = lvl
+                if "sec_levels_seen" not in files[sf]:
+                    files[sf]["sec_levels_seen"] = {lvl}
+                else:
+                    files[sf]["sec_levels_seen"].add(lvl)
                 # 优先使用非空的 file_id 和 original_filename
                 if not files[sf]["file_id"] and meta.get("file_id"):
                     files[sf]["file_id"] = meta["file_id"]
@@ -792,6 +922,10 @@ class VectorStore:
                 ts = meta.get("ingested_at", 0) or 0
                 if ts > files[sf]["ingested_at"]:
                     files[sf]["ingested_at"] = ts
+            # mixed_sec：各 chunk 密级不一致或存在未标注 chunk（台账"立即修复"信号）
+            for f in files.values():
+                f["mixed_sec"] = bool(f.pop("_sec_missing", False)) \
+                    or len(f.pop("sec_levels_seen", set())) > 1
             # 按入库时间倒序：最新上传的文件排最前；旧文件（无时间戳=0）排最后
             return sorted(list(files.values()), key=lambda x: x["ingested_at"], reverse=True)
         except Exception as e:

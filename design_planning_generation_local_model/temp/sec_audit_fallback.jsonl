@@ -1,0 +1,15 @@
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:06:20", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:06:20", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:06:20", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:06:21", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:06:21", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:07:23", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:07:23", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:07:23", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:07:24", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-28T18:07:24", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-29T10:09:32", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-29T10:09:32", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-29T10:09:32", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-29T10:09:33", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:alice", "detail": "回退按 0(public)"}
+{"type": "admin", "error": "unable to open database file", "ts": "2026-09-29T10:09:33", "operator": "(system)", "action": "anomaly_warning", "target": "user_sec_level_missing:admin", "detail": "回退按 0(public)"}

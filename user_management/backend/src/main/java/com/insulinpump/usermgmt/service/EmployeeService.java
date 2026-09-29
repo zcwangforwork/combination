@@ -1,5 +1,7 @@
 package com.insulinpump.usermgmt.service;
 
+import com.insulinpump.usermgmt.audit.Auditable;
+import com.insulinpump.usermgmt.config.RequestContextFilter;
 import com.insulinpump.usermgmt.dto.EmployeeDto;
 import com.insulinpump.usermgmt.dto.EmployeeListDto;
 import com.insulinpump.usermgmt.model.Department;
@@ -101,6 +103,8 @@ public class EmployeeService {
         user.setRole(role);
         user.setDepartment(department);
         user.setEnabled(dto.getEnabled() != null ? dto.getEnabled() : true);
+        // [SEC 2026-09-28] 密级缺省 0（公开，fail-closed）
+        user.setSecLevel(dto.getSecLevel() != null ? dto.getSecLevel() : 0);
 
         return userRepository.save(user);
     }
@@ -117,6 +121,8 @@ public class EmployeeService {
         if (dto.getEmail() != null) user.setEmail(dto.getEmail());
         if (dto.getPhone() != null) user.setPhone(dto.getPhone());
         if (dto.getEnabled() != null) user.setEnabled(dto.getEnabled());
+        // [SEC 2026-09-28] 密级可随员工信息更新；单独变更走 updateSecLevel（带审计 before 快照）
+        if (dto.getSecLevel() != null) user.setSecLevel(dto.getSecLevel());
 
         if (dto.getRoleCode() != null) {
             Role role = roleRepository.findByCode(dto.getRoleCode())
@@ -142,6 +148,33 @@ public class EmployeeService {
         userRepository.delete(user);
     }
 
+    /**
+     * [SEC 2026-09-28] 用户保密密级变更（升密/降密），方案 §12 R2。
+     *
+     * 独立于通用 updateEmployee：变更前后值入审计日志（@Auditable +
+     * setAuditBefore 快照）。变更落库后：
+     *  - 新登录 token 立即携带新密级 claim；
+     *  - Python 侧无 claim 旧 token 走 PG 回退查询，其 TTL 缓存
+     *    （SEC_USER_CACHE_TTL，缺省 300s）内可能短暂取旧值，过期自动收敛。
+     */
+    @Auditable(action = "CHANGE_SEC_LEVEL", entityType = "USER")
+    public User updateSecLevel(Long id, Integer newLevel, String reason) {
+        if (newLevel == null || newLevel < 0 || newLevel > 3) {
+            throw new IllegalArgumentException("密级必须在 0-3 之间");
+        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("员工不存在"));
+        Integer oldLevel = user.getSecLevel();
+        if (newLevel.equals(oldLevel)) {
+            return user; // 幂等：无变化不落库不审计
+        }
+        RequestContextFilter.setAuditBefore(
+                "secLevel=" + oldLevel + " -> " + newLevel
+                        + (reason != null && !reason.isBlank() ? ", reason=" + reason : ""));
+        user.setSecLevel(newLevel);
+        return userRepository.save(user);
+    }
+
     private EmployeeListDto toListDto(User user) {
         return new EmployeeListDto(
                 user.getId(),
@@ -154,7 +187,8 @@ public class EmployeeService {
                 user.getRole() != null ? user.getRole().getCode() : null,
                 user.getDepartment() != null ? user.getDepartment().getName() : null,
                 user.getEnabled(),
-                user.getCreateTime() != null ? user.getCreateTime().format(DTF) : null
+                user.getCreateTime() != null ? user.getCreateTime().format(DTF) : null,
+                user.getSecLevel()
         );
     }
 }

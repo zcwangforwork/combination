@@ -14,6 +14,12 @@ Agent 请求的作用域经 ContextVar 传递：在 /messages 等 Agent 入口�
 asyncio.create_task / to_thread 均会复制上下文，故后台生成任务内创建的
 VectorStore 在查询时按当前用户解析检索目标，多用户并发互不串扰
 （替代 VectorStore.EXTRA_DB_CONFIG 类级全局，后者无法按请求区分）。
+
+2026-09-28 密级维度扩展（保密受控 RAG 方案 §5.1）：
+  上下文三元组 (username, is_admin, sec_level)。库作用域（本文件）与文档
+  密级（rag/sec_filter.py）构成二维权限矩阵——chunk 必须两维都可见才被检索。
+  ADMIN 管理身份 ≠ 高密级查看权：密级过滤对 ADMIN 检索同样生效（§8.3）。
+  sec_level 缺省 None → sec_filter 按 fail-closed 处理（等效 0/public）。
 """
 import contextvars
 import re
@@ -30,15 +36,19 @@ UPLOADS_COLLECTION = "qms_doc_uploads"
 SHARED_QUERY_COLLECTIONS = ["insulin_pump_kb", "qms_doc_uploads"]
 
 _kb_user: contextvars.ContextVar = contextvars.ContextVar(
-    "kb_user", default=None)  # (username, is_admin) | None
+    "kb_user", default=None)  # (username, is_admin, sec_level) | None
 
 
-def set_kb_user(username: str, is_admin: bool) -> None:
-    """在请求入口设置当前知识库用户上下文（随请求/后台任务传播）"""
-    _kb_user.set((username, bool(is_admin)))
+def set_kb_user(username: str, is_admin: bool, sec_level=None) -> None:
+    """在请求入口设置当前知识库用户上下文（随请求/后台任务传播）。
+
+    sec_level：用户密级（0-3，来自 JWT claim / 查库回退）；缺省 None 由
+    sec_filter 按 fail-closed 处理。旧调用点仅传两参时自动兼容。
+    """
+    _kb_user.set((username, bool(is_admin), sec_level))
 
 
-def get_kb_user() -> Optional[Tuple[str, bool]]:
+def get_kb_user() -> Optional[Tuple[str, bool, object]]:
     return _kb_user.get()
 
 
@@ -74,7 +84,7 @@ def query_targets() -> dict:
     ctx = _kb_user.get()
     if not ctx:
         return targets
-    username, is_admin = ctx
+    username, is_admin = ctx[0], ctx[1]
     if is_admin:
         for d in list_user_kb_dirs():
             targets[d] = [UPLOADS_COLLECTION]

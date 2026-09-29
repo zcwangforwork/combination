@@ -1635,6 +1635,41 @@ class _LeakFilter:
         return remainder if remainder else None
 
 
+def _sec_final_leak_check(answer_text: str) -> Optional[dict]:
+    """[SEC L3] 流式完成后的输出泄露检测（方案 §5.5，2026-09-28）。
+
+    流式场景无法撤回已输出的 token：检测命中时返回 sec_blocked 事件
+    （前端应以显著提示覆盖展示该回答），审计与 enforce 拦截标记由
+    sec_leak.check_and_report 负责留痕。检测对象 = 本次请求的 denied
+    登记簿（drain 后清空，避免跨请求串扰）。off 模式 / 无命中返回 None。
+    """
+    try:
+        from app.services.rag import sec_filter
+        from app.services import sec_leak
+    except Exception:  # noqa: BLE001 — sec 模块缺失时不阻塞对话主链路
+        return None
+    if sec_filter.get_mode() == "off":
+        return None
+    ctx_user = "(anonymous)"
+    try:
+        from app.services import kb_scope
+        ctx = kb_scope.get_kb_user()
+        if ctx:
+            ctx_user = ctx[0]
+    except Exception:  # noqa: BLE001
+        pass
+    leak = sec_leak.check_and_report(
+        answer_text or "", sec_filter.drain_denied(), ctx_user)
+    if not leak:
+        return None
+    return {
+        "type": "sec_blocked",
+        "message": sec_leak.BLOCK_MESSAGE,
+        "source_file": leak.get("source_file", ""),
+        "overlap": leak.get("overlap", 0.0),
+    }
+
+
 async def _interleaved_agent_stream(agent, agent_input, config, doc_queue):
     """并发交织产出 graph 事件与工具文档流 chunk。
 
@@ -1720,6 +1755,7 @@ async def stream_agent_events(
         )]}
 
     leak_filter = _LeakFilter()
+    sec_answer: list[str] = []  # [SEC L3] 累计已输出正文，流结束时做泄露检测
 
     doc_queue = asyncio.Queue()
     set_stream_sink(doc_queue)
@@ -1729,6 +1765,7 @@ async def stream_agent_events(
             kind, text = item[1]
             if kind == "chat_content":
                 for line in leak_filter.feed(text):
+                    sec_answer.append(line)
                     yield {"type": "token", "content": line}
             elif kind == "chat_reasoning":
                 yield {"type": "chat_reasoning", "content": text}
@@ -1935,10 +1972,15 @@ async def stream_agent_events(
             }
 
     for line in leak_filter.flush():
+        sec_answer.append(line)
         yield {
             "type": "token",
             "content": line,
         }
+    # [SEC L3] 流完成点输出泄露检测（token 已流出，仅能补发 sec_blocked 事件 + 留痕）
+    sec_event = _sec_final_leak_check("".join(sec_answer))
+    if sec_event:
+        yield sec_event
     yield {"type": "done"}
 
 
@@ -1970,6 +2012,7 @@ async def resume_agent(
         resume_value = Command(resume={"action": "approve"})
 
     leak_filter = _LeakFilter()
+    sec_answer: list[str] = []  # [SEC L3] 累计已输出正文，流结束时做泄露检测
 
     doc_queue = asyncio.Queue()
     set_stream_sink(doc_queue)
@@ -1979,6 +2022,7 @@ async def resume_agent(
             kind, text = item[1]
             if kind == "chat_content":
                 for line in leak_filter.feed(text):
+                    sec_answer.append(line)
                     yield {"type": "token", "content": line}
             elif kind == "chat_reasoning":
                 yield {"type": "chat_reasoning", "content": text}
@@ -2177,10 +2221,15 @@ async def resume_agent(
             }
 
     for line in leak_filter.flush():
+        sec_answer.append(line)
         yield {
             "type": "token",
             "content": line,
         }
+    # [SEC L3] 流完成点输出泄露检测（token 已流出，仅能补发 sec_blocked 事件 + 留痕）
+    sec_event = _sec_final_leak_check("".join(sec_answer))
+    if sec_event:
+        yield sec_event
     yield {"type": "done"}
 
 

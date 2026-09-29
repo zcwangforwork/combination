@@ -89,6 +89,17 @@ public class User {
     @Transient
     private Boolean departmentLeader = false;
 
+    /**
+     * [SEC 2026-09-28] 用户保密密级（0=公开 1=内部 2=秘密 3=机密，方案 §2.1）。
+     *
+     * RAG 检索过滤用：chunk.sec_level ≤ user.secLevel 才可见；
+     * 登录时写入 JWT sec_level claim（Python 侧 verify_token_identity 解析）。
+     * 缺省 0（公开）——fail-closed：新增用户默认只能看公开资料，
+     * 由 ADMIN 显式提级。ADMIN 角色是管理权，不等于高密级查看权。
+     */
+    @Column(nullable = false, columnDefinition = "integer not null default 0")
+    private Integer secLevel = 0;
+
     @Column(nullable = false)
     private Boolean enabled = true;
 
@@ -150,6 +161,9 @@ public class User {
 
     public Boolean getDepartmentLeader() { return departmentLeader; }
     public void setDepartmentLeader(Boolean departmentLeader) { this.departmentLeader = departmentLeader; }
+
+    public Integer getSecLevel() { return secLevel; }
+    public void setSecLevel(Integer secLevel) { this.secLevel = secLevel; }
 
     public Boolean getEnabled() { return enabled; }
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }

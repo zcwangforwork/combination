@@ -20,6 +20,16 @@ def main():
     print("重新构建医疗器械文档知识库")
     print("=" * 70)
 
+    # [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+    sec_level = 3
+    if "--sec-level" in sys.argv:
+        try:
+            sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+        except (IndexError, ValueError):
+            print("用法: python rebuild_knowledge_base.py [--sec-level 0-3]")
+            return
+    print(f"\n[SEC] 本批次摄入密级: {sec_level}（0公开/1内部/2秘密/3机密）")
+
     # 第一步：检查现有数据
     print("\n[1/4] 检查现有知识库...")
     vs = VectorStore(collection_name="all")
@@ -67,7 +77,8 @@ def main():
         result = ingest_all(
             source_dir=str(source_dir),
             collection_name="all",
-            rebuild=True
+            rebuild=True,
+            sec_level=sec_level
         )
 
         print("\n" + "=" * 70)

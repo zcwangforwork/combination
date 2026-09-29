@@ -130,6 +130,12 @@ async def kb_page():
     return FileResponse("app/static/kb.html")
 
 
+@app.get("/sec-admin")
+async def sec_admin_page():
+    """返回保密密级管理页面（2026-09-29 新增，仅 ADMIN；服务端 /api/sec/* 仍二次鉴权）"""
+    return FileResponse("app/static/sec-admin.html")
+
+
 @app.get("/api/health")
 async def health_check():
     """健康检查接口"""

@@ -423,18 +423,38 @@ async def upload_attachment(
 
 
 @router.post("/kb/upload", dependencies=[Depends(require_user)])
-async def kb_upload(request: Request, file: UploadFile = File(...)):
+async def kb_upload(request: Request, file: UploadFile = File(...),
+                    sec_level: str = Form("", description="密级 0-3（公开/内部/秘密/机密）；缺省按上传者密级")):
     """上传文件到**当前用户个人知识库**（用户隔离，2026-09-21 新增）。
 
     与 /api/upload 的区别：入库目标为 chroma_db_users/<username>/ 而非共享库；
     提取任务与状态轮询（extract-status）机制复用。
+
+    [SEC 2026-09-28] §4.1：可选 sec_level 表单字段；缺省=上传者密级（inherit）；
+    普通用户不得标注高于本人密级（防投毒，403）。
     """
     from app.services import kb_scope
-    username, _is_admin = verify_token_identity(request.headers.get("authorization"))
+    from app.services.rag import sec_filter
+    username, is_admin, user_sec = verify_token_identity(request.headers.get("authorization"))
     file_content = await file.read()
     is_valid, error_msg = validate_upload(file.filename, len(file_content))
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
+
+    # [SEC] 显式密级解析与防投毒校验；后台入库线程不复制 ContextVar，须在请求侧定值
+    kb_scope.set_kb_user(username, is_admin, user_sec)
+    parsed_sec = None
+    sec_str = (sec_level or "").strip()
+    if sec_str:
+        parsed_sec = sec_filter.normalize_sec_level(
+            int(sec_str) if sec_str.lstrip("-").isdigit() else sec_str)
+        if parsed_sec is None:
+            raise HTTPException(status_code=400, detail=f"非法密级值: {sec_level}（应为 0-3）")
+    try:
+        sec_filter.check_upload_sec_level_permission(parsed_sec, is_admin)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    effective_sec = parsed_sec if parsed_sec is not None else user_sec
 
     task_id = submit_extract_task(
         file_content=file_content,
@@ -442,11 +462,14 @@ async def kb_upload(request: Request, file: UploadFile = File(...)):
         persist=True,
         doc_type="kb_upload",
         kb_dir=kb_scope.user_kb_dir(username),
+        sec_level=effective_sec,
     )
     return {
         "file_id": task_id,
         "filename": file.filename,
         "status": "pending",
+        "sec_level": effective_sec,
+        "sec_label": sec_filter.sec_label(effective_sec),
         "message": "文件已接收，正在提取并写入你的个人知识库..."
     }
 
@@ -516,7 +539,7 @@ class McpServerPayload(BaseModel):
 
 def _require_mcp_admin(request: Request) -> str:
     """校验 ADMIN 身份（MCP 管理端点专用）。返回用户名；非管理员抛 403。"""
-    username, is_admin = verify_token_identity(request.headers.get("authorization"))
+    username, is_admin, _sec = verify_token_identity(request.headers.get("authorization"))
     if not is_admin:
         raise HTTPException(status_code=403, detail="MCP 服务管理需要管理员权限")
     return username
@@ -593,7 +616,7 @@ async def list_kb_files(request: Request):
     """列出知识库上传文件（用户隔离）：普通用户=本人个人库；ADMIN=全部个人库（附 owner 标注）"""
     from app.services import kb_scope
     from app.services.rag.vector_store import VectorStore
-    username, is_admin = verify_token_identity(request.headers.get("authorization"))
+    username, is_admin, _sec = verify_token_identity(request.headers.get("authorization"))
     try:
         files = []
         if is_admin:
@@ -653,16 +676,20 @@ async def kb_chat(payload: KbChatRequest, request: Request):
     if not question:
         raise HTTPException(status_code=400, detail="缺少 question 参数")
 
-    username, is_admin = verify_token_identity(request.headers.get("authorization"))
-    kb_scope.set_kb_user(username, is_admin)
+    username, is_admin, user_sec = verify_token_identity(request.headers.get("authorization"))
+    kb_scope.set_kb_user(username, is_admin, user_sec)
 
     # 1) 检索作用域内的全部 uploads collection（普通用户=本人+共享；ADMIN=全部+共享）
     #    若指定 source_files（拖拽引用），则限定检索范围为这些文件，提高 top_k
+    #    [SEC] 本端点为直查旁路（§5.6 封堵）：enforce 注入密级 where（与
+    #    source_file $in 经 sec_filter.combine_where 收口合并）；shadow 复核标记
+    from app.services.rag import sec_filter
     scoped_files = [f.strip() for f in (payload.source_files or []) if f.strip()]
     try:
         store = VectorStore(collection_name="uploads")
         query_embedding = store.embedder.encode_single(question)
         top_k = 10 if scoped_files else 6  # 文件级过滤后搜索空间缩小，多召回段落
+        sec_mode = sec_filter.get_mode()
         results = []
         total = 0
         for db_path, coll_names in kb_scope.query_targets().items():
@@ -680,16 +707,30 @@ async def kb_chat(payload: KbChatRequest, request: Request):
                 where_filter = None
                 if scoped_files:
                     where_filter = {"source_file": {"$in": scoped_files}}
+                # [SEC] 密级条件经收口合并（enforce 生效；shadow/off 原样）
+                where_filter = sec_filter.combine_where(where_filter)
                 # 超采样后精排：向量粗召回 → 汇总后 bge-reranker 精排留 top_k
+                # [SEC] 密级模式下超额召回补偿被过滤掉的名额
+                n_fetch = top_k * 2 if sec_mode == "off" else max(
+                    top_k * 2, sec_filter.overfetch_n(top_k))
                 query_kwargs = {
                     "query_embeddings": [query_embedding],
-                    "n_results": top_k * 2,
+                    "n_results": n_fetch,
                     "include": ["documents", "metadatas", "distances"],
                 }
                 if where_filter:
                     query_kwargs["where"] = where_filter
                 raw = coll.query(**query_kwargs)
                 if raw and raw.get("ids") and raw["ids"][0]:
+                    # [SEC] shadow：复核标记 denied；enforce：探针取 denied 样本（供 L3）
+                    if sec_mode == "shadow":
+                        sec_filter.mark_denied_batch(
+                            raw["documents"][0], raw["metadatas"][0],
+                            kb_scope.UPLOADS_COLLECTION, user_sec)
+                    elif sec_mode == "enforce":
+                        sec_filter.probe_denied(
+                            coll, query_embedding, n_fetch,
+                            kb_scope.UPLOADS_COLLECTION, user_sec)
                     for i in range(len(raw["ids"][0])):
                         distance = raw["distances"][0][i]
                         similarity = max(0.0, 1.0 - distance / 2.0)
@@ -700,6 +741,8 @@ async def kb_chat(payload: KbChatRequest, request: Request):
                             "score": round(similarity, 3),
                             "section_title": meta.get("section_title", ""),
                             "chunk_index": meta.get("chunk_index", -1),
+                            "sec_level": sec_filter.chunk_sec_level(meta),
+                            "sec_label": meta.get("sec_label", ""),
                         })
             except Exception:
                 continue
@@ -726,12 +769,18 @@ async def kb_chat(payload: KbChatRequest, request: Request):
                         "score": round(float(r.get("rerank_score", r.get("score", 0))), 3),
                         "section_title": r.get("section_title", ""),
                         "chunk_index": r.get("chunk_index", -1),
+                        "sec_level": r.get("sec_level"),
+                        "sec_label": r.get("sec_label", ""),
                     }
                     for r in ranked
                 ]
         except Exception as e:
             print(f"[kb_chat] 精排失败（用向量粗排）: {e}")
             results = results[:top_k]
+        # [SEC] 检索审计（off 模式不审计）
+        if sec_mode != "off":
+            sec_filter.audit_retrieval(
+                query=question, scope_summary=f"kb_chat:{bool(scoped_files)}", results=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"知识库检索失败: {str(e)}")
 
@@ -777,6 +826,18 @@ async def kb_chat(payload: KbChatRequest, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"知识库问答生成失败: {str(e)}")
 
+    # [SEC L3] 输出泄露兜底检测（§5.5）：非流式端点可完整拦截（替换回答）。
+    # enforce：命中即拦截；shadow：仅检测+审计不拦截。
+    if sec_filter.get_mode() != "off":
+        from app.services import sec_leak
+        leak = sec_leak.check_and_report(
+            answer, sec_filter.drain_denied(), username)
+        if leak and sec_filter.get_mode() == "enforce":
+            return {
+                "answer": sec_leak.BLOCK_MESSAGE, "sources": [],
+                "scoped": bool(scoped_files), "sec_blocked": True,
+            }
+
     # 来源列表：按文件去重，附带最佳匹配段落定位（章节/序号）
     seen = set()
     sources = []
@@ -788,6 +849,7 @@ async def kb_chat(payload: KbChatRequest, request: Request):
                 "score": r["score"],
                 "section_title": r.get("section_title", ""),
                 "chunk_index": r.get("chunk_index", -1),
+                "sec_label": r.get("sec_label", ""),
             })
 
     return {"answer": answer, "sources": sources, "scoped": bool(scoped_files)}
@@ -803,7 +865,7 @@ async def delete_kb_file(payload: KbFileDeleteRequest, request: Request):
     """
     from app.services import kb_scope
     from app.services.rag.vector_store import VectorStore
-    username, is_admin = verify_token_identity(request.headers.get("authorization"))
+    username, is_admin, _sec = verify_token_identity(request.headers.get("authorization"))
     source_file = (payload.source_file or "").strip()
     if not source_file:
         raise HTTPException(status_code=400, detail="缺少 source_file 参数")
@@ -828,6 +890,125 @@ async def delete_kb_file(payload: KbFileDeleteRequest, request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除知识库文件失败: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════
+# 保密密级管理 API（2026-09-28 新增，方案 §8.2）— 仅 ADMIN
+# 管理身份 ≠ 高密级查看权：ADMIN 检索同样受密级过滤（§8.3），
+# 本组端点只提供管理视图与变更通道，不提供任何"绕过检索过滤"的出口。
+# ═══════════════════════════════════════════════════════════════
+
+def _require_sec_admin(request: Request) -> str:
+    """保密管理端点鉴权：仅 ADMIN。返回用户名；非管理员抛 403。"""
+    username, is_admin, _sec = verify_token_identity(request.headers.get("authorization"))
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="保密密级管理需要管理员权限")
+    return username
+
+
+class SecLevelChangeRequest(BaseModel):
+    """密级变更请求（单文件或批量）"""
+    source_files: List[str] = Field(..., description="目标文件 source_file 列表")
+    new_level: int = Field(..., description="新密级 0-3（公开/内部/秘密/机密）")
+    reason: str = Field("", description="变更原因（审计留痕）")
+
+
+class SecModeRequest(BaseModel):
+    """过滤模式切换请求"""
+    mode: str = Field(..., description="目标模式 off/shadow/enforce")
+    reason: str = Field("", description="切换原因（审计留痕）")
+
+
+@router.get("/sec/ledger", dependencies=[Depends(require_user)])
+async def sec_ledger(request: Request):
+    """密级台账：全部入库文件的密级状态（mixed=True 表示该文件各 chunk 密级不一致）"""
+    _require_sec_admin(request)
+    from app.services import sec_admin
+    try:
+        ledger = await asyncio.to_thread(sec_admin.list_sec_ledger)
+        return {"status": "ok", "count": len(ledger), "files": ledger}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查询密级台账失败: {str(e)}")
+
+
+@router.get("/sec/denied-top", dependencies=[Depends(require_user)])
+async def sec_denied_top(request: Request, limit: int = 20):
+    """高频拦截清单：被密级过滤排除次数最多的文件（shadow/enforce 观测数据）"""
+    _require_sec_admin(request)
+    from app.services import sec_audit
+    return {"status": "ok", "items": sec_audit.query_denied_top(limit)}
+
+
+@router.post("/sec/level", dependencies=[Depends(require_user)])
+async def sec_set_level(payload: SecLevelChangeRequest, request: Request):
+    """密级变更（单文件/批量）：定位全部 chunk → 原地更新 → 方差校验（§4.4）"""
+    operator = _require_sec_admin(request)
+    from app.services import sec_admin
+    try:
+        result = await asyncio.to_thread(
+            sec_admin.set_sources_sec_level,
+            payload.source_files, payload.new_level, payload.reason, operator)
+        return {"status": "ok", **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"密级变更失败: {str(e)}")
+
+
+@router.get("/sec/mode", dependencies=[Depends(require_user)])
+async def sec_get_mode(request: Request):
+    """查询当前密级过滤模式（env 缺省 + 运行时覆盖状态）"""
+    _require_sec_admin(request)
+    from app.services.rag import sec_filter
+    return {
+        "status": "ok",
+        "mode": sec_filter.get_mode(),
+        "env_default": sec_filter.cfg_mode(),
+        "runtime_override_by": sec_filter.mode_overridden_by(),
+    }
+
+
+@router.post("/sec/mode", dependencies=[Depends(require_user)])
+async def sec_switch_mode(payload: SecModeRequest, request: Request):
+    """运行时切换密级过滤模式（off=紧急回滚通道；切换全程留痕，§7）"""
+    operator = _require_sec_admin(request)
+    from app.services.rag import sec_filter
+    from app.services import sec_audit
+    import datetime as _dt
+    prev = sec_filter.get_mode()
+    try:
+        new_mode = sec_filter.set_mode_override(payload.mode, operator)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    sec_audit.enqueue_admin_audit({
+        "ts": _dt.datetime.now().isoformat(timespec="seconds"),
+        "operator": operator,
+        "action": "mode_switch",
+        "target": f"{prev} → {new_mode}",
+        "detail": payload.reason or "(no reason)",
+    })
+    return {"status": "ok", "previous": prev, "mode": new_mode}
+
+
+@router.get("/sec/audit", dependencies=[Depends(require_user)])
+async def sec_audit_query(
+    request: Request,
+    username: str = "",
+    start: str = "",
+    end: str = "",
+    min_level: int = -1,
+    leak_blocked: int = -1,
+    limit: int = 100,
+):
+    """检索审计查询（§8.2.5）：按用户/时间段/命中密级/是否拦截过滤"""
+    _require_sec_admin(request)
+    from app.services import sec_audit
+    rows = sec_audit.query_retrieval_audit(
+        username=username or None, start=start or None, end=end or None,
+        min_level=min_level if min_level >= 0 else None,
+        leak_blocked=leak_blocked if leak_blocked >= 0 else None,
+        limit=min(limit, 500))
+    return {"status": "ok", "count": len(rows), "items": rows}
 
 
 @router.get("/debug/env")
@@ -2104,8 +2285,8 @@ async def agent_add_attachment_from_kb(project_id: str, payload: KbToAttachmentR
     # 用户隔离：知识库文件可能位于任一作用域目录（本人/ADMIN 全部/共享），逐库查找
     from app.services import kb_scope as _kb_scope
     from app.services.agent_auth import verify_token_identity as _vti
-    _u, _a = _vti(request.headers.get("authorization"))
-    _kb_scope.set_kb_user(_u, _a)
+    _u, _a, _sec = _vti(request.headers.get("authorization"))
+    _kb_scope.set_kb_user(_u, _a, _sec)
     full_text = ""
     for _db, _colls in _kb_scope.query_targets().items():
         if _kb_scope.UPLOADS_COLLECTION not in _colls:
@@ -2201,8 +2382,8 @@ async def agent_add_attachments_from_kb_batch(project_id: str, payload: KbToAtta
         raise HTTPException(status_code=400, detail="files 列表为空")
 
     # [KB-ISO] 设置用户作用域，使文件读回覆盖个人库+共享库
-    _u, _a = verify_token_identity(request.headers.get("authorization"))
-    _kb_scope.set_kb_user(_u, _a)
+    _u, _a, _sec = verify_token_identity(request.headers.get("authorization"))
+    _kb_scope.set_kb_user(_u, _a, _sec)
 
     agent = get_agent()
     config = {"configurable": {"thread_id": project_id}}

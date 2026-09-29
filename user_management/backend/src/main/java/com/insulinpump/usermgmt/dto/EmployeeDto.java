@@ -1,6 +1,8 @@
 package com.insulinpump.usermgmt.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 public class EmployeeDto {
@@ -26,6 +28,11 @@ public class EmployeeDto {
     private String departmentName;
 
     private Boolean enabled;
+
+    /** [SEC 2026-09-28] 保密密级 0-3（0公开/1内部/2秘密/3机密）；缺省 0=公开 */
+    @Min(value = 0, message = "密级不能小于 0")
+    @Max(value = 3, message = "密级不能大于 3")
+    private Integer secLevel;
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
@@ -53,4 +60,7 @@ public class EmployeeDto {
 
     public Boolean getEnabled() { return enabled; }
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }
+
+    public Integer getSecLevel() { return secLevel; }
+    public void setSecLevel(Integer secLevel) { this.secLevel = secLevel; }
 }

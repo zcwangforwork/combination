@@ -34,6 +34,16 @@ def main():
     print("RAG 知识库重建 — 使用向量化 API")
     print("=" * 70)
 
+    # [SEC 2026-09-28] 脚本入库密级：--sec-level N（0-3，缺省 3=机密，倒逼管理员精标）
+    sec_level = 3
+    if "--sec-level" in sys.argv:
+        try:
+            sec_level = int(sys.argv[sys.argv.index("--sec-level") + 1])
+        except (IndexError, ValueError):
+            print("用法: python rebuild_kb_api.py [--sec-level 0-3]")
+            sys.exit(1)
+    print(f"\n[SEC] 本批次摄入密级: {sec_level}（0公开/1内部/2秘密/3机密）")
+
     # 1. 前置检查：API Key
     api_key = os.getenv("MINIMAX_API_KEY", "")
     if not api_key:
@@ -112,7 +122,8 @@ def main():
         try:
             chunks_added = ingest_document(
                 file_path=file_path,
-                vector_store=vs
+                vector_store=vs,
+                sec_level=sec_level
             )
             if chunks_added > 0:
                 total_docs += 1
