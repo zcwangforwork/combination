@@ -3135,6 +3135,21 @@ async def agent_delete_project(project_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除项目失败: {str(e)}")
 
+    # 归属行随任务一并清理（adelete_thread 只认 checkpoints/writes，不认识自定义表，
+    # 历史上会遗留 project_owners 孤儿行；线程本体已删成功，此处失败仅提示不回滚）
+    if db_path:
+        def _delete_owner_row():
+            conn = sqlite3.connect(db_path, timeout=5)
+            try:
+                conn.execute("DELETE FROM project_owners WHERE thread_id = ?", (project_id,))
+                conn.commit()
+            finally:
+                conn.close()
+        try:
+            await asyncio.to_thread(_delete_owner_row)
+        except Exception as e:
+            print(f"[agent] 清理项目归属行失败(非致命) {project_id}: {e}")
+
     return {"success": True, "message": f"项目 {project_id} 已删除"}
 
 

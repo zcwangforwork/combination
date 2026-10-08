@@ -41,6 +41,14 @@ async def lifespan(app: FastAPI):
         print(f"[main] Agent initialization failed (non-fatal): {e}")
         print("[main] Agent endpoints will return errors until fixed")
 
+    # 聊天任务保留期后台清理（AGENT_CHAT_RETENTION_DAYS=60 天，0=关闭）
+    try:
+        from app.services.agent_retention import start_retention_sweeper
+        start_retention_sweeper()
+        print("[main] Chat-task retention sweeper started")
+    except Exception as e:
+        print(f"[main] Retention sweeper start failed (non-fatal): {e}")
+
     yield
 
     # 关闭时清理
