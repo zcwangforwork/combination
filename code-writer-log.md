@@ -105,3 +105,17 @@
 - File Edited: `README.md` 已知限制 #5 —— 补记 kb/review 页尾回退脚本这一就地分叉点
 - Result: Success — node new Function 语法校验 kb/review 各 2 个 script block 全部通过；
   FastAPI FileResponse 按请求读盘，浏览器刷新 kb/review 页即生效，无需重启服务
+
+## 2026-10-08 11:35 - 分支合并（dev → main，保留两边功能）
+- Task: 把 combination-dev（dev 分支）的代码合并到主分支 main，保留两边功能
+- 前置调查: dev 与 main 提交历史原同在 39dcf5c，差异全在两边 worktree 未提交改动——
+  dev=聊天任务保留期功能（agent_retention.py 守护线程+测试+DELETE 端点归属行修复）；
+  main=kb/review 页尾「返回Agent对话」回退脚本。两边 README 改动在不同区域，预判无冲突
+- Steps:
+  1. dev 侧（combination-dev）提交 21c8658：feat: 聊天任务保留期后台清理（6 文件 +384 行）
+  2. main 侧（combination）提交 7c1c225：feat: kb/review 页尾回退脚本（4 文件 +41/-1）
+  3. `git merge --no-commit dev` 自动合并成功，零冲突（README.md 两 hunk 不同区域自动融合）
+  4. 复核合并结果：README 116 行(main侧说明)+162 行(dev侧段落) 并存；kb/review window.close
+     脚本仍在；agent_retention.py/test/.env/AGENT_CHAT_RETENTION_DAYS/main.py sweeper/
+     routes.py 归属行清理全部带入 —— 两边功能完整保留
+- Result: Success — 合并提交完成，main 同时具备「返回Agent对话」回退与「聊天任务保留期清理」

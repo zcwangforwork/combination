@@ -159,6 +159,12 @@ TopN、检索审计流水（用户/时间段/命中密级/泄漏拦截过滤）�
 本人密级）、文件列表显示密级徽章（不一致/未标注高亮）。员工管理端（`user_management/frontend`）增加
 密级列与「调整密级」弹窗（必填原因，调 `PUT /api/employees/{id}/sec-level`）。
 
+**聊天任务保留期**（2026-09-29）：`app/services/agent_retention.py` 后台守护线程（启动延迟
+60s，每日一轮）按**最后活动时间**清理过期聊天任务——同事务删除 `checkpoints`/`writes`/
+`project_owners` 三表该 thread 的行；保留天数由 `AGENT_CHAT_RETENTION_DAYS` 控制（缺省 60，
+0=关闭）。无法定龄的线程保守保留；进行中生成流的线程跳过；同库保密审计表不受影响。手动
+删除端点 `DELETE /agent/projects/{id}` 同步修复：归属行随任务一并清理，不再遗留孤儿行。
+
 **上线顺序**（§7）：shadow 观察审计（误伤面评估）→ 跑回填脚本补齐存量密级 → 批量精标降级 →
 切 enforce（可在保密管理页切换，运行时生效免重启）。存量未回填 chunk 在 enforce 下对所有人不可见
 （fail-closed），先回填再切换。
