@@ -91,3 +91,17 @@
   combination 与 docs 目录，无原目录写操作——判定为用户侧/其他会话在原项目的正常开发，未触碰
 - Decision: 不回滚不同步（用户可能仍在编辑）；combination 副本仍为上午基线版本；
   如需同步状态条到移植版 = 重拷 agent.html → 重跑 build/wire（设计好的流程）
+
+## 2026-10-08 10:05 - Bug 修复（SPA 流 kb/review 返回后「⟵ 返回系统」按钮消失）
+- 现象: 用户报告——在 SPA「AI 文档写作」视图点开知识库页，再点「返回 Agent 对话」后，agent 页面没有「⟵ 返回系统」按钮了
+- 根因: kb.html:181 `href="/agent"` 在当前标签内跳转到 FastAPI `GET /agent`（main.py:115）返回的**独立版** agent.html；
+  「⟵ 返回系统」按钮仅由 tools/build_agent_port.py 插入到 SPA 移植版工具栏（agent-view-fragment.html:229），
+  独立版没有 → 用户被带离 SPA。review.html 同病（540/908/921 三处 `/agent` 链接）
+- File Edited: `app/static/kb.html`、`app/static/review.html`
+  - 页尾 </body> 前各加一段事件委托脚本：点击 `a[href="/agent"]` 时若 `window.opener` 存在
+    （本页由 window.open 打开——SPA 与独立页两种入口均如此）→ preventDefault + window.close()
+    直接关本标签回到打开方（SPA agent 视图原样保留，按钮在）；无 opener（直接输 URL）或 close
+    被拒时 200ms 后回退原跳转 /agent。事件委托同时覆盖 review.html showEmpty/showError 模板生成的动态链接
+- File Edited: `README.md` 已知限制 #5 —— 补记 kb/review 页尾回退脚本这一就地分叉点
+- Result: Success — node new Function 语法校验 kb/review 各 2 个 script block 全部通过；
+  FastAPI FileResponse 按请求读盘，浏览器刷新 kb/review 页即生效，无需重启服务

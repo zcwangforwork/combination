@@ -1206,5 +1206,17 @@
             appendChatMsg('agent', '❌ 排队等待超时，请稍后重新发送。');
         }
     </script>
+    <!-- [COMBINATION-PORT 2026-10-08] 返回修复：本页由 Agent 页 window.open 打开时（SPA 内嵌
+         视图或独立页均如此），点「返回Agent对话」直接关闭本标签页回到打开方，避免 SPA 用户
+         被带到独立版 /agent（无「⟵ 返回系统」按钮）。无 opener 或 close 被拒绝时保持原跳转。 -->
+    <script>
+    document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href="/agent"]') : null;
+        if (!a || !window.opener) return;
+        e.preventDefault();
+        window.close();
+        setTimeout(function () { window.location.href = '/agent'; }, 200);
+    }, false);
+    </script>
 </body>
 </html>

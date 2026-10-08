@@ -113,7 +113,9 @@ cd .. && python tools/migrate_project_owners.py admin
    40 条 agent 路由、跨刷新上传恢复等），同步时重放了用户隔离改造（鉴权依赖/
    CORS/static 挂载/token-relay 接线/PyJWT）。日常就地修改点：`app/static/agent.html`、
    `review.html`、`kb.html`（token-relay 引用，agent.html 3 行，生成脚本行号常量随源
-   变化需重算）与后端源码——从源头再次同步时需重做该接线。
+   变化需重算；kb/review 页尾另有「返回Agent对话」回退脚本 [2026-10-08]——本页由
+`window.open` 打开时点返回直接 `window.close()` 回到打开方，避免 SPA 用户被带到
+独立版 `/agent`（无「⟵ 返回系统」按钮））与后端源码——从源头再次同步时需重做该接线。
 6. **项目持久化语义变化**：原版用 URL `?project=` 恢复会话；移植版用 localStorage——
    同一浏览器刷新/重登后自动恢复最后一次的项目（跨浏览器/隐身模式不共享）。
 7. 强依赖本地 Ollama(:11435) + PostgreSQL + ChromaDB 就绪；模板/知识库页（`/kb`、
