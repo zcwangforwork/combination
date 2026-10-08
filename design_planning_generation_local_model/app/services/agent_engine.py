@@ -1883,6 +1883,14 @@ async def stream_agent_events(
                     "chapter": chapter,
                     "message": f"正在编写「{chapter}」..."
                 }
+            elif tool_name == "spawn_subagent":
+                # 动态派生子代理：角色名由主代理按任务指定，截短防超长
+                role = str(tool_input.get("role_name", "动态子代理"))[:30]
+                yield {
+                    "type": "subagent_start",
+                    "agent": role,
+                    "message": f"已派生子代理「{role}」正在执行任务..."
+                }
 
         elif event_type == "on_tool_end":
             tool_name = event.get("name", "unknown")
@@ -1962,6 +1970,14 @@ async def stream_agent_events(
                     "agent": "chapter_agent",
                     "chapter": chapter,
                     "message": f"「{chapter}」编写完成"
+                }
+            elif tool_name == "spawn_subagent":
+                tool_input_end = event["data"].get("input", {})
+                role_end = str(tool_input_end.get("role_name", "动态子代理"))[:30]
+                yield {
+                    "type": "subagent_complete",
+                    "agent": role_end,
+                    "message": f"子代理「{role_end}」已完成任务"
                 }
 
         elif event_type == "on_interrupt":
@@ -2136,6 +2152,14 @@ async def resume_agent(
                     "chapter": chapter,
                     "message": f"正在编写「{chapter}」..."
                 }
+            elif tool_name == "spawn_subagent":
+                # 动态派生子代理：角色名由主代理按任务指定，截短防超长
+                role = str(tool_input.get("role_name", "动态子代理"))[:30]
+                yield {
+                    "type": "subagent_start",
+                    "agent": role,
+                    "message": f"已派生子代理「{role}」正在执行任务..."
+                }
 
         elif event_type == "on_tool_end":
             tool_name = event.get("name", "unknown")
@@ -2212,6 +2236,14 @@ async def resume_agent(
                     "agent": "chapter_agent",
                     "chapter": chapter,
                     "message": f"「{chapter}」编写完成"
+                }
+            elif tool_name == "spawn_subagent":
+                tool_input_end = event["data"].get("input", {})
+                role_end = str(tool_input_end.get("role_name", "动态子代理"))[:30]
+                yield {
+                    "type": "subagent_complete",
+                    "agent": role_end,
+                    "message": f"子代理「{role_end}」已完成任务"
                 }
 
         elif event_type == "on_interrupt":

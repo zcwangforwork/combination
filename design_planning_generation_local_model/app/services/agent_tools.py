@@ -8363,6 +8363,187 @@ async def analyze_template_style() -> str:
     }, ensure_ascii=False)
 
 
+# ═══════════════════════════════════════════════════════
+# 动态子代理派生 (2026-09-29)
+# 主代理按任务现场组装临时子代理：spawn_subagent 内运行时 create_agent，
+# 角色提示词与工具集由主代理指定，任务结束即弃（无 checkpointer、不驻留内存）。
+# 设计要点见 conversation 评审：白名单只读、单层不可再派生、
+# Semaphore 并发、滑动窗口限流、回传结果截断保护主上下文。
+# ═══════════════════════════════════════════════════════
+
+# 子代理可用工具白名单：仅只读检索 / 结构分析 / 数据库查询 / 计算类。
+# 有副作用的写工具（write_chapter/build_docx/modify_*/revise_* 等）一律排除；
+# spawn_subagent 自身也排除 —— 子代理不可再派生子代理，杜绝递归。
+SUBAGENT_TOOL_WHITELIST = {
+    "search_kb": search_kb,
+    "search_attachment": search_attachment,
+    "search_template": search_template,
+    "web_search": web_search,
+    "find_kb_reference_files": find_kb_reference_files,
+    "analyze_document_structure": analyze_document_structure,
+    "sql_db_list_tables": sql_db_list_tables,
+    "sql_db_schema": sql_db_schema,
+    "sql_db_query": sql_db_query,
+    "pgsql_list_tables": pgsql_list_tables,
+    "pgsql_schema": pgsql_schema,
+    "pgsql_query": pgsql_query,
+    "calculate_sample_size": calculate_sample_size,
+    "calculate_process_capability": calculate_process_capability,
+    "calculate_reliability": calculate_reliability,
+    "calculate_statistics": calculate_statistics,
+}
+
+
+def get_subagent_tools(tool_names: list[str]) -> list:
+    """按白名单名取工具对象；含未知名称时抛 ValueError（防御性兜底，
+    正常路径 spawn_subagent 已先行过滤并返回引导性错误）"""
+    unknown = [n for n in tool_names if n not in SUBAGENT_TOOL_WHITELIST]
+    if unknown:
+        raise ValueError(f"工具不在子代理白名单内: {unknown}")
+    return [SUBAGENT_TOOL_WHITELIST[n] for n in tool_names]
+
+
+# ── 资源与安全护栏（模块级常量，调用时读取，便于测试覆盖）──
+_SUBAGENT_SPAWN_TIMES: list[float] = []      # 滑动窗口内的派生时间戳
+_SUBAGENT_SPAWN_LOCK = asyncio.Lock()
+SUBAGENT_MAX_SPAWNS_PER_WINDOW = int(os.getenv("SUBAGENT_MAX_SPAWNS_PER_WINDOW", "8"))
+SUBAGENT_SPAWN_WINDOW_SECONDS = 300.0        # 窗口长度（秒）
+SUBAGENT_SPAWN_TIMEOUT_SECONDS = float(os.getenv("SUBAGENT_SPAWN_TIMEOUT_SECONDS", "600"))
+_SUBAGENT_RESULT_MAX_CHARS = 8000            # 回传主代理的结果上限（保护主上下文）
+
+# 追加到子代理 system prompt 末尾的通用约束
+_DYNAMIC_SUBAGENT_PROMPT_FOOTER = """
+
+## 通用要求（追加，必须遵守）
+- 只输出任务最终结果，不寒暄、不复述任务
+- 结果精炼：优先用要点/小表格呈现，总长不超过 6000 字
+- 引用的标准条款/数据须来自你检索到的内容（标注条款号/来源），禁止编造"""
+
+
+@tool
+async def spawn_subagent(
+    role_name: str,
+    task_description: str,
+    role_instructions: str,
+    allowed_tools: str = "search_kb",
+) -> str:
+    """派生一个临时专家子代理执行子任务（动态多代理协作）。
+
+    子代理拥有独立 LLM 会话与独立上下文（看不到本对话历史），自主多轮调用
+    白名单内工具完成任务，仅将最终结果回传本对话。一次回复可同时发起多个
+    spawn_subagent 调用，系统会并行执行。
+
+    何时派生:
+    - 章节审校: 章节生成后审查其与标准条款一致性、参数错误、占位符残留等问题
+    - 跨章一致性: 核对参数/术语/标准引用在多个章节间是否一致
+    - 附件批量分析: 多份附件并行解析提炼，再汇总要点
+    - 大检索量研究: 多轮检索后蒸馏成简报，避免检索噪声撑大主对话上下文
+    何时禁用:
+    - 标准文档流程（大纲→写章→精简）必须走 design_outline / write_chapter /
+      summarize_section 等专用工具（其子代理提示词经过深度调优，质量更高）
+    - 单工具即可完成的事、简单问答，直接做，不要派生
+
+    Args:
+        role_name: 角色短名（如 "标准审校员"），用于进度展示
+        task_description: 完整任务描述。必须自包含 —— 子代理看不到对话历史，
+            任务依赖的背景信息（产品参数、待审章节原文、用户要求等）必须全部写入
+        role_instructions: 角色提示词（作为子代理 system prompt），包含四要素:
+            职责 + 领域知识 + 工作流程 + 输出格式
+        allowed_tools: 逗号或空格分隔的工具名，只能取自白名单:
+            search_kb, search_attachment, search_template, web_search,
+            find_kb_reference_files, analyze_document_structure,
+            sql_db_list_tables, sql_db_schema, sql_db_query,
+            pgsql_list_tables, pgsql_schema, pgsql_query,
+            calculate_sample_size, calculate_process_capability,
+            calculate_reliability, calculate_statistics
+
+    Returns:
+        JSON字符串: {"status": "ok", "role", "tools", "truncated", "elapsed_s", "result"}；
+        失败时 {"status": "error", "message"}。result 超长会被截断。
+    """
+    import re
+
+    # 1) 解析并校验工具名（服务端白名单过滤，防注入未授权工具）
+    requested = [t.strip() for t in re.split(r"[,，\s]+", allowed_tools or "") if t.strip()]
+    invalid = [t for t in requested if t not in SUBAGENT_TOOL_WHITELIST]
+    if invalid:
+        return json.dumps({
+            "status": "error",
+            "message": (
+                f"以下工具不在子代理白名单内: {', '.join(invalid)}。"
+                f"可用工具: {', '.join(SUBAGENT_TOOL_WHITELIST)}"
+            ),
+        }, ensure_ascii=False)
+    if not requested:
+        requested = ["search_kb"]
+    # 防御性断言：子代理绝不可再派生（白名单本就不含 spawn_subagent，防未来误加）
+    if "spawn_subagent" in requested:
+        return json.dumps({
+            "status": "error",
+            "message": "子代理不可再派生子代理（仅允许一层）。",
+        }, ensure_ascii=False)
+
+    # 2) 滑动窗口限流：窗口内派生数超上限直接拒绝（防失控循环打爆 Ollama）
+    async with _SUBAGENT_SPAWN_LOCK:
+        now = time.monotonic()
+        while _SUBAGENT_SPAWN_TIMES and _SUBAGENT_SPAWN_TIMES[0] < now - SUBAGENT_SPAWN_WINDOW_SECONDS:
+            _SUBAGENT_SPAWN_TIMES.pop(0)
+        if len(_SUBAGENT_SPAWN_TIMES) >= SUBAGENT_MAX_SPAWNS_PER_WINDOW:
+            return json.dumps({
+                "status": "error",
+                "message": (
+                    f"子代理派生已达上限（{SUBAGENT_MAX_SPAWNS_PER_WINDOW} 个/"
+                    f"{SUBAGENT_SPAWN_WINDOW_SECONDS:.0f}秒），请稍后再试或改用专用工具。"
+                ),
+            }, ensure_ascii=False)
+        _SUBAGENT_SPAWN_TIMES.append(now)
+
+    # 3) 组装并运行临时子代理（独立上下文，无 checkpointer，用完即弃）
+    system_prompt = (role_instructions or "").strip() + _DYNAMIC_SUBAGENT_PROMPT_FOOTER
+    started = time.monotonic()
+    try:
+        from app.services.subagents import create_dynamic_agent
+        agent = create_dynamic_agent(
+            system_prompt=system_prompt,
+            tool_names=requested,
+        )
+        async with _llm_semaphore:
+            result_state = await asyncio.wait_for(
+                agent.ainvoke({
+                    "messages": [{"role": "user", "content": (task_description or "").strip()}]
+                }),
+                timeout=SUBAGENT_SPAWN_TIMEOUT_SECONDS,
+            )
+        content = result_state["messages"][-1].content
+        if not isinstance(content, str):
+            content = str(content)
+    except asyncio.TimeoutError:
+        return json.dumps({
+            "status": "error",
+            "message": f"子代理执行超时（{SUBAGENT_SPAWN_TIMEOUT_SECONDS:.0f}秒），任务未完成。",
+        }, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"子代理执行失败: {e}",
+        }, ensure_ascii=False)
+
+    # 4) 结果截断保护：防止话痨子代理把主代理上下文一次性撑爆
+    truncated = False
+    if len(content) > _SUBAGENT_RESULT_MAX_CHARS:
+        content = content[:_SUBAGENT_RESULT_MAX_CHARS] + "\n...[子代理结果过长，已截断]"
+        truncated = True
+
+    return json.dumps({
+        "status": "ok",
+        "role": role_name,
+        "tools": requested,
+        "truncated": truncated,
+        "elapsed_s": round(time.monotonic() - started, 1),
+        "result": content,
+    }, ensure_ascii=False)
+
+
 # ── 工具列表导出 ──
 
 PHASE1_TOOLS = [
@@ -8410,4 +8591,6 @@ PHASE1_TOOLS = [
     calculate_process_capability,
     calculate_reliability,
     calculate_statistics,
+    # 动态子代理派生（2026-09-29 集成）
+    spawn_subagent,
 ]

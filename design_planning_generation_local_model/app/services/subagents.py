@@ -273,3 +273,56 @@ def create_summary_agent() -> "CompiledGraph":
         tools=[],  # 纯文本精简，无需检索工具
         system_prompt=SUMMARY_AGENT_PROMPT,
     )
+
+
+# ═══════════════════════════════════════════════════════
+# 动态子代理 (2026-09-29): 主代理按任务现场组装的临时子代理
+# 角色提示词与工具集运行时生成，任务结束即弃，不做持久化
+# ═══════════════════════════════════════════════════════
+
+# 动态子代理单次回复上限与主代理对齐（主代理 max_tokens=8192），
+# 避免动态角色在长输出任务（整章审校、批量汇总）中被 4096 截断
+_DYNAMIC_SUBAGENT_MAX_TOKENS = 8192
+
+
+def create_dynamic_agent(
+    system_prompt: str,
+    tool_names: list[str],
+    max_tokens: int = _DYNAMIC_SUBAGENT_MAX_TOKENS,
+    temperature: float = 0.3,
+) -> "CompiledGraph":
+    """按任务现场组装临时子代理
+
+    与上面 3 个静态子代理的区别：system_prompt 由主代理在派生时按任务撰写，
+    工具集从 agent_tools.SUBAGENT_TOOL_WHITELIST 白名单中选取。
+    子代理不可再派生子代理（spawn_subagent 不在白名单内），只有一层。
+
+    Args:
+        system_prompt: 角色提示词（职责+领域知识+工作流程+输出格式），由主代理撰写
+        tool_names: 白名单内的工具名列表；含未知名称时抛 ValueError（防御性兜底，
+                    正常路径 agent_tools 侧已先行过滤）
+        max_tokens: 单次回复上限，默认 8192 与主代理对齐
+        temperature: 采样温度，默认 0.3 与静态子代理一致
+    """
+    from langchain.agents import create_agent
+    from langchain_openai import ChatOpenAI
+
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11435") + "/v1"
+    model = os.getenv("OLLAMA_MODEL", "qwen3.5:122b")
+    api_key = os.getenv("MINIMAX_API_KEY", "ollama")
+    llm = ChatOpenAI(
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+    from app.services.agent_tools import get_subagent_tools
+    tools = get_subagent_tools(tool_names)
+
+    return create_agent(
+        model=llm,
+        tools=tools,
+        system_prompt=system_prompt,
+    )
