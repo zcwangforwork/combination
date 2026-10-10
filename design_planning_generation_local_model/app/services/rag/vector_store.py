@@ -20,6 +20,11 @@ from app.services.rag.tokenizer import get_tokenizer
 # 延迟导入
 _chroma_client = None
 
+# RRF 融合权重（向量路 / BM25 路）。模块常量便于评测网格搜索与运行期调参；
+# 取值依据见 retrieve_hybrid 内注释与 evals/reports 评测记录。
+RRF_W_VECTOR = 0.5
+RRF_W_BM25 = 0.5
+
 
 class VectorStore:
     """ChromaDB 向量存储封装"""
@@ -306,6 +311,7 @@ class VectorStore:
                             "chunk_index": meta.get("chunk_index", 0),
                             "similarity": similarity,
                             "distance": distance,
+                            "chunk_id": results["ids"][0][i],
                             "sec_level": sec_filter.chunk_sec_level(meta),
                             "sec_label": meta.get("sec_label", ""),
                         })
@@ -342,10 +348,17 @@ class VectorStore:
         doc_type: Optional[str] = None,
         top_k: int = 5,
         similarity_threshold: float = 0.3,
-        vector_weight: float = 0.85
+        collections: Optional[List[str]] = None,
+        audit_scope: Optional[str] = None
     ) -> list[dict]:
         """
-        混合检索：从多个 collection 语义向量检索
+        混合检索：向量 + BM25 双路召回，RRF 排名融合
+
+        融合采用 Reciprocal Rank Fusion（score = Σ 1/(k+rank), k=60）：
+        cosine 相似度（有界 0-1）与 BM25Okapi 分数（无界）量纲不可比，
+        此前的加权线性融合在单侧极端分时会被劫持；rank-based 融合只用排名，
+        对分数分布免疫。similarity 字段归一化为 min(1, rrf/(n_lists/(k+1)))，
+        近似保留 0-1 阈值语义（无 rerank 路径的 WEB_FALLBACK 消费该字段）。
 
         注意：当 collection 数据量过大时（>5万条），BM25 检索需加载全量数据到内存，
         开销巨大，因此对大 collection 仅使用向量检索。
@@ -354,11 +367,14 @@ class VectorStore:
             query: 查询文本
             doc_type: 文档类型过滤（可选），如果过滤后无结果则忽略
             top_k: 返回数量
-            similarity_threshold: 最低相似度阈值（0-1）
-            vector_weight: 向量检索权重 (0-1)，BM25权重 = 1 - vector_weight
+            similarity_threshold: 最低相似度阈值（0-1，作用于向量路召回）
+            collections: 显式限定检索的 collection 名列表（仅本 store 自身 client）；
+                         uploads 等定向检索场景传入，缺省查全部目标库
+            audit_scope: 检索审计的 scope_summary 覆盖值（如 "search_kb:uploads"），
+                         缺省用 "hybrid:{n}colls"
 
         Returns:
-            合并后的检索结果列表，按综合分数排序
+            合并后的检索结果列表，按 RRF 综合分数排序
         """
         t_start = time.time()
         print(f"    [VectorStore] retrieve_hybrid start — query='{query[:80]}'")
@@ -376,11 +392,15 @@ class VectorStore:
             top_k * 2, sec_filter.overfetch_n(top_k))
 
         # 构建所有 (client, collection_name) 查询对
-        query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
-        for db_path, coll_names in self._effective_extra().items():
-            client = self._get_client_for_path(db_path)
-            for name in coll_names:
-                query_targets.append((client, name))
+        # collections 显式限定时仅查本 store 自身 client 的指定 collection（uploads 定向检索）
+        if collections:
+            query_targets = [(self.client, name) for name in collections]
+        else:
+            query_targets = [(self.client, name) for name in self.QUERY_COLLECTIONS]
+            for db_path, coll_names in self._effective_extra().items():
+                client = self._get_client_for_path(db_path)
+                for name in coll_names:
+                    query_targets.append((client, name))
 
         # 1. 向量检索 - 从所有 collection 检索并合并
         vector_dict = {}
@@ -515,37 +535,52 @@ class VectorStore:
         t_bm25_done = time.time()
         print(f"    [VectorStore] BM25 done — {len(bm25_scores)} results ({t_bm25_done - t_vector_done:.1f}s)")
 
-        # 3. 合并结果
-        all_ids = set(vector_dict.keys()) | set(bm25_scores.keys())
+        # 3. 加权 RRF（Reciprocal Rank Fusion）合并结果
+        # 向量路与 BM25 路分别按自身分数排名，chunk 得分 = Σ w/(k+rank)（k=60 标准平滑）。
+        # 只用排名不用原始分 → 对两路分数分布/量纲完全免疫（cosine 有界 vs BM25Okapi 无界）。
+        # [2026-10-10 权重网格] golden set 实测（0.6/0.4→0.5/0.5 之间存在悬崖）：
+        #   0.6v/0.4b: R@15=0.58（向量路前 31 名全数压过 BM25 第 1 名，标准号
+        #               gold 由 BM25 精确匹配承载、被向量尾巴挤出窗口）
+        #   0.5v/0.5b: R@15=1.00 RR=0.318（唯一「两路互不淹没」的对称配置）
+        #   0.4v/0.6b ~ 0.2v/0.8b: R@15=1.00，RR 略升但 BM25 可淹没向量路头部
+        # 取等权：主链路（精排候选池）对各配置不敏感，回退路径需要对称鲁棒性，
+        # 且与 _fuse_rrf 多查询平权语义一致。调参改模块常量 RRF_W_*。
+        rrf_k = 60.0
+        w_vector, w_bm25 = RRF_W_VECTOR, RRF_W_BM25
+
+        rrf_scores: Dict[str, float] = {}
+        for rank, cid in enumerate(
+                sorted(vector_dict, key=lambda c: vector_dict[c]["vector_score"], reverse=True),
+                start=1):
+            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + w_vector / (rrf_k + rank)
+        for rank, cid in enumerate(
+                sorted(bm25_scores, key=lambda c: bm25_scores[c], reverse=True),
+                start=1):
+            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + w_bm25 / (rrf_k + rank)
+
+        # 归一化锚点：两路同 chunk 同时第 1 的理论贡献上界（w 和 = 1）
+        norm_cap = (w_vector + w_bm25) / (rrf_k + 1.0)
 
         merged = []
-        for chunk_id in all_ids:
+        for chunk_id, rrf in rrf_scores.items():
             vec_score = vector_dict.get(chunk_id, {}).get("vector_score", 0.0)
             bm_score = bm25_scores.get(chunk_id, 0.0)
-
-            # 归一化并计算综合分数
-            if vec_score > 0 and bm_score > 0:
-                combined_score = vector_weight * vec_score + (1 - vector_weight) * bm_score
-            elif vec_score > 0:
-                combined_score = vec_score * vector_weight
-            elif bm_score > 0:
-                combined_score = bm_score * (1 - vector_weight)
-            else:
-                continue
 
             chunk_info = vector_dict.get(chunk_id, {})
             bm_hit = bm25_hits.get(chunk_id, {})
             bm_meta = bm_hit.get("meta") or {}
             merged.append({
                 # bm25-only 命中（向量段未召回）时从 BM25 载荷补全文与元数据
+                "chunk_id": chunk_id,
                 "text": chunk_info.get("text") or bm_hit.get("doc", ""),
                 "source_file": chunk_info.get("source_file") or bm_meta.get("source_file", ""),
                 "section_title": chunk_info.get("section_title") or bm_meta.get("section_title", ""),
                 "doc_type": chunk_info.get("doc_type") or bm_meta.get("doc_type", ""),
                 "chunk_index": chunk_info.get("chunk_index", bm_meta.get("chunk_index", 0)),
-                "similarity": combined_score,
+                "similarity": min(1.0, rrf / norm_cap),
                 "vector_score": vec_score,
                 "bm25_score": bm_score,
+                "rrf_score": rrf,
                 "source_collection": chunk_info.get("source_collection") or bm_hit.get("collection", ""),
                 "sec_level": chunk_info.get("sec_level")
                 if chunk_info.get("sec_level") is not None
@@ -553,8 +588,8 @@ class VectorStore:
                 "sec_label": chunk_info.get("sec_label") or bm_meta.get("sec_label", ""),
             })
 
-        # 按综合分数排序
-        merged.sort(key=lambda x: x["similarity"], reverse=True)
+        # 按 RRF 分数排序（并列时向量分高者优先，保证确定性）
+        merged.sort(key=lambda x: (-x["rrf_score"], -x["vector_score"]))
 
         final = merged[:top_k]
         print(f"    [VectorStore] retrieve_hybrid done — {len(final)} results, total {time.time() - t_start:.1f}s")
@@ -562,17 +597,27 @@ class VectorStore:
         # [SEC] 检索审计（异步落盘；off 模式不审计）
         if sec_mode != "off":
             sec_filter.audit_retrieval(
-                query=query, scope_summary=f"hybrid:{len(query_targets)}colls",
+                query=query,
+                scope_summary=audit_scope or f"hybrid:{len(query_targets)}colls",
                 results=final)
         return final
 
     @classmethod
-    def _get_or_build_bm25(cls, collection_name: str, docs: List[str]):
+    def _get_or_build_bm25(cls, cache_key: str, docs: List[str]):
         """
         获取或构建缓存的 BM25Okapi 实例
 
         当 collection 的 chunk 数量不变时，复用已构建的 BM25 索引，
         避免每次查询都重新加载全量文档 + 重新分词。
+
+        [2026-10-10 评测回退] 语料不做元数据前置：前置 source_file 会让同文件
+        全部 chunk 命中标准号 token，BM25 路同文件洪水把边缘 gold 挤出窗口
+        （R@15 1.0→0.83）。精确词对齐由分词层标准号规范化 token 承担（正文级）。
+
+        Args:
+            cache_key: 缓存键 "{id(client)}::{collection_name}"——不同 ChromaDB
+                       目录下同名 collection（如各用户的 qms_doc_uploads）互不串缓存
+            docs: 文档正文列表
 
         Returns:
             (BM25Okapi_instance, tokenized_corpus)
@@ -580,15 +625,16 @@ class VectorStore:
         from rank_bm25 import BM25Okapi
 
         chunk_count = len(docs)
+        corpus = docs
 
         with cls._bm25_cache_lock:
-            cached = cls._bm25_cache.get(collection_name)
+            cached = cls._bm25_cache.get(cache_key)
             if cached and cached[0] == chunk_count:
                 return cached[1], cached[2]
 
             # 重建：分词 + 构建 BM25
             tokenizer = get_tokenizer()
-            tokenized_corpus = tokenizer.tokenize_corpus(docs)
+            tokenized_corpus = tokenizer.tokenize_corpus(corpus)
             bm25 = BM25Okapi(
                 tokenized_corpus,
                 k1=1.2,    # 降低高频词惩罚（中文法规文档核心术语频繁出现）
@@ -597,7 +643,7 @@ class VectorStore:
             )
 
             # 缓存
-            cls._bm25_cache[collection_name] = (chunk_count, bm25, tokenized_corpus)
+            cls._bm25_cache[cache_key] = (chunk_count, bm25, tokenized_corpus)
 
             # LRU 淘汰：超过 10 个缓存项时删除最旧的
             if len(cls._bm25_cache) > 10:
@@ -608,10 +654,16 @@ class VectorStore:
 
     @classmethod
     def invalidate_bm25_cache(cls, collection_name: str = None):
-        """使 BM25 缓存失效（文档摄入后调用）"""
+        """使 BM25 缓存失效（文档摄入后调用）。
+
+        缓存键为 "{id(client)}::{collection_name}"，按后缀匹配清理
+        同名 collection 的全部缓存（跨目录全清）。
+        """
         with cls._bm25_cache_lock:
             if collection_name:
-                cls._bm25_cache.pop(collection_name, None)
+                suffix = f"::{collection_name}"
+                for key in [k for k in cls._bm25_cache if k.endswith(suffix)]:
+                    del cls._bm25_cache[key]
             else:
                 cls._bm25_cache.clear()
 
@@ -705,7 +757,8 @@ class VectorStore:
                 docs = result["documents"]
                 metas = result["metadatas"]
 
-                bm25, _tokenized_corpus = self._get_or_build_bm25(collection_name, docs)
+                bm25, _tokenized_corpus = self._get_or_build_bm25(
+                    f"{id(client)}::{collection_name}", docs)
 
             # 查询分词
             tokenizer = get_tokenizer()
@@ -738,6 +791,118 @@ class VectorStore:
             print(f"    [VectorStore] BM25 检索失败: {e}")
             return {}
 
+    @staticmethod
+    def _fuse_rrf(paths: List[List[dict]], rrf_k: float = 60.0) -> List[dict]:
+        """跨查询 RRF 融合（方案 §3.1）：每路结果按自身 rrf_score 排名，
+        chunk 融合分 = Σ 1/(k+rank)。重复 chunk 保留单路表现最好的一份载荷，
+        并附 matched_queries（命中路数）与 mq_rrf_score 字段。输出按融合分降序。
+
+        纯函数（不触 Chroma/模型），可直接单测。
+        """
+        fused_scores: Dict[str, float] = {}
+        best: Dict[str, dict] = {}
+        n_hit: Dict[str, int] = {}
+        for path in paths:
+            ranked = sorted(
+                path,
+                key=lambda r: (r.get("rrf_score") or 0.0,
+                               r.get("similarity") or 0.0),
+                reverse=True)
+            for rank, r in enumerate(ranked, start=1):
+                cid = r.get("chunk_id") or ("text::" + (r.get("text") or "")[:120])
+                fused_scores[cid] = fused_scores.get(cid, 0.0) + 1.0 / (rrf_k + rank)
+                n_hit[cid] = n_hit.get(cid, 0) + 1
+                cur = best.get(cid)
+                if cur is None or (r.get("rrf_score") or 0.0) > (cur.get("rrf_score") or 0.0):
+                    best[cid] = r
+        out = []
+        for cid, score in fused_scores.items():
+            item = dict(best[cid])
+            item["mq_rrf_score"] = score
+            item["matched_queries"] = n_hit[cid]
+            out.append(item)
+        out.sort(key=lambda x: (-x["mq_rrf_score"], -(x.get("rrf_score") or 0.0)))
+        return out
+
+    def retrieve_multi_query(
+        self,
+        queries: List[str],
+        top_k: int = 5,
+        candidate_pool_size: int = 30,
+        similarity_threshold: float = 0.3,
+        min_rerank_score: float = 0.0,
+        use_rerank: bool = True,
+    ) -> list[dict]:
+        """
+        多查询融合检索（方案 §3.1）：N 路混合检索 + 跨查询 RRF 融合 + 可选精排。
+
+        把「多查询」从 agent 自觉行为下沉为检索层内部行为：
+          1. 每路查询各自 retrieve_hybrid（向量+BM25、单路 RRF、SEC 全链路）
+          2. 跨查询按各路 rrf_score 排名做第二轮 RRF 融合（对抗单查询词汇偏置）
+          3. use_rerank=True 时精排仅对融合后候选池执行一次（原始查询作为
+             精排 query），避免 N 路 × GPU 精排的线性成本
+
+        Args:
+            queries: 查询列表（queries[0] 为原始查询，其余为变体）
+            top_k: 最终返回数量
+            candidate_pool_size: 送入精排的融合候选池大小
+            similarity_threshold: 各路向量召回阈值
+            min_rerank_score: 精排最低分数阈值（0=不过滤）
+            use_rerank: 是否精排
+
+        Returns:
+            融合（+精排）后的结果列表
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        queries = [q for q in queries if q and q.strip()]
+        if not queries:
+            return []
+
+        t_start = time.time()
+        print(f"[MultiQuery] {len(queries)} 路查询融合开始")
+
+        per_path_k = candidate_pool_size if use_rerank else top_k
+
+        def _one(q: str) -> list[dict]:
+            try:
+                return self.retrieve_hybrid(
+                    query=q,
+                    top_k=per_path_k,
+                    similarity_threshold=similarity_threshold,
+                )
+            except Exception as e:
+                print(f"[MultiQuery] 单路检索失败（降级跳过）: {e}")
+                return []
+
+        if len(queries) == 1:
+            paths = [_one(queries[0])]
+        else:
+            with ThreadPoolExecutor(max_workers=min(3, len(queries))) as ex:
+                paths = list(ex.map(_one, queries))
+
+        fused = self._fuse_rrf(paths)
+        if not fused:
+            return []
+
+        if not use_rerank:
+            final = fused[:top_k]
+            print(f"[MultiQuery] 融合完成 — {len(final)} 结果 ({time.time() - t_start:.1f}s)")
+            return final
+
+        # 精排：仅一次，query 用原始查询（queries[0]）
+        from app.services.rag.reranker import Reranker
+        reranker = Reranker()
+        _ = reranker.model  # 触发模型加载（须在 BM25 大内存分配前，见 retrieve_and_rerank 注释）
+        final = reranker.rerank_with_threshold(
+            query=queries[0],
+            chunks=fused[:candidate_pool_size],
+            top_k=top_k,
+            min_score=min_rerank_score,
+        )
+        print(f"[MultiQuery] 融合+精排完成 — {len(final)} 结果 ({time.time() - t_start:.1f}s)")
+        return final
+
     def retrieve_and_rerank(
         self,
         query: str,
@@ -745,16 +910,14 @@ class VectorStore:
         top_k: int = 5,
         candidate_pool_size: int = 30,
         similarity_threshold: float = 0.3,
-        vector_weight: float = 0.85,
         min_rerank_score: float = 0.0,
     ) -> list[dict]:
         """
         两阶段检索：粗召回 + Cross-Encoder 精排
 
         阶段1 — 粗召回 (高召回率):
-          - 向量检索 n_results=candidate_pool_size (权重: vector_weight)
-          - BM25 检索 top_k=candidate_pool_size (权重: 1-vector_weight)
-          - 加权融合去重
+          - 向量检索 + BM25 检索各取 candidate_pool_size
+          - RRF 排名融合去重（见 retrieve_hybrid）
 
         阶段2 — 精排 (高精确率):
           - Cross-Encoder (BGE-Reranker-v2-m3) 对候选池逐条打分
@@ -765,8 +928,7 @@ class VectorStore:
             doc_type: 文档类型过滤（可选）
             top_k: 精排后返回数量（最终输出）
             candidate_pool_size: 粗召回候选池大小（建议 20-40）
-            similarity_threshold: 粗召回最低相似度阈值
-            vector_weight: 向量检索权重
+            similarity_threshold: 粗召回最低相似度阈值（作用于向量路召回）
             min_rerank_score: 精排最低分数阈值（0-1），0=不过滤
 
         Returns:
@@ -787,7 +949,6 @@ class VectorStore:
             doc_type=doc_type,
             top_k=candidate_pool_size,
             similarity_threshold=similarity_threshold,
-            vector_weight=vector_weight,
         )
 
         if not candidates:

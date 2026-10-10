@@ -72,9 +72,11 @@ def test_every_chroma_query_carries_sec_where():
                 continue
             violations.append(f"{rel}:{call.lineno}")
 
-    # 白名单文件已被跳过，线上应收口数 = vector_store(3) + agent_tools(3) + routes(1)
-    assert checked >= 7, (
-        f"扫描到的 .query( 调用数异常（{checked} < 7），静态守卫可能失效，"
+    # 白名单文件已被跳过，线上应收口数 = vector_store(3) + agent_tools(2) + routes(1)
+    # [2026-10-10] 7→6：search_kb uploads 直查旁路收口为 retrieve_hybrid 定向检索
+    # （其 .query( 在 vector_store 内且带密级 where），agent_tools 直查数 3→2
+    assert checked >= 6, (
+        f"扫描到的 .query( 调用数异常（{checked} < 6），静态守卫可能失效，"
         "请检查扫描范围")
     assert not violations, (
         "发现未携带密级 where 的 .query( 调用（L1 旁路，违反 §5.2 唯一收口）：\n  "

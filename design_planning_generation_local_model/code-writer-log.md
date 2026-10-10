@@ -2771,3 +2771,22 @@ MinerU 启用 GPU 后，首次加载模型 + 多页推理可能超过原 30 秒�
 - File: `app/api/routes.py`（以源版覆盖）、`app/services/agent_streams.py`（新文件）、`tests/test_agent_streams.py`（新文件）
 - Change: 合并源项目"切换聊天任务不中断生成"改造：后台流管理器 + 3 个生成端点解耦 + stream/status、stream、stream/cancel 新端点 + recall/delete 联动取消
 - Result: Success
+
+# 2026-10-10 14:00 - 任务开始：RAG 无重建检索优化实施（跨两个会话完成，本条为项目侧汇总记录）
+
+用户指令「重排模型不要换，其他做一下」；方案源：《RAG检索精度提升可执行方案.md》（researcher_docs）免重建子集。会话 1（14:00-17:33）完成评测基建与基线后意外退出，会话 2（18:2x-19:0x）经 git diff 对账恢复上下文并完成评测-修正循环。完整逐操作日志见 code_writer/code-writer-log.md。
+
+## 最终代码改动（git diff 于 main，未提交）
+- app/services/rag/vector_store.py：retrieve_hybrid 线性融合(0.85·cos+0.15·BM25) → RRF 排名融合（k=60，等权 0.5/0.5，模块常量 RRF_W_* 可调）；BM25 语料不做元数据前置（评测撤销）；新增 retrieve_multi_query（多查询并行混合检索 + _fuse_rrf 跨查询 RRF + 单次精排）；retrieve_hybrid 增加 collections/audit_scope 参数（uploads 定向检索）
+- app/services/rag/tokenizer.py：_extract_std_num_tokens 标准号规范化 token（GB 9706.1-2020↔gb9706.1 对齐）
+- app/services/rag/medical_device_dict.txt：+10 领域词
+- app/services/rag/reranker.py：_doc_input 统一入口，精排输入=纯正文截断（元数据前缀实验经评测撤销并留守护注释）
+- app/services/agent_tools.py：search_kb 内置多查询扩展（SEARCH_KB_MULTI_QUERY=1，LLM 生成 2 变体）；uploads 检索从直查 collection 收口为 retrieve_hybrid 定向检索（SEC 红线）
+- tests/test_rag_no_rebuild.py（新，10 用例）、test_sec_no_bypass.py 基线 7→6
+- evals/：build_golden_seed.py、run_eval.py、golden_dataset.json（12 题）、NOTES.md（结论记录）、reports/ 4 份
+
+## 评测结论（详见 evals/NOTES.md）
+基线→定稿：hybrid R@15 1.0→1.0（v1/v2 中间态曾跌至 0.83/0.58，定位为 BM25 前缀洪水与向量主导权重两个根因后修复）；rerank R@5/@10 持平，chunk 级 MRR 0.56→0.41 但经逐位归因+文件级复评（0.43→0.47）确认为 golden set 自动标注噪声（目录索引块被标 gold，精排正确偏好标准原文）。精排模型未换（遵用户指令）。
+
+## 待办
+- 方案 Step 1.4 阈值校准未在本轮范围；golden set 人工复核；多查询融合需在线观测

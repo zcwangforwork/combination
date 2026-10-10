@@ -78,6 +78,18 @@ class Reranker:
         print(f"[Reranker] 已加载 {self._model_name} 到 GPU (FP16){offline_tag}")
         return self._model
 
+    @staticmethod
+    def _doc_input(chunk: dict, max_chunk_length: int) -> str:
+        """精排输入文本 = 纯正文截断。
+
+        [2026-10-10 评测回退] 曾实验「元数据前缀 + 正文」（Contextual Retrieval
+        免重建平替）：cross-encoder 精排 MRR 0.56 → 0.17。根因：候选池常大量
+        来自同一标准文件，前缀给同文件所有 chunk 无差别注入相同标准号/文件名，
+        摧毁文件内区分度。上下文增强应在索引侧（Phase 2 重建窗口）做，精排
+        输入保持纯正文。保留本函数作为统一入口，便于后续 A/B。
+        """
+        return str(chunk.get('text') or '')[:max_chunk_length]
+
     def rerank(
         self,
         query: str,
@@ -87,6 +99,8 @@ class Reranker:
     ) -> list[dict]:
         """
         对粗召回结果进行 Cross-Encoder 精排
+
+        精排输入为纯正文截断（_doc_input，见其 docstring 的实验记录）。
 
         Args:
             query: 原始查询文本
@@ -102,7 +116,7 @@ class Reranker:
 
         # 构建 (query, document) 配对
         pairs = [
-            (query, c['text'][:max_chunk_length])
+            (query, self._doc_input(c, max_chunk_length))
             for c in chunks
         ]
 

@@ -55,7 +55,6 @@ def benchmark(top_k: int = 5, candidate_pool: int = 30):
             baseline = store.retrieve_hybrid(
                 query=query,
                 top_k=top_k,
-                vector_weight=0.85,
             )
             t_baseline = time.time() - t0
         except Exception as e:
@@ -70,7 +69,6 @@ def benchmark(top_k: int = 5, candidate_pool: int = 30):
                 query=query,
                 top_k=top_k,
                 candidate_pool_size=candidate_pool,
-                vector_weight=0.85,
             )
             t_rerank = time.time() - t0
         except Exception as e:

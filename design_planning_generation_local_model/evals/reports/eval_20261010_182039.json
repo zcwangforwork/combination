@@ -1,0 +1,432 @@
+{
+  "meta": {
+    "timestamp": "2026-10-10T18:19:16",
+    "dataset": "E:\\A_nrf_sample_codes\\working_team_work\\public\\project\\git_project\\combination\\design_planning_generation_local_model\\evals\\golden_dataset.json",
+    "n_queries": 12,
+    "n_reviewed": 0,
+    "top_k": 15,
+    "skip_rerank": false,
+    "sec_filter_mode": "off(评测固定)"
+  },
+  "queries": [
+    "ISO 14971 风险管理 危害判定",
+    "GB 9706.1 电气安全 漏电流限值",
+    "YY/T 0316 风险可接受准则",
+    "胰岛素泵 软件确认 测试方法",
+    "贴敷式 输注精度 性能要求",
+    "可用性工程 IEC 62366 形成性评估",
+    "生物相容性 ISO 10993 细胞毒性试验",
+    "GB/T 42061 质量管理体系 文件控制",
+    "GB/T 42062 风险管理计划",
+    "IEC 62304 软件安全分类",
+    "报警系统 IEC 60601-1-8",
+    "电磁兼容 YY 9706.102"
+  ],
+  "entries": {
+    "retrieve": {
+      "aggregate": {
+        "recall@5": 0.3333,
+        "recall@10": 0.5,
+        "recall@15": 0.5833,
+        "rr@10": 0.1813,
+        "ndcg@10": 0.1001,
+        "p95_latency_sec": 0.56,
+        "mean_latency_sec": 1.56,
+        "empty_rate": 0.0,
+        "error_count": 0
+      },
+      "per_query": [
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 1.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 12.936,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.14285714285714285,
+          "ndcg@10": 0.10086747116627115,
+          "latency": 0.528,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.2,
+          "ndcg@10": 0.20453430723937174,
+          "latency": 0.521,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.16666666666666666,
+          "ndcg@10": 0.10778915452451093,
+          "latency": 0.468,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.3333333333333333,
+          "ndcg@10": 0.33424620450682646,
+          "latency": 0.539,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.3333333333333333,
+          "ndcg@10": 0.15130120674940672,
+          "latency": 0.52,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.532,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.548,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.522,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.54,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.49,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 1.0,
+          "ndcg@10": 0.30260241349881345,
+          "latency": 0.561,
+          "n_results": 15,
+          "error": null
+        }
+      ]
+    },
+    "hybrid": {
+      "aggregate": {
+        "recall@5": 0.5833,
+        "recall@10": 0.8333,
+        "recall@15": 0.8333,
+        "rr@10": 0.3128,
+        "ndcg@10": 0.2331,
+        "p95_latency_sec": 0.94,
+        "mean_latency_sec": 2.99,
+        "empty_rate": 0.0,
+        "error_count": 0
+      },
+      "per_query": [
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.3333333333333333,
+          "ndcg@10": 0.15130120674940672,
+          "latency": 26.462,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.2,
+          "ndcg@10": 0.21793006430423467,
+          "latency": 0.942,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.3333333333333333,
+          "ndcg@10": 0.37708540574924465,
+          "latency": 0.824,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.14285714285714285,
+          "ndcg@10": 0.1919598743897292,
+          "latency": 0.863,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 1.0,
+          "ndcg@10": 0.5855700749881525,
+          "latency": 0.854,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.2,
+          "ndcg@10": 0.21793006430423467,
+          "latency": 0.83,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.1,
+          "ndcg@10": 0.0874717141014082,
+          "latency": 0.886,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.86,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 0.854,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.3333333333333333,
+          "ndcg@10": 0.4864687556375333,
+          "latency": 0.795,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.1111111111111111,
+          "ndcg@10": 0.17856411732486627,
+          "latency": 0.86,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 1.0,
+          "ndcg@10": 0.30260241349881345,
+          "latency": 0.819,
+          "n_results": 15,
+          "error": null
+        }
+      ]
+    },
+    "rerank": {
+      "aggregate": {
+        "recall@5": 0.25,
+        "recall@10": 0.5833,
+        "recall@15": 0.6667,
+        "rr@10": 0.1739,
+        "ndcg@10": 0.1512,
+        "p95_latency_sec": 2.04,
+        "mean_latency_sec": 2.43,
+        "empty_rate": 0.0,
+        "error_count": 0
+      },
+      "per_query": [
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.16666666666666666,
+          "ndcg@10": 0.10778915452451093,
+          "latency": 8.349,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.25,
+          "ndcg@10": 0.23119123707664177,
+          "latency": 1.904,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.25,
+          "ndcg@10": 0.3088878832352369,
+          "latency": 1.908,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.1111111111111111,
+          "ndcg@10": 0.09109240322345806,
+          "latency": 1.862,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 1.0,
+          "ndcg@10": 0.8667163765466583,
+          "latency": 2.039,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 1.869,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.14285714285714285,
+          "ndcg@10": 0.10086747116627115,
+          "latency": 1.921,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 1.833,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 1.881,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 1.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 1.839,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 1.0,
+          "recall@15": 1.0,
+          "rr@10": 0.16666666666666666,
+          "ndcg@10": 0.10778915452451093,
+          "latency": 1.884,
+          "n_results": 15,
+          "error": null
+        },
+        {
+          "recall@5": 0.0,
+          "recall@10": 0.0,
+          "recall@15": 0.0,
+          "rr@10": 0.0,
+          "ndcg@10": 0.0,
+          "latency": 1.886,
+          "n_results": 15,
+          "error": null
+        }
+      ]
+    }
+  }
+}

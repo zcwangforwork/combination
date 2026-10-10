@@ -1462,10 +1462,13 @@ def _build_style_reference(exclude_chapter: str, max_chars: int = 2600) -> str:
 # 本地无结果 / 结果少于 N 条 / 最高相关度低于 S 时触发；env 可调
 _WEB_FALLBACK_MIN_RESULTS = int(os.getenv("WEB_FALLBACK_MIN_RESULTS", "3"))
 _WEB_FALLBACK_MIN_SCORE = float(os.getenv("WEB_FALLBACK_MIN_SCORE", "0.5"))
+# [RAG §3.1] search_kb 内置多查询融合开关（1=开：原查询+2 变体 3 路融合；0=回退单查询）
+_SEARCH_KB_MULTI_QUERY = os.getenv("SEARCH_KB_MULTI_QUERY", "1") == "1"
 
 
 @tool
-async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str:
+async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True,
+                    multi_query: bool = True) -> str:
     """检索贴敷式胰岛素泵知识库 (标准、法规、技术文档、测试报告等)。
 
     同时检索两个 collection 并合并结果:
@@ -1480,7 +1483,11 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
         top_k: 返回结果数量，默认15条。
         use_rerank: 是否启用Cross-Encoder精排（默认开启，提升精确率）。
                     两阶段检索：粗召回40条→BGE-Reranker精排→Top-K。
-                    注：精排仅作用于主知识库；uploads 集合较小，直接向量检索即可。
+                    注：精排仅作用于主知识库；uploads 集合较小，走混合检索不精排。
+        multi_query: 是否启用内置多查询融合（默认开启，SEARCH_KB_MULTI_QUERY=0 可全局关闭）。
+                    自动生成 2 条查询变体，原查询+变体各走一次混合检索，
+                    跨查询 RRF 融合后再精排——无需再手动调用 generate_search_query
+                    生成多条查询分别检索。
 
     Returns:
         JSON格式的检索结果列表，每项包含 content, source, source_collection, score。
@@ -1489,102 +1496,91 @@ async def search_kb(query: str, top_k: int = 15, use_rerank: bool = True) -> str
     try:
         from app.services.rag.vector_store import VectorStore
 
+        # ── [RAG §3.1] 多查询扩展：原查询 + LLM 生成的 2 条互补变体 ──
+        # 变体生成失败/超时 → 优雅降级为单查询，不阻塞检索主链路
+        queries = [query]
+        if _SEARCH_KB_MULTI_QUERY and multi_query:
+            try:
+                variants = await asyncio.wait_for(
+                    _generate_search_queries(
+                        chapter_name=query,
+                        intent="search_kb 内置多查询扩展：生成与原查询互补的检索变体"
+                               "（不同关键词/同义术语/相关标准号维度）",
+                        num_queries=2,
+                    ),
+                    timeout=20.0,
+                )
+                seen_q = {query}
+                for v in variants or []:
+                    v = (v or "").strip()
+                    if v and v not in seen_q:
+                        queries.append(v)
+                        seen_q.add(v)
+            except Exception as e:
+                print(f"[search_kb] 多查询变体生成失败（回退单查询）: {e}")
+
         def _do_retrieve_main():
-            """检索主知识库 (insulin_pump_kb)，可走 Reranker 精排"""
+            """检索主知识库 (insulin_pump_kb)：多查询融合，可走 Reranker 精排"""
             store = VectorStore()
+            if len(queries) > 1:
+                return store.retrieve_multi_query(
+                    queries=queries,
+                    top_k=top_k,
+                    candidate_pool_size=50,
+                    use_rerank=use_rerank,
+                )
             if use_rerank:
                 return store.retrieve_and_rerank(
                     query=query,
                     top_k=top_k,
                     candidate_pool_size=50,
-                    vector_weight=0.85,
                 )
             else:
                 return store.retrieve_hybrid(
                     query=query,
                     top_k=top_k,
-                    vector_weight=0.85,
                 )
 
         def _do_retrieve_uploads():
-            """直接检索 uploads collection (用户上传附件库)。
+            """混合检索 uploads collection (用户上传附件库)。
 
             uploads 已纳入 QUERY_COLLECTIONS，主库检索会一并命中 uploads。
             本方法仍独立检索一次，用于控制 uploads 配额 (uploads_n) 并打上
             [附件] 来源标注；主库结果中的 uploads chunk 会在后续被剔除，避免重复。
-            直接走 self.collection.query 即可，无需 Reranker 或 BM25 二次召回。
 
-            [SEC 2026-09-28] 本方法为直查旁路，密级过滤必须与 VectorStore 主链路
-            同口径（§5.6 旁路封堵）：enforce 注入 sec where；shadow 无 where 逐条
-            复核标记；off 回退上线前行为。
+            [RAG §1.5] 由纯向量直查旁路收口为 retrieve_hybrid 定向检索
+            （collections=["qms_doc_uploads"]）：向量+BM25 双路 + RRF 融合，
+            与主库同一检索实现，附件中的标准号/术语精确词不再漏召回。
+            [SEC 2026-09-28] 密级过滤链路（where 注入 / shadow 复核 / enforce
+            探针 / 审计）由 retrieve_hybrid 内部保证，与主链路同口径（§5.6）。
             """
             try:
                 # [KB-ISO] 用户隔离：uploads 检索遍历当前作用域（本人+共享 / ADMIN 全部）
                 from app.services import kb_scope as _kbs
-                from app.services.rag import sec_filter
                 scoped = _kbs.scoped_kb_stores()
                 if not scoped:
                     return []
-                query_embedding = scoped[0].embedder.encode_single(query)
-                sec_where = sec_filter.effective_query_where()
-                sec_mode = sec_filter.get_mode()
-                user_sec = sec_filter.current_user_sec_level()
                 # uploads 集合独立检索，给予与主库同等的配额（各库分别取，汇总后由调用方截断）
-                uploads_n = max(top_k, 5) if sec_mode == "off" else sec_filter.overfetch_n(
-                    max(top_k, 5))
-                merged = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+                uploads_n = max(top_k, 5)
+                merged: dict = {}  # chunk_id -> result（跨库去重，保留 rrf 分高者）
                 for store in scoped:
                     try:
-                        coll = store.collection
-                        raw = coll.query(
-                            query_embeddings=[query_embedding],
-                            n_results=uploads_n,
-                            where=sec_where,
-                            include=["documents", "metadatas", "distances"],
+                        results = store.retrieve_hybrid(
+                            query=query,
+                            top_k=uploads_n,
+                            collections=["qms_doc_uploads"],
+                            audit_scope="search_kb:uploads",
                         )
-                        # [SEC] shadow：无 where → 复核标记；enforce：探针取 denied 样本
-                        if raw and raw.get("ids") and raw["ids"][0]:
-                            if sec_mode == "shadow":
-                                sec_filter.mark_denied_batch(
-                                    raw["documents"][0], raw["metadatas"][0],
-                                    "qms_doc_uploads", user_sec)
-                            elif sec_mode == "enforce":
-                                sec_filter.probe_denied(
-                                    coll, query_embedding, uploads_n,
-                                    "qms_doc_uploads", user_sec)
                     except Exception:
                         continue
-                    if raw and raw.get("ids") and raw["ids"][0]:
-                        merged["ids"][0].extend(raw["ids"][0])
-                        merged["documents"][0].extend(raw["documents"][0])
-                        merged["metadatas"][0].extend(raw["metadatas"][0])
-                        merged["distances"][0].extend(raw["distances"][0])
-                raw = merged
-                if not raw or not raw.get("ids") or not raw["ids"][0]:
-                    return []
-                results = []
-                for i in range(len(raw["ids"][0])):
-                    distance = raw["distances"][0][i]
-                    similarity = max(0.0, 1.0 - distance / 2.0)
-                    meta = raw["metadatas"][0][i] or {}
-                    results.append({
-                        "text": raw["documents"][0][i],
-                        "source_file": meta.get("source_file", "用户上传附件"),
-                        "section_title": meta.get("section_title", ""),
-                        "doc_type": meta.get("doc_type", ""),
-                        "chunk_index": meta.get("chunk_index", 0),
-                        "similarity": similarity,
-                        "distance": distance,
-                        "chunk_id": raw["ids"][0][i],
-                        "sec_level": sec_filter.chunk_sec_level(meta),
-                        "sec_label": meta.get("sec_label", ""),
-                    })
-                # [SEC] 检索审计（off 模式不审计）
-                if sec_mode != "off":
-                    sec_filter.audit_retrieval(
-                        query=query, scope_summary="search_kb:uploads",
-                        results=results)
-                return results
+                    for r in results or []:
+                        cid = r.get("chunk_id")
+                        if not cid:
+                            continue
+                        prev = merged.get(cid)
+                        if prev is None or (r.get("rrf_score") or 0.0) > (prev.get("rrf_score") or 0.0):
+                            merged[cid] = r
+                return list(merged.values())
             except Exception as e:
                 print(f"[search_kb] uploads 检索异常: {e}")
                 return []

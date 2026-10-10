@@ -6,6 +6,7 @@ app/services/rag/tokenizer.py
 """
 
 import os
+import re
 import threading
 from pathlib import Path
 from typing import List, Optional
@@ -33,6 +34,45 @@ _BUILTIN_STOPWORDS = {
     "并", "将", "已", "以", "且", "但", "若", "该",
     "则", "因", "此", "如", "无", "未", "更", "最",
 }
+
+
+# ── 标准号规范化（方案 §4.2 分词层优化）──
+# 标准号写法高度多样："GB 9706.1-2020" / "gb9706.1" / "GB/T 42062-2022" /
+# "GBT42062" / "IEC 60601-1-11:2015" 等。原始 jieba 分词会把它们切成
+# 互不相等的碎片，导致 BM25 中查询与语料无法对齐。
+# 这里在分词结果之外附加规范化 token：小写、去空格/斜杠、去年代号后缀。
+
+_STD_NUM_RE = re.compile(
+    r'(?<![a-z0-9])('
+    r'gb|yy|yb|iec|iso|astm|cispr|en|ul'
+    r')\s*/?\s*t?\s*(\d+(?:[.\-:]\d+)*)',
+    re.IGNORECASE,
+)
+# 年代号后缀：GB 9706.1-2020 / ISO 14971:2019 中的 "-2020" / ":2019"
+_STD_YEAR_RE = re.compile(r'[-:]\d{4}$')
+
+# 常见全角字符 → 半角（标准号中出现的概率不低）
+_FULLWIDTH_MAP = str.maketrans({
+    '／': '/', '．': '.', '－': '-', '：': ':',
+})
+
+
+def _extract_std_num_tokens(text: str) -> list:
+    """提取规范化标准号 token。
+
+    例：GB 9706.1-2020 / gb9706.1 → "gb9706.1"
+        GB/T 42062-2022 / GBT42062 / GB T 42062 → "gb42062"
+        IEC 60601-1-11:2015 / IEC60601-1-11 → "iec60601-1-11"
+
+    前缀中的 "/t"、"t" 变体（GB/T、GBT）统一并入前缀（gb），
+    年代号后缀剥离后，同一标准的不同写法得到相同 token。
+    """
+    tokens = []
+    for m in _STD_NUM_RE.finditer(text.translate(_FULLWIDTH_MAP)):
+        canon = m.group(1).lower() + _STD_YEAR_RE.sub('', m.group(2))
+        if canon and canon not in tokens:
+            tokens.append(canon)
+    return tokens
 
 
 class ChineseTokenizer:
@@ -99,6 +139,7 @@ class ChineseTokenizer:
         1. jieba.cut_for_search 搜索引擎模式分词
         2. 英文/数字部分自动保留
         3. 可选停用词过滤
+        4. 附加标准号规范化 token（GB 9706.1-2020 / gb9706.1 对齐）
 
         Returns:
             tuple (用于 LRU 缓存的可哈希类型)
@@ -126,6 +167,12 @@ class ChineseTokenizer:
                 continue
             else:
                 tokens.append(token)
+
+        # 附加标准号规范化 token（去重：原始分词碎片不会与之重复，但防御性去重）
+        std_tokens = _extract_std_num_tokens(text)
+        if std_tokens:
+            existing = set(tokens)
+            tokens.extend(t for t in std_tokens if t not in existing)
 
         return tuple(tokens)
 

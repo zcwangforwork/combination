@@ -2008,7 +2008,6 @@ class MiniMaxService:
                         query=chapter_query,
                         top_k=main_k,
                         similarity_threshold=0.3,
-                        vector_weight=0.7
                     )
                     break
                 except Exception as e:

@@ -1,0 +1,331 @@
+[
+  {
+    "query": "ISO 14971 风险管理 危害判定",
+    "relevant_chunk_ids": [
+      "053b2764b4d90833",
+      "221c9926411c8b21",
+      "236e60c87e69d5fd",
+      "2401ab1dad78e4b3",
+      "bf06b528dc66bab4",
+      "08b459db175c7458"
+    ],
+    "relevant_source_files": [
+      "GBT 16886.1-2025草案稿.pdf",
+      "IEC TR 62366-2-2016_1_100_translate.pdf",
+      "ISO 13485：2016 医疗器械-质量管理体系用于法规的要求.pdf",
+      "输液泵产品生命周期.docx"
+    ],
+    "query_type": "standard_no",
+    "notes": "精确标准号",
+    "auto_label_rule": {
+      "std": [
+        "14971"
+      ],
+      "kw": [
+        "风险",
+        "危害"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "GB 9706.1 电气安全 漏电流限值",
+    "relevant_chunk_ids": [
+      "02dde4149d7c001f",
+      "150eb0bba9e946d5",
+      "151f05181cede491",
+      "27a8c8daffd5a7ad",
+      "38a3d3eac155e1e1",
+      "45475daa0e06247f"
+    ],
+    "relevant_source_files": [
+      "GB 9706.1-2020 标准解读（蓝宝书）.pdf",
+      "有源医疗器械9706.1-2020风险管理报告-47d5200ae39c.docx",
+      "有源医疗器械9706.1-2020风险管理报告.docx",
+      "贴敷式胰岛素泵知识库介绍.md"
+    ],
+    "query_type": "standard_no",
+    "notes": "精确标准号+参数限值",
+    "auto_label_rule": {
+      "std": [
+        "9706.1"
+      ],
+      "kw": [
+        "漏电流",
+        "电气安全"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "YY/T 0316 风险可接受准则",
+    "relevant_chunk_ids": [
+      "08c5680c67adfec6",
+      "0f4c0b9642494b09",
+      "304449dcc32dae85",
+      "46b2beb428394eca",
+      "478d5c344b44a6e3",
+      "506711e51a6f66e4"
+    ],
+    "relevant_source_files": [
+      "GB 9706.1-2020 标准解读-药监局标准管理中心 编.pdf",
+      "GB 9706.1-2020 标准解读（蓝宝书）.pdf",
+      "GBT 42062-2022 医疗器械 风险管理对医疗器械的应用.pdf",
+      "有源医疗器械9706.1-2020风险管理报告-47d5200ae39c.docx",
+      "有源医疗器械9706.1-2020风险管理报告.docx",
+      "有源医疗器械风险管理分析报告-2024年-42062-2022,9706.1-2020.docx"
+    ],
+    "query_type": "standard_no",
+    "notes": "精确标准号",
+    "auto_label_rule": {
+      "std": [
+        "0316"
+      ],
+      "kw": [
+        "可接受",
+        "风险"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "胰岛素泵 软件确认 测试方法",
+    "relevant_chunk_ids": [
+      "48a81489127fa640",
+      "6024cea669a8e2a6",
+      "c0000f21d074b802",
+      "017b9e6a27408845",
+      "042b6c14945644ca",
+      "09a35ab1049819d2"
+    ],
+    "relevant_source_files": [
+      "62304软件评估报告 - 副本.docx",
+      "GBZ 42217-2022 医疗器械 用于医疗器械质量体系软件的确认.pdf",
+      "医疗器械软件描述文档 及体系文件模板.docx"
+    ],
+    "query_type": "semantic",
+    "notes": "模糊语义",
+    "auto_label_rule": {
+      "std": [],
+      "kw": [
+        "软件确认",
+        "软件验证",
+        "软件测试"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "贴敷式 输注精度 性能要求",
+    "relevant_chunk_ids": [
+      "06b4f485456f9e57",
+      "6a81166f24a5c737",
+      "91cd44b26f4b6438",
+      "dabaed32f172d772"
+    ],
+    "relevant_source_files": [
+      "贴敷式胰岛素泵知识库介绍.md",
+      "贴敷式胰岛素泵设计需求文件V1.0.docx"
+    ],
+    "query_type": "semantic",
+    "notes": "模糊语义",
+    "auto_label_rule": {
+      "std": [],
+      "kw": [
+        "输注精度",
+        "输注准确"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "可用性工程 IEC 62366 形成性评估",
+    "relevant_chunk_ids": [
+      "c95a7ed328e2964d",
+      "e8975b7f1e02c90e",
+      "4632425f90684f26",
+      "4ce175cb79105ae9",
+      "7ca0829663fc363c",
+      "bfcbbd469ba8e367"
+    ],
+    "relevant_source_files": [
+      "2016版13485&GMP内审检查表（模板） .xlsx",
+      "DB32T 5123-2025 医疗器械可用性测试通用技术规范.pdf",
+      "GBT 42062-2022 医疗器械 风险管理对医疗器械的应用.pdf",
+      "IEC TR 62366-2-2016_1_100_translate.pdf",
+      "YYT 0664-2020 医疗器械软件 软件生存周期过程（可复制）.pdf"
+    ],
+    "query_type": "mixed",
+    "notes": "中英混合",
+    "auto_label_rule": {
+      "std": [
+        "62366"
+      ],
+      "kw": [
+        "形成",
+        "可用性"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "生物相容性 ISO 10993 细胞毒性试验",
+    "relevant_chunk_ids": [
+      "06b4f485456f9e57",
+      "dabaed32f172d772",
+      "012dbdbe7702416d",
+      "06ee8686b9355676",
+      "8760d1b87a8c835d",
+      "91cd44b26f4b6438"
+    ],
+    "relevant_source_files": [
+      "GBT 16886.1-2025草案稿.pdf",
+      "贴敷式胰岛素泵知识库介绍.md",
+      "贴敷式胰岛素泵设计需求文件V1.0.docx",
+      "输液泵产品生命周期.docx"
+    ],
+    "query_type": "mixed",
+    "notes": "中英混合",
+    "auto_label_rule": {
+      "std": [
+        "10993"
+      ],
+      "kw": [
+        "细胞毒性",
+        "生物相容"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "GB/T 42061 质量管理体系 文件控制",
+    "relevant_chunk_ids": [
+      "8760d1b87a8c835d",
+      "e21c5ff6a15f10f7"
+    ],
+    "relevant_source_files": [
+      "GBT 42062-2022 医疗器械 风险管理对医疗器械的应用.pdf",
+      "贴敷式胰岛素泵知识库介绍.md"
+    ],
+    "query_type": "standard_no",
+    "notes": "QMS 体系标准",
+    "auto_label_rule": {
+      "std": [
+        "42061"
+      ],
+      "kw": [
+        "文件控制",
+        "质量管理体系"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "GB/T 42062 风险管理计划",
+    "relevant_chunk_ids": [
+      "45475daa0e06247f",
+      "8760d1b87a8c835d"
+    ],
+    "relevant_source_files": [
+      "贴敷式胰岛素泵知识库介绍.md"
+    ],
+    "query_type": "standard_no",
+    "notes": "风险管理计划文档",
+    "auto_label_rule": {
+      "std": [
+        "42062"
+      ],
+      "kw": [
+        "风险管理计划",
+        "风险管理"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "IEC 62304 软件安全分类",
+    "relevant_chunk_ids": [
+      "45475daa0e06247f",
+      "8760d1b87a8c835d",
+      "97cded83e83e977c",
+      "b5c3337b25162e9e"
+    ],
+    "relevant_source_files": [
+      "62304软件评估报告 - 副本.docx",
+      "贴敷式胰岛素泵知识库介绍.md"
+    ],
+    "query_type": "mixed",
+    "notes": "软件生命周期等级",
+    "auto_label_rule": {
+      "std": [
+        "62304"
+      ],
+      "kw": [
+        "软件",
+        "安全"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "报警系统 IEC 60601-1-8",
+    "relevant_chunk_ids": [
+      "39489653373c92b8",
+      "77985d5abaa2509f",
+      "0a40c06d462a512a",
+      "38c2a5af44937674",
+      "3a8d8bba869e7475",
+      "3d03ebb99a90967a"
+    ],
+    "relevant_source_files": [
+      "GB 9706.1-2020 标准解读-药监局标准管理中心 编.pdf",
+      "GB 9706.1-2020 标准解读（蓝宝书）.pdf",
+      "IEC TR 62366-2-2016_1_100_translate.pdf",
+      "有源医疗器械9706.1-2020风险管理报告-47d5200ae39c.docx",
+      "有源医疗器械9706.1-2020风险管理报告.docx",
+      "输液泵产品生命周期.docx"
+    ],
+    "query_type": "mixed",
+    "notes": "报警标准",
+    "auto_label_rule": {
+      "std": [
+        "60601"
+      ],
+      "kw": [
+        "报警",
+        "警报"
+      ]
+    },
+    "reviewed": false
+  },
+  {
+    "query": "电磁兼容 YY 9706.102",
+    "relevant_chunk_ids": [
+      "45475daa0e06247f",
+      "0614743d74e67871",
+      "0959c86c86ad2d97",
+      "10c27add23eb717f",
+      "20fcd8d47f649dc4",
+      "2ed189066b611315"
+    ],
+    "relevant_source_files": [
+      "CH3.4.1标准列表.docx",
+      "有源医疗器械9706.1-2020风险管理报告-47d5200ae39c.docx",
+      "气管插管技术要求示范模板.docx",
+      "贴敷式胰岛素泵知识库介绍.md",
+      "贴敷式胰岛素泵设计需求文件V1.0.docx"
+    ],
+    "query_type": "standard_no",
+    "notes": "EMC 标准",
+    "auto_label_rule": {
+      "std": [
+        "9706.102"
+      ],
+      "kw": [
+        "电磁兼容",
+        "emc"
+      ]
+    },
+    "reviewed": false
+  }
+]
