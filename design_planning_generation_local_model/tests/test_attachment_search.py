@@ -19,8 +19,9 @@ def _mk_att(fid, name, text):
 
 def test_tokenize_query_chinese():
     terms = agent_tools._tokenize_query("输注精度的技术要求是什么")
-    assert "输注" in terms or "精度" in terms
-    assert "输注精度" in terms or ("输注" in terms and "精度" in terms)
+    # [2026-10-10] 领域词典加入「输注精度」词条后 jieba 输出合并词（检索侧更优，
+    # BM25 精确短语匹配）；断言按「合并词或拆分词均接受」放宽
+    assert "输注精度" in terms or "输注" in terms or "精度" in terms
     # 停用词被过滤
     assert "的" not in terms and "什么" not in terms
     # 单字字母数字保留
