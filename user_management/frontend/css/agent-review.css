@@ -1,0 +1,371 @@
+/*
+ * agent-review.css — 由审核 agent.html 提取并命名空间化（#ar-root）
+ * 生成脚本: combination/tools/build_review_port.py（勿手改，重跑脚本覆盖）
+ * 类名交集（UM↔agent-review）: (无)
+ */
+
+/* 全屏浮层：审核视图覆盖整个视口（含 UM 头部与侧边栏），还原原独立页体验。
+   v-show 关闭时 display:none，不参与布局；z-index 与写作 agent 浮层同层
+   （两视图互斥呈现，不叠加）；内部 upload-overlay z-index:100 在本层叠
+   上下文内不受影响 */
+.agent-review-page {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1800;
+    overflow: hidden;
+}
+
+/* 全屏模式返回按钮（注入 header .nav 首项，随导航栏流动）*/
+#ar-root .ar-back-btn {
+    background: #455a64; color: #fff; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
+}
+#ar-root .ar-back-btn:hover { background: #37474f; }
+
+/* 审核服务不可用提示横幅 */
+#ar-root .ar-service-error {
+    margin: 16px auto; max-width: 560px; padding: 14px 18px;
+    background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;
+    border-radius: 8px; font-size: 13px; line-height: 1.7; text-align: center;
+}
+#ar-root .ar-service-error button {
+    margin-top: 8px; padding: 4px 14px; background: #c62828; color: #fff;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+
+  #ar-root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border: #30363d;
+    --text-primary: #c9d1d9;
+    --text-secondary: #8b949e;
+    --accent: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-orange: #d2991d;
+    --accent-red: #f85149;
+    --accent-purple: #a371f7;
+  }
+  #ar-root, #ar-root * { margin: 0; padding: 0; box-sizing: border-box; }
+  #ar-root {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100%;
+    min-height: 0;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  #ar-root .header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 24px; background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  #ar-root .header .logo { font-size: 18px; font-weight: 700; }
+  #ar-root .header .logo .agent-badge {
+    display: inline-block; background: var(--accent-purple);
+    color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    margin-left: 8px; vertical-align: middle;
+  }
+  #ar-root .header .nav { margin-left: auto; display: flex; gap: 12px; }
+  #ar-root .header .nav a {
+    color: var(--text-secondary); text-decoration: none;
+    padding: 6px 12px; border-radius: 6px; font-size: 14px;
+  }
+  #ar-root .header .nav a:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+  #ar-root .header .nav a.active { color: var(--accent); background: var(--bg-tertiary); }
+
+  /* Progress bar */
+  #ar-root .progress-bar-wrap {
+    background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+  }
+  #ar-root .progress-stages {
+    display: flex; justify-content: space-between; position: relative;
+    max-width: 1000px; margin: 0 auto;
+  }
+  #ar-root .progress-stages::before {
+    content: ''; position: absolute; top: 12px; left: 0; right: 0;
+    height: 2px; background: var(--border); z-index: 0;
+  }
+  #ar-root .progress-stage {
+    position: relative; z-index: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary);
+    cursor: default;
+  }
+  #ar-root .progress-stage .dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg-tertiary); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all 0.3s;
+  }
+  #ar-root .progress-stage.active .dot {
+    background: var(--accent-purple); border-color: var(--accent-purple);
+    color: #fff; box-shadow: 0 0 8px rgba(163,113,247,0.4);
+  }
+  #ar-root .progress-stage.done .dot {
+    background: var(--accent-green); border-color: var(--accent-green);
+    color: #fff;
+  }
+  #ar-root .progress-stage.active { color: var(--accent-purple); font-weight: 600; }
+  #ar-root .progress-stage.done { color: var(--accent-green); }
+  #ar-root .progress-stage .label { text-align: center; max-width: 70px; line-height: 1.3; }
+
+  /* Main chat area */
+  #ar-root .chat-container {
+    flex: 1; display: flex; flex-direction: column;
+    max-width: 900px; width: 100%; margin: 0 auto;
+    overflow: hidden;
+  }
+  #ar-root .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px 24px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  #ar-root .chat-messages:empty::after {
+    content: '正在进入对话模式...';
+    display: flex; align-items: center; justify-content: center;
+    height: 200px; color: var(--text-secondary);
+  }
+
+  /* Message bubbles */
+  #ar-root .msg { display: flex; gap: 10px; max-width: 85%; animation: ar-fadeIn 0.3s; }
+  @keyframes ar-fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  #ar-root .msg.agent { align-self: flex-start; }
+  #ar-root .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  #ar-root .msg .avatar {
+    width: 32px; height: 32px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+    flex-shrink: 0;
+  }
+  #ar-root .msg.agent .avatar { background: var(--accent-purple); }
+  #ar-root .msg.user .avatar { background: var(--accent); }
+  #ar-root .msg .bubble {
+    padding: 10px 14px; border-radius: 12px; font-size: 14px;
+    line-height: 1.7; word-wrap: break-word; overflow-wrap: break-word;
+  }
+  #ar-root .msg.agent .bubble {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+  #ar-root .msg.user .bubble {
+    background: var(--accent-purple); color: #fff;
+    border-top-right-radius: 4px;
+  }
+  #ar-root .msg.system .bubble {
+    background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3);
+    color: var(--accent-red); font-size: 13px; align-self: center;
+  }
+
+  /* Chat markdown */
+  #ar-root .msg .bubble h1, #ar-root .msg .bubble h2, #ar-root .msg .bubble h3, #ar-root .msg .bubble h4 {
+    margin: 8px 0 4px; line-height: 1.4;
+  }
+  #ar-root .msg .bubble h1 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  #ar-root .msg .bubble h2 { font-size: 17px; }
+  #ar-root .msg .bubble h3 { font-size: 15px; }
+  #ar-root .msg .bubble p { margin: 4px 0; }
+  #ar-root .msg .bubble ul, #ar-root .msg .bubble ol { padding-left: 20px; margin: 4px 0; }
+  #ar-root .msg .bubble li { margin: 2px 0; }
+  #ar-root .msg .bubble code {
+    background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;
+    font-size: 13px;
+  }
+  #ar-root .msg .bubble pre {
+    background: var(--bg-primary); padding: 10px; border-radius: 6px;
+    overflow-x: auto; font-size: 12px; margin: 6px 0;
+  }
+  #ar-root .msg .bubble pre code { background: none; padding: 0; }
+  #ar-root .msg .bubble blockquote {
+    border-left: 3px solid var(--accent); padding-left: 10px;
+    color: var(--text-secondary); margin: 4px 0;
+  }
+  #ar-root .msg .bubble table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 13px; }
+  #ar-root .msg .bubble td, #ar-root .msg .bubble th {
+    border: 1px solid var(--border); padding: 4px 8px; text-align: left;
+  }
+  #ar-root .msg .bubble th { background: var(--bg-tertiary); }
+  #ar-root .msg .bubble strong { color: #fff; }
+  #ar-root .msg .bubble hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+  /* Streaming bubble: blinking caret to indicate live token rendering */
+  #ar-root .msg.streaming .bubble::after {
+    content: '▋';
+    display: inline-block;
+    margin-left: 2px;
+    animation: ar-blink 0.9s steps(2, start) infinite;
+    color: var(--accent-purple);
+  }
+  @keyframes ar-blink { to { visibility: hidden; } }
+
+  /* Phase 2.5: checkpoint 结构化卡片 */
+  #ar-root .card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 6px 0;
+    background: rgba(0,0,0,0.02);
+  }
+  #ar-root .card-title { font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+  #ar-root .card-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  #ar-root .card-stats span { padding: 2px 0; }
+  #ar-root .card-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #ar-root .card-table th, #ar-root .card-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 4px 6px;
+    text-align: left;
+  }
+  #ar-root .card-table th { font-weight: 600; background: rgba(0,0,0,0.03); }
+  #ar-root .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1.6;
+    background: #eee;
+    color: #333;
+  }
+  #ar-root .badge.depth-deep { background: #ffe0e0; color: #b00; }
+  #ar-root .badge.depth-standard { background: #fff3cd; color: #856404; }
+  #ar-root .badge.depth-quick { background: #d4edda; color: #155724; }
+  #ar-root .badge.sev-critical { background: #d9534f; color: #fff; }
+  #ar-root .badge.sev-warn { background: #f0ad4e; color: #fff; }
+  #ar-root .badge.sev-ok { background: #5cb85c; color: #fff; }
+
+  /* Phase 3.4: tool-call 状态条 */
+  #ar-root .tool-call {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  #ar-root .tool-call code {
+    background: #f0f0f0;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  #ar-root .tool-args {
+    color: #666;
+    font-size: 11px;
+    font-family: monospace;
+  }
+  #ar-root .tool-status[data-status="pending"] { color: #f0ad4e; }
+  #ar-root .tool-status[data-status="done"] { color: #5cb85c; }
+  #ar-root .tool-output {
+    width: 100%;
+    margin-top: 4px;
+    padding: 4px 6px;
+    background: #f8f8f8;
+    border-left: 2px solid #ccc;
+    font-size: 12px;
+    white-space: pre-wrap;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  /* Progress message */
+  #ar-root .msg.progress .bubble {
+    background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.3);
+    font-size: 13px;
+  }
+  #ar-root .mini-progress {
+    height: 4px; background: var(--bg-tertiary); border-radius: 2px;
+    margin-top: 6px; overflow: hidden;
+  }
+  #ar-root .mini-progress .fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.5s;
+  }
+
+  /* Quick actions */
+  #ar-root .quick-actions {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+  }
+  #ar-root .quick-actions button {
+    padding: 6px 14px; border: 1px solid var(--border);
+    border-radius: 16px; background: var(--bg-tertiary);
+    color: var(--text-primary); font-size: 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  #ar-root .quick-actions button:hover {
+    border-color: var(--accent); background: rgba(88,166,255,0.1);
+  }
+  #ar-root .quick-actions button.primary {
+    background: var(--accent-purple); border-color: var(--accent-purple);
+    color: #fff;
+  }
+
+  /* Input area */
+  #ar-root .input-area {
+    padding: 12px 24px 16px; background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+  }
+  #ar-root .input-row {
+    display: flex; gap: 8px; max-width: 900px; margin: 0 auto;
+  }
+  #ar-root .input-row input {
+    flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border);
+    color: var(--text-primary); padding: 10px 16px; border-radius: 20px;
+    font-size: 14px; font-family: inherit;
+  }
+  #ar-root .input-row input:focus { outline: none; border-color: var(--accent); }
+  #ar-root .input-row input:disabled { opacity: 0.5; cursor: not-allowed; }
+  #ar-root .input-row button {
+    padding: 10px 20px; border: none; border-radius: 20px;
+    background: var(--accent-purple); color: #fff;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  #ar-root .input-row button:hover { opacity: 0.9; }
+  #ar-root .input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Upload overlay */
+  #ar-root .upload-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); display: flex; align-items: center;
+    justify-content: center; z-index: 100;
+  }
+  #ar-root .upload-card {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px; width: 440px; max-width: 90vw;
+  }
+  #ar-root .upload-card h2 { font-size: 20px; margin-bottom: 8px; }
+  #ar-root .upload-card .subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  #ar-root .upload-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 30px; text-align: center; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 16px;
+  }
+  #ar-root .upload-zone:hover, #ar-root .upload-zone.drag-over {
+    border-color: var(--accent); background: rgba(88,166,255,0.05);
+  }
+  #ar-root .upload-zone .icon { font-size: 40px; margin-bottom: 8px; }
+  #ar-root .upload-zone p { color: var(--text-secondary); font-size: 13px; }
+  #ar-root .upload-zone .file-types { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+  #ar-root .file-selected {
+    background: rgba(63,185,80,0.1); border: 1px solid var(--accent-green);
+    border-radius: 6px; padding: 10px 14px; font-size: 13px;
+    display: none; margin-bottom: 16px;
+  }
+  #ar-root .file-selected .name { font-weight: 600; }
+  #ar-root .file-selected .size { color: var(--text-secondary); font-size: 12px; }
+  #ar-root .file-selected .remove { color: var(--accent-red); cursor: pointer; float: right; }
+  #ar-root .form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  #ar-root .form-row label { font-size: 13px; color: var(--text-secondary); }
+  #ar-root .form-row select, #ar-root .form-row input {
+    background: var(--bg-tertiary); border: 1px solid var(--border);
+    color: var(--text-primary); padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-family: inherit;
+  }
+  #ar-root .form-row select:focus { outline: none; border-color: var(--accent); }
+  #ar-root .hidden { display: none !important; }
+  #ar-root .export-btn {
+    background: var(--bg-tertiary); color: var(--accent-green);
+    border: 1px solid var(--accent-green); padding: 6px 14px;
+    border-radius: 16px; font-size: 13px; cursor: pointer;
+    margin-left: 8px;
+  }
+  #ar-root .export-btn:hover { background: rgba(63,185,80,0.1); }

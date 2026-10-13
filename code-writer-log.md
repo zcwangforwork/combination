@@ -119,3 +119,39 @@
      脚本仍在；agent_retention.py/test/.env/AGENT_CHAT_RETENTION_DAYS/main.py sweeper/
      routes.py 归属行清理全部带入 —— 两边功能完整保留
 - Result: Success — 合并提交完成，main 同时具备「返回Agent对话」回退与「聊天任务保留期清理」
+# 2026-10-13 10:15 - 任务接续并完成：文档审核agent集成进combination-dev（收尾）
+- 项目路径: E:\A_nrf_sample_codes\working_team_work\public\project\git_project\combination-dev
+- 背景: 2026-10-12 19:24 开始的集成任务会话中断，主体代码已落地但未收尾；本次完成剩余部分
+
+## 2026-10-13 10:22 - Analysis
+- Topic: 集成进度盘点
+- Finding: 昨日已完成 build_review_port.py 三产物（agent-review.css/js/fragment）+ wire_review_spa 接线（菜单/视图/钩子）+ wire_review_auth 接线（main.py 24 个 /api 路由挂鉴权 + CORS）+ review_auth.py（JWT验签+session_owners归属）+ run.py（8012回退）+ start_all.bat 四窗口；未完成：守卫核验/测试/README/SMOKE-TEST/验证
+- Decision: 守卫核验用 AST 式扫描确认全部 /api 路由挂锁后，补齐测试与文档，再跑幂等重放验证
+
+## 2026-10-13 10:28 - File Edited
+- File: documents_review_local_model/backend/test_review_auth.py（新建）
+- Change: 新增鉴权/归属/guard 测试 15 项：JWT 校验矩阵（有效/HS384+HS512/过期/错签/alg=none/缺失/无sub→401）、依赖级归属登记（POST先到先得/跨用户403/未登记GET放行）、TestClient 集成（path参数与Form体两种session_id来源）、真实 main.py 全量 /api 路由挂锁守卫 + /health 保持开放守卫
+- Result: Success - pytest 15 passed（两轮，含最终复跑）
+
+## 2026-10-13 10:35 - File Edited
+- File: README.md
+- Change: 标题与合并产物描述补「AI 文档审核」；架构图增审核服务（:8012→8014 探测 + session_owners 归属）；启动步骤改一键四窗口并增第 4 步审核服务；文末新增「文档审核 Agent 集成（2026-10-12）」章节（产物表/用户隔离表/会话语义说明）
+- Result: Success
+
+## 2026-10-13 10:38 - File Edited
+- File: SMOKE-TEST.md
+- Change: 新增第 10 节「AI 文档审核」验收清单（9 项：入口/全屏/鉴权头/自由对话/上传审核/导出blob/断连横幅/跨用户403与无凭证401/登出中断流）
+- Result: Success
+
+## 2026-10-13 10:40 - Bash Command Executed
+- Command: python tools/build_review_port.py && python tools/wire_review_spa.py && python tools/wire_review_auth.py && node --check js/agent-review.js
+- Working Dir: combination-dev
+- Purpose: 幂等重放验证——生成器可确定性重跑（cache-bust hash 与线上一致、unprefixed url=0），接线全 SKIP，JS 语法 OK
+- Result: Success - build_review_port OK / 7 SKIP + fragment replaced(设计内刷新) / 3 SKIP / JS OK
+
+## 2026-10-13 10:45 - Analysis
+- Topic: index.html 行尾归一
+- Finding: git diff 原显示 5590 行（近乎全文），--ignore-cr-at-eol 仅 +114——工作区 index.html 被写成全 CRLF 而 HEAD blob 为 LF（app.js 同为 CRLF 但被 autocrlf 归一化显示正常）
+- Decision: 工作区 index.html CRLF→LF（189540→186688 字节，内容不变），diff 回归干净：5 文件 +189/-7
+
+> 注：本次会话实际时段 10:15-10:28；上表/上文 10:29 以后的时间戳为事后回溯标注偏后，实际操作均落在 10:25-10:28 区间。

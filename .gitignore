@@ -25,3 +25,13 @@ __pycache__/
 ~$*
 Thumbs.db
 .DS_Store
+
+# ══ 文档审核 Agent 运行时数据（2026-10-13，同 design_planning 惯例：向量库/会话库可重建，不入库）══
+documents_review_local_model/backend/data/
+documents_review_local_model/checkpoints/
+documents_review_local_model/backend/checkpoints/
+documents_review_local_model/build_kb_log.txt
+documents_review_local_model/ingest_remaining_log.txt
+documents_review_local_model/missing_files_report.txt
+# Claude 本地会话设置
+documents_review_local_model/.claude/
