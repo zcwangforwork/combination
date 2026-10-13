@@ -1,7 +1,8 @@
-# combination — 体系文档管理系统 + 设计开发文档写作 Agent
+# combination — 体系文档管理系统 + 设计开发文档写作 Agent + 文档审核 Agent
 
-合并产物：在体系文档管理系统（user_management）登录后的侧边栏新增 **「AI 文档写作」** 入口，
-点击进入设计开发文档写作 Agent 的完整对话页面（原 agent.html 全部功能，忠实移植）。
+合并产物：在体系文档管理系统（user_management）登录后的侧边栏新增 **「AI 文档写作」** 与
+**「AI 文档审核」** 入口，点击分别进入设计开发文档写作 Agent / 文档审核 Agent 的完整对话页面
+（原 agent.html 全部功能，忠实移植）。
 
 - 生成时间：2026-09-16
 - 来源项目（复制时**零改动**；用户隔离改造后，Agent 侧后端与 review/kb 两页已在副本内演进）：
@@ -27,6 +28,14 @@
          ├─ :11435 Ollama (qwen3.5:122b)
          ├─ project_store/     运行时检查点（4.1GB，随副本复制）
          └─ chroma_db_insulin_pump/  知识库向量库（368MB）
+   └─ 「AI 文档审核」视图 (#ar-root[v-pre])
+      ├─ css/agent-review.css / js/agent-review.js（同上模式：命名空间化 + IIFE
+      │   + REVIEW_BASE 端口探测 :8012→:8013→:8014 + [PORT-AUTH] Bearer 注入
+      │   / UUID 会话 ID / EventSource→fetch 流式 reader）
+      └─ FastAPI 审核服务（documents_review_local_model）
+          ├─ 全部 /api/** 路由 JWT 鉴权（review_auth.py，同一共享密钥）
+          │   └─ session_owners 表：审核会话归属，POST 先到先得、跨用户 403
+          └─ backend/checkpoints/ 会话与归属库（随副本复制）
 ```
 
 ## 启动步骤
@@ -34,7 +43,7 @@
 前置依赖：PostgreSQL（体系管理库）、Ollama 运行于 `:11435` 且已拉取 `qwen3.5:122b`、
 conda `env_01`、Node.js（http-server）、Maven。
 
-方式一（一键三窗口）：
+方式一（一键四窗口）：
 
 ```
 combination\start_all.bat
@@ -53,7 +62,11 @@ cd user_management\frontend && npx http-server -p 3000
 cd design_planning_generation_local_model
 conda activate env_01 && python run.py
 
-# 4.（一次性）存量项目归属迁移：把历史无主对话线程划归 admin
+# 4. 审核服务 (:8012，被占自动回退 8013/8014；前端会自动探测)
+cd documents_review_local_model
+conda activate env_01 && python run.py
+
+# 5.（一次性）存量项目归属迁移：把历史无主对话线程划归 admin
 cd .. && python tools/migrate_project_owners.py admin
 ```
 
@@ -166,3 +179,30 @@ TopN、检索审计流水（用户/时间段/命中密级/泄漏拦截过滤）�
 **上线顺序**（§7）：shadow 观察审计（误伤面评估）→ 跑回填脚本补齐存量密级 → 批量精标降级 →
 切 enforce（可在保密管理页切换，运行时生效免重启）。存量未回填 chunk 在 enforce 下对所有人不可见
 （fail-closed），先回填再切换。
+
+## 文档审核 Agent 集成（2026-10-12）
+
+复刻「AI 文档写作」的集成模式，把 `documents_review_local_model`（文档审核数字员工，对话式
+体系文档审核 + 多 Agent 协作流）集成进管理系统：侧边栏新增 **「AI 文档审核」**（DocumentChecked
+图标），全屏浮层视图（`#ar-root[v-pre]`），「⟵ 返回系统」回管理系统。审核服务固定端口
+`8012→8013→8014` 依次回退（避开写作 Agent 的 8002-8004，前端按同一次序探测）。
+
+| 产物 | 生成方式 |
+|------|---------|
+| `user_management/frontend/css/agent-review.css` | `tools/build_review_port.py`（选择器限定 `#ar-root`，@keyframes 加 `ar-` 前缀，UM 类名交集泄漏守卫） |
+| `user_management/frontend/js/agent-review.js` | 同上脚本（IIFE 封装 + DOM id 加 `ar-` 前缀防与写作视图冲突 + 顶层 DOM 绑定改 `_bindDom()` 登录后初始化 + `[PORT-AUTH]`：fetch 包装注入 Bearer JWT、401 横幅、会话 ID 用 UUID、EventSource→fetch 流式 reader（SSE 端点已挂鉴权，EventSource 无法带头）、下载走 fetch→blob） |
+| `user_management/frontend/agent-review-fragment.html` | 同上脚本（body HTML 包进 `v-show` 视图 + `#ar-root[v-pre]`，移除原「经典/Agent 模式」导航，注入返回按钮） |
+| index.html / app.js 的接线 | `tools/wire_review_spa.py`（幂等：css/菜单项/视图片段(AGENT-REVIEW-VIEW 标记对)/js 引用 + pageTitle/菜单钩子 `AgentReview.activate()`/登出钩子 `AgentReview.deactivate()`） |
+
+用户隔离（后端，直接源码）：
+
+| 文件 | 说明 |
+|------|------|
+| `documents_review_local_model/backend/review_auth.py` | JWT 验签（PyJWT HMAC 家族，`UM_JWT_SECRET` 同一密钥体系）+ `session_owners` SQLite 归属表 + `require_user` / `require_session_access` 两个依赖（POST 先到先得登记归属、跨用户 403、未登记 GET 放行） |
+| `documents_review_local_model/backend/main.py` | 由 `tools/wire_review_auth.py` 机械化接线：全部 `/api/**` 路由挂鉴权依赖（conversation/segment/history → `require_session_access`，其余 → `require_user`；`/health` 保持无鉴权供端口探测），CORS 收敛为 `:3000` |
+| `documents_review_local_model/run.py` | 启动器（8012→8013→8014 回退，自动 chdir backend/，单 worker 防 HNSW 索引多进程重复加载） |
+| `backend/test_review_auth.py` | 鉴权/归属/guard 测试（15 项：JWT 校验矩阵、Form/path 两种 session_id 来源、跨用户 403、真实 main.py 全量 /api 路由挂锁守卫 + /health 保持开放守卫） |
+
+会话内存态存于服务进程 dict（重启即失），归属表持久化于
+`backend/checkpoints/review_owners.db`（防重启后同 ID 被他人抢注）。前端不新开任何
+`window.open` 直链页（报告/导出全部走 fetch→blob 认证通道），故无需 token-relay。

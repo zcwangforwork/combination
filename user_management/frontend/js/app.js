@@ -348,6 +348,7 @@ const app = createApp({
                 'suppliers': '供应商管理',
                 'commercial-records': '商业成本记录',
                 'agent-chat': 'AI 文档写作',
+                'agent-review': 'AI 文档审核',
             };
             return map[activeMenu.value] || '工作台';
         });
@@ -560,6 +561,7 @@ const app = createApp({
             // 中断 agent 进行中的 SSE 流与定时器（视图随 v-if 登录页切换而保留在 DOM，
             // 但流不应在登出后继续）
             if (window.AgentChat) AgentChat.deactivate();
+            if (window.AgentReview) AgentReview.deactivate();
             if (notifTimer) {
                 clearInterval(notifTimer);
                 notifTimer = null;
@@ -2426,6 +2428,8 @@ const app = createApp({
             activeMenu.value = index;
             // AI 文档写作: 首次进入初始化 agent 视图（幂等；重复点击无副作用）
             if (index === 'agent-chat' && window.AgentChat) AgentChat.activate();
+            // AI 文档审核: 首次进入初始化 review 视图（幂等；重复点击无副作用）
+            if (index === 'agent-review' && window.AgentReview) AgentReview.activate();
             if (index === 'employees') loadEmployees();
             if (index === 'dashboard') loadDashboard();
             if (index === 'departments') loadDepartments();

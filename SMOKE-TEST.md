@@ -93,3 +93,24 @@ admin）；两个不同浏览器（或普通+隐身窗口）分别准备 admin/a
       对话中 search_kb 可检索到「自己上传的 A + 共享标准库内容」，但检索不到
       admin 上传的文件；admin 的 agent 可检索全部。存量上传文件（迁移划归
       admin）仅 admin 可检索
+
+## 10. AI 文档审核（2026-10-12 集成）
+
+前置：审核服务窗口已随 `start_all.bat` 启动（:8012，占用回退 8013/8014）。
+
+- [ ] 侧边栏「AI 文档写作」之后出现 **「AI 文档审核」**（DocumentChecked 图标），
+      点击后全屏浮层铺满视口，出现「文档审核数字员工」空状态与审核领域选择
+- [ ] 工具栏首项「⟵ 返回系统」可回管理系统，再进会话状态保留
+- [ ] **强刷缓存**（Ctrl+F5）：F12 Network 中审核请求发往 `:8012`（或 8013/8014），
+      请求头含 `Authorization: Bearer eyJ...`，无 CORS 报错、无 401/403
+- [ ] 无文件直接「开始对话审核」→ 进入自由对话模式，发一条消息能看到流式打字输出
+      （fetch 流式 reader，非 EventSource）
+- [ ] 上传一份体系文件（docx/pdf）审核：解析 → 逐章审核进度 → 审核报告生成；
+      「导出审核报告」正常触发浏览器下载（blob: 链接，地址栏不出现 token）
+- [ ] 停掉审核服务窗口 → 点「重试连接」出现红色横幅
+      "⚠ 无法连接文档审核 Agent 服务"；重启后重试恢复
+- [ ] **用户隔离**：admin 发起审核会话后，zhangsan 登录 F12 控制台模拟越权读
+      （sessionId 换成 admin 的）：
+      `fetch('http://localhost:8012/api/agent/conversation/state/<admin的sessionId>',{headers:{Authorization:'Bearer '+localStorage.token}}).then(r=>r.status).then(console.log)`
+      → 输出 **403**；无凭证访问 → **401**；admin 本人访问 → 200
+- [ ] 生成中点击「退出登录」→ SSE 流被中断，回到登录页无报错
