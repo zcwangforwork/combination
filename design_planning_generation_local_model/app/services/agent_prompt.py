@@ -19,6 +19,32 @@ from app.services.default_templates import (
 )
 
 
+# ── 中文规范公共前缀（方案模块二 §3.1：GB/T 1.1 规范块，注入语言风格公共层）──
+# 拼在"精炼简洁/严谨详细"两档风格块之前，两档共用；用户补充提示词追加在其后，
+# 用户显式要求（如"此处保留应当"）可局部覆盖。导出侧另有 cn_norm_lint 硬把关。
+
+CN_NORM_STYLE_BLOCK = """# 文档语言规范（中国体系文件写作要求，硬约束）
+
+1. 规范性表述用词（GB/T 1.1-2020 助动词体系）：
+   - 表要求（必须遵守）：用"应 / 不应"；
+   - 表推荐（首选但不强制）：用"宜 / 不宜"；
+   - 表允许（许可）：用"可 / 不必"；
+   - 表能力/可能性：用"能 / 不能"。
+2. 禁用词：**应当、应该**（改"应"）；**必须**（除直接引用法规原文，改"应"）；
+   **建议**（表规范要求时改"宜"）；**严禁、务必**（改"不应/应"）；"应确保"改"应"。
+3. 引用法规原文（《医疗器械生产质量管理规范》等）时保留原文用词（法规用"应当/不得"，
+   体系文件自撰语句用"应/不应"），引用必须加书名号并注明公告号与施行版本。
+4. 数字用法（GB/T 15835-2011）：物理量量值用阿拉伯数字+单位符号（45 mm、0.05 U/h）；
+   概数用汉字（"三四个"，不用"3-4个"）；多位数千分位分节。
+5. 标点（GB/T 15834-2011）：中文语句用全角标点；并列成分用顿号；不重复标点；
+   标准与法规名用书名号；省略号用"……"。
+6. 中英文混排：中文与英文/数字之间加空格（"ISO 13485 认证"）；全角标点前后不加空格；
+   标准号内部（GB/T、YY/T 斜杠与连字符）不加空格。
+7. 术语写法全篇统一，遵循术语规范表（NMPA、ISO 13485、IEC 62304、YY/T 0664 等）。
+
+"""
+
+
 # ── Section 1: 角色定义 ──
 
 ROLE_DEFINITION = """# 角色定义
@@ -1094,10 +1120,13 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
     from app.services.agent_tools import get_word_budget_text, get_user_word_budget_text
     budget_block = get_word_budget_text()
 
-    style_block = ""
+    # ── 中文规范公共前缀（方案模块二 §3.2）：GB/T 1.1 规范块拼在两档风格块之前，
+    #    无论用户选哪档风格，规范约束不变；用户补充提示词追加在其后，可显式覆盖 ──
+    style_block = CN_NORM_STYLE_BLOCK
+
     writing_style = state.get("writing_style", "concise") or "concise"
     if writing_style == "concise":
-        style_block = """
+        style_block = CN_NORM_STYLE_BLOCK + """
 # 文档风格：精炼简洁、准确全面（默认）
 
 用户未作特殊说明（或已选择"精炼简洁"）。该风格仅作用于**文档内容生成**，不改变聊天回复风格：
@@ -1119,7 +1148,7 @@ def build_system_prompt(state: AgentState, memory_context: str = "") -> str:
   且准确全面性不打折
 """
     else:
-        style_block = """
+        style_block = CN_NORM_STYLE_BLOCK + """
 # 文档风格：严谨详细（已选择）
 
 用户已选择"严谨详细"语言风格。该风格仅作用于**文档内容生成**，不改变聊天回复风格：

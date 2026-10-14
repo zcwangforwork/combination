@@ -10,7 +10,8 @@ from typing import Optional
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor, Cm
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.enum.section import WD_SECTION_START
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -86,6 +87,19 @@ def _append_field(paragraph, field_code: str, placeholder: str = ""):
     r.append(fld_sep)
     r.append(t)
     r.append(fld_end)
+
+
+def _reg_basis_cover_line_safe() -> str:
+    """封面「编制依据」行文本（方案 §4.5/§4.6：64号/107号 双轨自动判定）。
+
+    doc_control 不可用或异常时留空，不阻断导出。
+    """
+    try:
+        from app.services.doc_control import reg_basis_cover_line
+        return reg_basis_cover_line()
+    except Exception as e:
+        print(f"[template] 编制依据行生成失败（留空）: {e}")
+        return ""
 
 
 def _append_numpages_minus_one(paragraph):
@@ -180,6 +194,8 @@ class TemplateService:
         product_name: str,
         doc_type: str,
         format_overrides: dict = None,
+        doc_version: str = "",
+        revision_entries: list = None,
     ) -> Document:
         """
         用AI生成的内容填充模板
@@ -208,7 +224,10 @@ class TemplateService:
         self._set_doc_fonts(doc)
 
         # 前置页（首页 / 修订记录 / 目录）+ 页码页脚：每个生成的文档统一附带
-        self._add_front_matter(doc, product_name, doc_type)
+        # 受控形态（方案模块四）：版本号/修订记录条目由 state 传入（缺省回退 env）
+        self._add_front_matter(doc, product_name, doc_type,
+                               doc_version=doc_version,
+                               revision_entries=revision_entries or [])
         self._add_page_number_footer(doc)
 
         # 解析Markdown内容并写入文档
@@ -358,7 +377,8 @@ class TemplateService:
             p.add_run(en)
         return cell
 
-    def _add_front_matter(self, doc, product_name: str, doc_type: str):
+    def _add_front_matter(self, doc, product_name: str, doc_type: str,
+                          doc_version: str = "", revision_entries: list = None):
         """依次添加 首页 / 修订记录 / 目录 三个前置页。
 
         各字段：文件名称取自 DOC_TYPE_LABELS，编号由阶段编号方案生成，
@@ -370,16 +390,22 @@ class TemplateService:
         """
         label = DOC_TYPE_LABELS.get(doc_type, doc_type)
         doc_no = _derive_doc_number(doc_type)
-        version = os.environ.get("DOC_VERSION", "V1.0")
+        # 版本号优先级：state 升版结果 > env DOC_VERSION > 默认 V1.0
+        version = (doc_version or "").strip() or os.environ.get("DOC_VERSION", "V1.0")
         maker = os.environ.get("DOC_MAKER", "")
         reviewer = os.environ.get("DOC_REVIEWER", "")
         approver = os.environ.get("DOC_APPROVER", "")
         sign_date = os.environ.get("DOC_SIGN_DATE", "")
+        # 受控状态三态（方案 §5.3）：受控（默认）/ 非受控副本 / 作废
+        controlled_status = os.environ.get("DOC_CONTROLLED_STATUS", "受控")
 
         self._add_cover(doc, label, product_name, doc_no, version,
-                        maker, reviewer, approver, sign_date)
-        self._add_revision_history(doc, version, maker, reviewer, approver, sign_date)
-        self._add_toc(doc)
+                        maker, reviewer, approver, sign_date, controlled_status)
+        self._add_revision_history(doc, version, maker, reviewer, approver,
+                                   sign_date, revision_entries)
+        # 正文节起统一页眉三要素（前置页不带页眉的受控文件惯例）
+        self._add_toc(doc, doc_no=doc_no, label=label,
+                      version=version, status=controlled_status)
 
     def _add_front_matter_title(self, doc, text: str):
         """前置页小节标题（居中加粗，非 Heading 样式，避免进入正文目录）。"""
@@ -390,17 +416,19 @@ class TemplateService:
         run.font.size = Pt(16)
 
     def _add_cover(self, doc, label, product_name, doc_no, version,
-                   maker, reviewer, approver, sign_date):
+                   maker, reviewer, approver, sign_date, controlled_status="受控"):
         """首页：双语文件信息表 + 文档标题 + 相关文档表 + 编制/审核/批准签名表。
 
         参照 KF- 系列受控文件封面：4 列表格，字段为
         文件类型/保密密级/文件编号/文件版本/适用范围，中英文双语。
+        受控形态增强（方案 §4.5/§5.3）：新增受控状态行（三态枚举）与
+        编制依据行（64号/107号 双轨自动判定），均为不被法规剥离机制影响的结构化字段。
         """
         for _ in range(2):
             doc.add_paragraph()
 
-        # 文档信息表（4 列，10 行）
-        info = doc.add_table(rows=10, cols=4, style="Table Grid")
+        # 文档信息表（4 列，12 行）
+        info = doc.add_table(rows=12, cols=4, style="Table Grid")
         info.alignment = WD_TABLE_ALIGNMENT.CENTER
 
         # 行0：文件类型 / 开发文档 / 保密密级 / 机密
@@ -420,21 +448,29 @@ class TemplateService:
         self._set_cell(info, 3, 0, "适用范围", "Applicable Scope", bold=True)
         info.cell(3, 1).merge(info.cell(3, 3))
         self._set_cell(info, 3, 1, product_name)
-        # 行4：文档标题（合并整行，居中）
-        info.cell(4, 0).merge(info.cell(4, 3))
-        title_cell = self._set_cell(info, 4, 0, label, bold=True)
+        # 行4：受控状态（三态：受控/非受控副本/作废，env DOC_CONTROLLED_STATUS 配置）
+        self._set_cell(info, 4, 0, "受控状态", "Controlled Status", bold=True)
+        info.cell(4, 1).merge(info.cell(4, 3))
+        self._set_cell(info, 4, 1, controlled_status)
+        # 行5：编制依据（64号/107号 双轨自动判定 + GB/T 42061，法规剥离不影响本行）
+        self._set_cell(info, 5, 0, "编制依据", "Regulatory Basis", bold=True)
+        info.cell(5, 1).merge(info.cell(5, 3))
+        self._set_cell(info, 5, 1, _reg_basis_cover_line_safe())
+        # 行6：文档标题（合并整行，居中）
+        info.cell(6, 0).merge(info.cell(6, 3))
+        title_cell = self._set_cell(info, 6, 0, label, bold=True)
         for p in title_cell.paragraphs:
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        # 行5：相关文档（合并整行，节标题）
-        info.cell(5, 0).merge(info.cell(5, 3))
-        self._set_cell(info, 5, 0, "相关文档", "Related Documents", bold=True)
-        # 行6：相关文档表头
-        self._set_cell(info, 6, 0, "文件编号", "Document No.", bold=True)
-        info.cell(6, 1).merge(info.cell(6, 2))
-        self._set_cell(info, 6, 1, "文件名称", "Document Name", bold=True)
-        self._set_cell(info, 6, 3, "版本", "Version", bold=True)
-        # 行7-9：相关文档空行（留待填写，保持表格结构完整）
-        for r in (7, 8, 9):
+        # 行7：相关文档（合并整行，节标题）
+        info.cell(7, 0).merge(info.cell(7, 3))
+        self._set_cell(info, 7, 0, "相关文档", "Related Documents", bold=True)
+        # 行8：相关文档表头
+        self._set_cell(info, 8, 0, "文件编号", "Document No.", bold=True)
+        info.cell(8, 1).merge(info.cell(8, 2))
+        self._set_cell(info, 8, 1, "文件名称", "Document Name", bold=True)
+        self._set_cell(info, 8, 3, "版本", "Version", bold=True)
+        # 行9-11：相关文档空行（留待填写，保持表格结构完整）
+        for r in (9, 10, 11):
             self._set_cell(info, r, 0, "")
             self._set_cell(info, r, 1, "")
             self._set_cell(info, r, 3, "")
@@ -455,8 +491,13 @@ class TemplateService:
             self._set_cell(sig, i, 2, "日期", bold=True)
             self._set_cell(sig, i, 3, sign_date)
 
-    def _add_revision_history(self, doc, version, maker, reviewer, approver, sign_date):
-        """修订记录页：双语标题 + 5列表格（版本/ECN·PCN·CR/修订内容概述/修订人/生效日期）。"""
+    def _add_revision_history(self, doc, version, maker, reviewer, approver,
+                              sign_date, revision_entries=None):
+        """修订记录页：双语标题 + 5列表格（版本/ECN·PCN·CR/修订内容概述/修订人/生效日期）。
+
+        受控形态增强（方案 §5.2）：除首行"新增"外，state 中的升版条目
+        （revise_section 触发的 minor/major）自动追加成行；修订人/生效日期
+        留空待签署手填。"""
         doc.add_page_break()
 
         p = doc.add_paragraph()
@@ -484,13 +525,32 @@ class TemplateService:
         first_row = [version, "/", "新增", maker, sign_date]
         for j, v in enumerate(first_row):
             self._set_cell(table, 1, j, v)
+        # 升版条目自动追加（方案 §5.2：ECN/CR 来源标注 + 一句话概述）
+        row = 2
+        for ent in (revision_entries or []):
+            if row >= 17:
+                break
+            if not isinstance(ent, dict):
+                continue
+            vals = [ent.get("version", ""),
+                    ent.get("source", "/"),
+                    ent.get("summary", "内容修订"),
+                    ent.get("revisor", ""),
+                    ent.get("effective_date", "")]
+            for j, v in enumerate(vals):
+                self._set_cell(table, row, j, v)
+            row += 1
         # 其余空行
-        for r in range(2, 17):
+        for r in range(row, 17):
             for j in range(5):
                 self._set_cell(table, r, j, "")
 
-    def _add_toc(self, doc):
-        """目录页：插入 Word TOC 域（Heading 1-3），打开文档时自动更新。"""
+    def _add_toc(self, doc, doc_no=None, label=None, version=None, status=None):
+        """目录页：插入 Word TOC 域（Heading 1-3），打开文档时自动更新。
+
+        受控形态增强（方案 §5.3）：目录后新建"正文节"，正文起统一页眉
+        三要素（文件编号｜标题缩略｜版本+受控状态），前置页不带页眉。
+        """
         doc.add_page_break()
         self._add_front_matter_title(doc, "目录")
 
@@ -498,8 +558,43 @@ class TemplateService:
         _append_field(toc_para, 'TOC \\o "1-3" \\h \\z \\u', "（目录将在打开文档时自动更新）")
         _set_update_fields_on_open(doc)
 
-        # 目录后分页，正文从新页开始
-        doc.add_page_break()
+        # 正文独立成节（新页起始），页眉/页码按节控制
+        body_section = doc.add_section(WD_SECTION_START.NEW_PAGE)
+        body_section.different_first_page_header_footer = False
+        if doc_no:
+            try:
+                self._add_body_header(body_section, doc_no, label, version, status)
+            except Exception as e:
+                print(f"[template] 页眉三要素写入失败（忽略，不影响导出）: {e}")
+
+    def _add_body_header(self, section, doc_no, label, version, status):
+        """正文节页眉三要素：文件编号（左）｜文档标题缩略（中）｜版本+受控状态（右）。
+
+        对齐 KF 样例与受控文件惯例；前置页（封面/修订记录/目录）不带页眉。
+        """
+        header = section.header
+        header.is_linked_to_previous = False
+        p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+        for r in list(p.runs):
+            r._element.getparent().remove(r._element)
+        try:
+            usable = section.page_width - section.left_margin - section.right_margin
+            p.paragraph_format.tab_stops.add_tab_stop(usable / 2, WD_TAB_ALIGNMENT.CENTER)
+            p.paragraph_format.tab_stops.add_tab_stop(usable, WD_TAB_ALIGNMENT.RIGHT)
+        except Exception:
+            pass  # 页边距异常时退化为默认制表位
+        run = p.add_run(f"{doc_no}	{label or ''}	{version or 'V1.0'}｜{status or '受控'}")
+        run.font.size = Pt(9)
+        # 页眉下边框线（受控文件惯例）
+        pPr = p._p.get_or_add_pPr()
+        pBdr = OxmlElement("w:pBdr")
+        bottom = OxmlElement("w:bottom")
+        bottom.set(qn("w:val"), "single")
+        bottom.set(qn("w:sz"), "4")
+        bottom.set(qn("w:space"), "1")
+        bottom.set(qn("w:color"), "000000")
+        pBdr.append(bottom)
+        pPr.append(pBdr)
 
     def _add_page_number_footer(self, doc):
         """页脚添加「第N页共Y页」页码域；首页（封面）不显示页码。

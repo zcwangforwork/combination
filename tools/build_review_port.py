@@ -81,6 +81,8 @@ DOM_IDS = [
     'startConvBtn', 'uploadOverlay', 'chatContainer', 'chatMessages',
     'inputArea', 'messageInput', 'sendBtn', 'progressBarWrap',
     'uploadDocBtn', 'auditType', 'agentMode', 'autoResumeCountdown',
+    # P0 优化新增：历史会话列表弹层
+    'historyBtn', 'sessionListOverlay', 'sessionListBody',
 ]
 
 # ══════════════════════════════════════════════════════════════
@@ -346,6 +348,29 @@ def discover_inline_handlers():
     return to_export, missing, len(codes)
 
 
+# [PORT-GLOBAL] 全局函数名冲突规避（对齐 DOM id 加 ar- 前缀的做法）：
+# agent-review.js 在 index.html 中晚于 agent-chat.js 加载，二者 IIFE 都向
+# window 导出内联 handler 用函数；sendMessage / handleFileSelect 重名时审核侧
+# 覆盖写作侧，写作页发消息会调到审核侧未初始化的 messageInput 而崩溃。
+# 导出名加 ar 前缀，视图片段内联属性同步改写；JS 内部调用走词法作用域不受影响。
+GLOBAL_RENAME = {
+    'sendMessage': 'arSendMessage',
+    'handleFileSelect': 'arHandleFileSelect',
+}
+
+
+def _rename_colliding_handlers(frag):
+    """视图片段 onXXX="..." 属性值内的冲突函数名改写为 ar 前缀全局名。"""
+    def fix_attr(m):
+        inner = re.sub(r'\b(sendMessage|handleFileSelect)\b',
+                       lambda n: GLOBAL_RENAME[n.group(0)], m.group(2))
+        return m.group(1) + inner + m.group(3)
+    pat = re.compile(
+        r'(on(?:click|change|input|submit|keydown|keyup|keypress|load|error'
+        r'|focus|blur|mouseover|mouseout|mousedown|mouseup)\s*=\s*")([^"]*)(")')
+    return pat.sub(fix_attr, frag)
+
+
 # ══════════════════════════════════════════════════════════════
 # JS 变换
 # ══════════════════════════════════════════════════════════════
@@ -411,16 +436,21 @@ function _bindDom() {
   });
 }'''
 
-OLD_SSE = '''// SSE connection
-function connectSSE() {
+OLD_SSE = '''// SSE connection（P0 优化：seq 游标 — 断线重连/恢复后用 from_seq 补齐漏收事件）
+function connectSSE(replayAll = false) {
   if (eventSource) { eventSource.close(); }
+  if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
 
-  const url = `${apiBase()}/conversation/stream/${sessionId}`;
+  // replayAll=true：刚 restore 的新事件通道从 0 全量重放（checkpoint/complete 等）
+  // lastSeq>0：断线重连，从上次收到的位置续传；新会话（lastSeq=0）仅推新事件
+  const qs = replayAll ? '?from_seq=0' : (lastSeq > 0 ? `?from_seq=${lastSeq}` : '');
+  const url = `${apiBase()}/conversation/stream/${sessionId}${qs}`;
   eventSource = new EventSource(url);
 
   eventSource.onmessage = (e) => {
     try {
       const event = JSON.parse(e.data);
+      if (event.seq && event.seq > lastSeq) lastSeq = event.seq;
       handleSSEEvent(event);
     } catch (err) {
       console.error('SSE parse error:', err);
@@ -428,26 +458,31 @@ function connectSSE() {
   };
 
   eventSource.onerror = () => {
-    console.warn('SSE connection lost, reconnecting in 3s...');
+    console.warn('SSE connection lost, probing session state before reconnect...');
     eventSource.close();
-    setTimeout(connectSSE, 3000);
+    if (sessionFinished) return;  // 已完成的会话无需重连
+    sseReconnectTimer = setTimeout(reconnectWithProbe, 2000);
   };
 }'''
 
 NEW_SSE = '''// SSE connection（[PORT-AUTH] 原为 EventSource——无法携带 Authorization 头，
-// 服务端流端点已挂 require_session_access 鉴权 → 改 fetch 流式读取：
-// 逐块解析 data: 行语义等价；正常结束/网络错误 3s 重连保持原行为）
-function connectSSE() {
+// 服务端流端点已挂 require_session_access 鉴权 → 改 fetch 流式读取。
+// P0 优化同步：seq 游标 from_seq 续传 / restore 全量重放 / 完成会话不重连 /
+// 断线先探测会话状态再决定 restore 或续连）
+function connectSSE(replayAll = false) {
   if (sseController) { try { sseController.abort(); } catch (e) {} }
+  if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
   sseAlive = false;
-  const url = `${apiBase()}/conversation/stream/${sessionId}`;
+  const qs = replayAll ? '?from_seq=0' : (lastSeq > 0 ? `?from_seq=${lastSeq}` : '');
+  const url = `${apiBase()}/conversation/stream/${sessionId}${qs}`;
   sseController = new AbortController();
   const ctl = sseController;
   const _fail = () => {
     if (sseController === ctl) sseController = null;
     sseAlive = false;
-    console.warn('SSE connection lost, reconnecting in 3s...');
-    setTimeout(connectSSE, 3000);
+    if (sessionFinished) return;  // 已完成的会话无需重连
+    console.warn('SSE connection lost, probing session state before reconnect...');
+    sseReconnectTimer = setTimeout(reconnectWithProbe, 2000);
   };
   fetch(url, { signal: ctl.signal }).then(resp => {
     if (!resp.ok || !resp.body) throw new Error('SSE HTTP ' + resp.status);
@@ -465,7 +500,9 @@ function connectSSE() {
         for (const line of chunk.split('\\n')) {
           if (line.startsWith('data:')) {
             try {
-              handleSSEEvent(JSON.parse(line.slice(5).trim()));
+              const event = JSON.parse(line.slice(5).trim());
+              if (event.seq && event.seq > lastSeq) lastSeq = event.seq;
+              handleSSEEvent(event);
             } catch (err) {
               console.error('SSE parse error:', err);
             }
@@ -481,19 +518,32 @@ function connectSSE() {
   });
 }'''
 
-OLD_TAIL = '''// 页面加载后直接进入对话界面（自由对话模式），不显示上传覆盖层
-// 用户可随时点击 header 中的「📄 上传文档审核」按钮上传文档进入结构化审核
-startConversation();'''
+OLD_TAIL = '''// 页面加载：优先恢复上次会话（P0 优化 — 刷新/服务重启后不丢上下文），
+// 无可恢复会话时新建自由对话；可随时点「📄 上传文档审核」进入结构化审核
+async function initPage() {
+  const saved = loadSavedSession();
+  if (saved && saved.sessionId && await tryRestoreSession(saved)) return;
+  startConversation();
+}
+initPage();'''
 
-NEW_TAIL = '''// ── Init（[PORT] 原为脚本尾顶层立即调用；改为 activate() 首次触发，一次性执行。
-// 后续菜单切换不重跑——v-show 视图与页面共存亡，等价于原页面持续打开）──
+NEW_TAIL = '''// 页面加载：优先恢复上次会话（P0 优化 — 刷新/服务重启后不丢上下文），
+// 无可恢复会话时新建自由对话；可随时点「📄 上传文档审核」进入结构化审核
+async function initPage() {
+  const saved = loadSavedSession();
+  if (saved && saved.sessionId && await tryRestoreSession(saved)) return;
+  startConversation();
+}
+// ── Init（[PORT] 原为脚本尾顶层立即调用；改为 activate() 首次触发，一次性执行。
+// 后续菜单切换不重跑——v-show 视图与页面共存亡，等价于原页面持续打开。
+// 注意：initPage 定义必须保留在产物内——_doInit 调用它，旧版 NEW_TAIL 曾把
+// 定义随顶层调用一起删掉，导致 activate 抛 ReferenceError、视图卡占位符）──
 let _inited = false;
 function _doInit() {
   if (_inited) return;
   _inited = true;
   _bindDom();
-  // 原语义：页面加载即进入自由对话模式（无上传覆盖层），可随时点「上传文档审核」
-  startConversation();
+  initPage();
 }'''
 
 
@@ -528,6 +578,13 @@ def transform_js():
     js = rep("    const resp = await fetch('/api/export-review', {",
              "    const resp = await fetch(REVIEW_BASE + '/api/export-review', {",
              'export_fetch')
+    # P0 优化新增：会话列表/删除端点前缀（/api/sessions 不含 conversation 关键字）
+    js = rep("    const r = await fetch('/api/sessions');",
+             "    const r = await fetch(REVIEW_BASE + '/api/sessions');",
+             'sessions_fetch')
+    js = rep("    const r = await fetch(`/api/sessions/${sid}`, { method: 'DELETE' });",
+             "    const r = await fetch(REVIEW_BASE + `/api/sessions/${sid}`, { method: 'DELETE' });",
+             'sessions_delete_fetch')
 
     # 3) [PORT-AUTH] session_id 生成：UUID 防跨用户毫秒级碰撞
     js = rep("  formData.append('session_id', 'conv-' + Date.now());",
@@ -671,7 +728,8 @@ def build_js(to_export):
 
 '''
 
-    exports = '\n'.join('    window.%s = %s;' % (n, n) for n in to_export)
+    exports = '\n'.join('    window.%s = %s;' % (GLOBAL_RENAME.get(n, n), n)
+                        for n in to_export)
     footer = '''
     // ── 内联事件处理器导出（自动生成）──
     // 审核 HTML（静态 + JS 动态生成）使用 onclick="fn()" 原生全局解析，
@@ -701,6 +759,10 @@ def build_js(to_export):
             try { if (sseController) sseController.abort(); } catch (e) { /* ignore */ }
             sseController = null;
             sseAlive = false;
+            // P0 优化：取消待执行的探测式重连，避免登出后仍拉起 SSE
+            try {
+                if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+            } catch (e) { /* ignore */ }
             try {
                 if (autoResumeTimer) { clearInterval(autoResumeTimer); autoResumeTimer = null; }
             } catch (e) { /* ignore */ }
@@ -729,7 +791,7 @@ def main():
         sys.exit(1)
 
     css, keyframes, shared = transform_css()
-    frag = transform_body()
+    frag = _rename_colliding_handlers(transform_body())
     js, rep_counts = build_js(to_export)
 
     # ┐ 审计断言（[PORT-AUTH] 相关变换必须全部生效，源头漂移时构建即失败）

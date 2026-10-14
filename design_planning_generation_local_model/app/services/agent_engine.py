@@ -1149,6 +1149,34 @@ async def _after_tools_node(state: AgentState) -> dict:
     if template_style_summary_update:
         result["template_style_summary"] = template_style_summary_update
 
+    # ── 升版事件消费（方案模块四 §5.1）：revise_section 旁路判定的
+    #    minor/major 事件 → bump_version 推进版本号并追加修订履历，
+    #    随 state 持久化（导出时模板自动渲染 revision_entries）──
+    doc_version = state.get("doc_version") or "V1.0"
+    revision_entries = list(state.get("revision_entries") or [])
+    version_updated = False
+    try:
+        from app.services.agent_tools import pop_pending_revision_events
+        from app.services import doc_control
+        revision_events = pop_pending_revision_events()
+    except Exception:
+        revision_events = []
+    for ev in revision_events:
+        action = ev.get("action") or "minor"
+        old_ver = doc_version
+        doc_version = doc_control.bump_version(doc_version, action)
+        revision_entries.append(doc_control.build_revision_entry(
+            version=doc_version,
+            source=ev.get("source", ""),
+            summary=ev.get("summary") or ev.get("instruction", ""),
+        ))
+        version_updated = True
+        print(f"[agent_engine] 升版事件: {old_ver} → {doc_version} ({action}) "
+              f"— {ev.get('section_name', '')}")
+    if version_updated:
+        result["doc_version"] = doc_version
+        result["revision_entries"] = revision_entries
+
     # ── 撤销快照：本轮若覆盖了章节或新增了附件修改，压入撤销栈（单步回退） ──
     if sections_before or modifications:
         undo_entry = {
@@ -1201,6 +1229,8 @@ def _sync_doc_context(state: AgentState,
         supplementary_prompts=supplementary_prompts,
         template_style_summary=template_style_summary,
         memory_context=memory_context,
+        doc_version=state.get("doc_version") or "V1.0",
+        revision_entries=list(state.get("revision_entries") or []),
     )
 
     # 附件→章节预分配映射同步到工具层（write_chapter 懒加载构建后经 state 持久化）

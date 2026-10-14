@@ -29,7 +29,13 @@ from pydantic import BaseModel, Field
 
 # [COMBINATION-PORT] 用户鉴权（combination 移植新增）：体系管理系统 JWT 验签 + 会话归属
 from fastapi import Depends
-from review_auth import require_user, require_session_access
+from review_auth import (
+    require_user, require_session_access,
+    get_owner, get_session_meta, list_session_meta,
+    upsert_session_meta, touch_session_meta, delete_session_rows,
+    init_owner_table,
+)
+from stream_buffer import EventChannel
 
 # LangGraph Agent 模式导入
 from agent_state import AuditState as AgentAuditState, make_initial_state
@@ -532,6 +538,9 @@ async def lifespan(app: FastAPI):
     print(f"API URL: {config.api_url}")
     print(f"Model: {config.model}")
 
+    # 建会话归属/元数据表（幂等）：/api/sessions 走 require_user 不触发懒建表，须启动时保证
+    await init_owner_table()
+
     # 初始化向量存储
     vs_loaded = init_vector_store()
     if vs_loaded and vector_store:
@@ -595,6 +604,23 @@ async def lifespan(app: FastAPI):
         traceback.print_exc()
         multi_agent_graph = None
         multi_agent_checkpointer = None
+
+    # MCP 外部工具加载（联网搜索/网页抓取 — 千问 EnhancedSearch/WebFetch 远程 MCP）
+    # 工具装入 mcp_manager 模块缓存后，由 agent_tools.create_audit_tools（审核
+    # tool-calling agent）与 chat_rag（自由对话/审核中提问）按需合入。
+    # 逐服务器容错：单台连不上只记状态，不影响服务启动与内置工具。
+    try:
+        from mcp_manager import load_mcp_tools
+        from agent_tools import PHASE1_TOOLS as _builtin_tools
+        _mcp_tools = await load_mcp_tools(
+            exclude_names={t.name for t in _builtin_tools})
+        if _mcp_tools:
+            print(f"MCP 外部工具已加载: {len(_mcp_tools)} 个 "
+                  f"({', '.join(sorted(t.name for t in _mcp_tools))})")
+        else:
+            print("MCP 外部工具未加载（未配置/密钥缺失/全部不可用），审核与对话走内置工具")
+    except Exception as e:
+        print(f"警告: MCP 工具加载失败（不影响服务启动）: {e}")
 
     # Phase 1.5: 启动 session 清理任务
     global _session_sweeper_task
@@ -1044,7 +1070,10 @@ class ConversationSession:
     def __init__(self, session_id: str, config: dict):
         self.session_id = session_id
         self.config = config
-        self.queue: asyncio.Queue = asyncio.Queue()
+        # P0 优化（2026-10-13）：事件通道由 asyncio.Queue 换为可回放的
+        # EventChannel——生产端 put() 接口不变，消费端（SSE 端点）改游标式
+        # 读取，支持 from_seq 断线回放与多连接并存
+        self.queue = EventChannel()
         self.awaiting_input = False
         self.task: Optional[asyncio.Task] = None
         self.filename = ""
@@ -1332,6 +1361,14 @@ async def conversation_start(
         session.awaiting_input = True  # 直接进入待输入状态，等待用户消息
         _conversation_sessions[session_id] = session
 
+        # P0 优化：会话元数据落库（/api/sessions 列表 + 恢复用）
+        owner = await get_owner(session_id)
+        if owner:
+            await upsert_session_meta(
+                session_id, owner, mode="single",
+                filename="", audit_type=audit_type, section_count=0,
+            )
+
         # 推送欢迎 checkpoint 事件，前端会展示提示并启用输入
         await session.queue.put({
             "event": "checkpoint",
@@ -1399,6 +1436,14 @@ async def conversation_start(
         session.filename = filename
         _conversation_sessions[session_id] = session
 
+        # P0 优化：会话元数据落库（/api/sessions 列表 + 恢复用）
+        owner = await get_owner(session_id)
+        if owner:
+            await upsert_session_meta(
+                session_id, owner, mode="single", filename=filename,
+                audit_type=audit_type, section_count=len(sections),
+            )
+
         # Start graph execution in background
         session.task = asyncio.create_task(
             _run_graph_and_push_events(session, initial_state)
@@ -1420,15 +1465,20 @@ async def conversation_start(
 
 
 @app.get("/api/agent/conversation/stream/{session_id}", dependencies=[Depends(require_session_access)])
-async def conversation_stream(session_id: str):
+async def conversation_stream(session_id: str, from_seq: Optional[int] = Query(None)):
     """
-    SSE 端点：推送 Agent 实时状态
+    SSE 端点：推送 Agent 实时状态（P0 优化：支持 from_seq 断线回放）
+
+    查询参数:
+    - from_seq: 上次收到的最大事件 seq。给出时先回放 seq > from_seq 的缓冲
+      事件再继续实时推送（断线重连用）；缺省时从当前时刻起只推新事件
+      （对齐原行为）。每条事件额外携带自身 seq 字段，前端据此续传。
 
     事件类型:
-    - node_complete: 节点执行完成 {event, node, current_stage}
-    - checkpoint: Agent 等待用户反馈 {event, checkpoint, stage, summary}
-    - complete: 审核完成 {event, report}
-    - error: 执行错误 {event, message}
+    - node_complete: 节点执行完成 {event, seq, node, current_stage}
+    - checkpoint: Agent 等待用户反馈 {event, seq, checkpoint, stage, summary}
+    - complete: 审核完成 {event, seq, report}
+    - error: 执行错误 {event, seq, message}
     """
 
     if session_id not in _conversation_sessions:
@@ -1440,22 +1490,25 @@ async def conversation_stream(session_id: str):
 
     session = _conversation_sessions[session_id]
     session.touch()
+    channel = session.queue  # EventChannel（见 ConversationSession 注释）
 
     async def event_stream():
+        # 游标起点：from_seq（回放）或当前最大 seq（仅新事件）
+        cursor = from_seq if from_seq is not None else channel.last_seq
         try:
             while True:
-                try:
-                    event = await asyncio.wait_for(session.queue.get(), timeout=60.0)
+                for seq, event in channel.events_after(cursor):
+                    cursor = seq
                     session.touch()
-                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-
+                    payload = dict(event)
+                    payload["seq"] = seq
+                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                     # Only break on terminal events — checkpoint is NOT terminal
                     if event.get("event") in ("complete", "error"):
-                        break
-                except asyncio.TimeoutError:
-                    # 后台审核长时间无事件（如本地大模型推理慢）时，
-                    # SSE 仍保持连接：心跳同时刷新 last_active，避免被
-                    # session-sweeper 误判为过期而清理，导致"会话不存在或已过期"
+                        return
+                # 无新事件：等待（60s 超时发心跳，同时刷新 last_active，
+                # 避免 session-sweeper 误判过期清理）
+                if not await channel.wait_for_more(cursor, 60.0):
                     session.touch()
                     yield f"data: {json.dumps({'event': 'heartbeat'})}\n\n"
 
@@ -1490,6 +1543,7 @@ async def conversation_message(
 
     session = _conversation_sessions[session_id]
     session.touch()
+    await touch_session_meta(session_id)  # P0 优化：驱动会话列表排序
 
     if not conversation_graph:
         raise HTTPException(status_code=503, detail="对话式审核服务未就绪")
@@ -1773,6 +1827,143 @@ async def conversation_report(session_id: str):
     }
 
 
+@app.get("/api/agent/conversation/stream/status/{session_id}", dependencies=[Depends(require_session_access)])
+async def conversation_stream_status(session_id: str):
+    """流状态探测（P0 优化：断线重连前先探测，再决定 from_seq 续传）
+
+    - alive=False 表示内存会话不在（服务重启/过期），可再调 restore 恢复
+    - last_seq 为事件通道当前最大 seq，前端以其校验本地游标是否落后
+    """
+    session = _conversation_sessions.get(session_id)
+    if session is None:
+        return {"session_id": session_id, "exists": False, "alive": False,
+                "last_seq": 0, "awaiting_input": False, "filename": "",
+                "restorable": bool(conversation_graph)}
+    return {
+        "session_id": session_id,
+        "exists": True,
+        "alive": bool(session.task and not session.task.done()) or session.awaiting_input,
+        "last_seq": session.queue.last_seq,
+        "awaiting_input": session.awaiting_input,
+        "filename": session.filename,
+        "restorable": False,  # 会话仍在内存，无需恢复
+    }
+
+
+def _messages_to_history(values: Dict) -> List[Dict]:
+    """LangGraph messages → 前端可渲染的对话历史（跳过 Tool/System 噪声）"""
+    out: List[Dict] = []
+    for m in (values.get("messages") or []):
+        kind = type(m).__name__
+        content = getattr(m, "content", "")
+        if isinstance(content, list):
+            content = " ".join(str(c) for c in content)
+        content = str(content or "").strip()
+        if not content:
+            continue
+        if kind == "HumanMessage":
+            out.append({"role": "user", "content": content})
+        elif kind == "AIMessage":
+            out.append({"role": "assistant", "content": content})
+    return out
+
+
+def _interrupt_payload(state) -> Optional[Dict]:
+    """提取 interrupt 检查点的前端展示载荷（对齐 SSE checkpoint 事件字段）"""
+    if not state or not getattr(state, "interrupts", None):
+        return None
+    value = state.interrupts[-1].value
+    return value if isinstance(value, dict) else {"summary": str(value)}
+
+
+@app.get("/api/agent/conversation/history/{session_id}", dependencies=[Depends(require_session_access)])
+async def conversation_history(session_id: str):
+    """会话历史（P0 优化：从 LangGraph checkpoint 重建，供刷新/重启后恢复界面）
+
+    自由对话会话不落 checkpoint，服务重启后不保留（返回 404）。
+    """
+    if not conversation_graph:
+        raise HTTPException(status_code=503, detail="对话式审核服务未就绪")
+    snap = await conversation_graph.aget_state(
+        {"configurable": {"thread_id": session_id}})
+    values = snap.values if snap else {}
+    if not values:
+        raise HTTPException(status_code=404, detail="会话不存在或已过期（自由对话会话重启后不保留）")
+
+    session = _conversation_sessions.get(session_id)
+    meta = await get_session_meta(session_id)
+    intr = _interrupt_payload(snap)
+    return {
+        "session_id": session_id,
+        "mode": "single",
+        "filename": (session.filename if session else (meta or {}).get("filename", "")),
+        "audit_type": (meta or {}).get("audit_type", ""),
+        "current_stage": values.get("current_stage", ""),
+        "finished": bool(values.get("finished", False)),
+        "awaiting_input": bool(getattr(snap, "interrupts", None)),
+        "has_interrupts": bool(getattr(snap, "interrupts", None)),
+        "section_count": len(values.get("sections") or []),
+        "audited_count": len(values.get("audit_results") or []),
+        "final_report": values.get("final_report", ""),
+        "checkpoint": intr,
+        "messages": _messages_to_history(values),
+    }
+
+
+@app.post("/api/agent/conversation/restore/{session_id}", dependencies=[Depends(require_session_access)])
+async def conversation_restore(session_id: str):
+    """恢复会话（P0 优化：服务重启后从 checkpoint 续跑/续等输入）
+
+    - 内存会话仍在 → 直接返回（幂等）
+    - checkpoint 有未完成节点/中断 → 重建内存会话并以 None 输入恢复图执行
+      （中断处重新推 checkpoint 事件；progress 型检查点按原逻辑自动续跑）
+    - checkpoint 已跑完 → 重建会话并补发 complete(最终报告)
+    - 无 checkpoint（自由对话）→ 404
+    """
+    if session_id in _conversation_sessions:
+        return {"session_id": session_id, "alive": True, "restored": True,
+                "restarted": False}
+    if not conversation_graph:
+        raise HTTPException(status_code=503, detail="对话式审核服务未就绪")
+
+    snap = await conversation_graph.aget_state(
+        {"configurable": {"thread_id": session_id}})
+    values = snap.values if snap else {}
+    if not values:
+        raise HTTPException(status_code=404,
+                            detail="会话不存在或已过期（自由对话会话重启后不保留）")
+    sections = values.get("sections") or []
+
+    config = {
+        "configurable": {"thread_id": session_id},
+        "recursion_limit": max(200, 25 + len(sections) * 5),
+    }
+    session = ConversationSession(session_id=session_id, config=config)
+    meta = await get_session_meta(session_id)
+    session.filename = (meta or {}).get("filename", "") or ""
+    _conversation_sessions[session_id] = session
+    await touch_session_meta(session_id)
+
+    pending = bool(getattr(snap, "next", None)) or bool(getattr(snap, "interrupts", None))
+    if pending:
+        # None 输入 = 从 checkpoint 恢复（中断处重新出 checkpoint 事件等待输入）
+        session.task = asyncio.create_task(
+            _run_graph_and_push_events(session, None))
+        restarted = True
+    else:
+        # 已完成的线程：不重跑图，补发 complete 让前端拿到最终报告
+        session.awaiting_input = False
+        await session.queue.put({
+            "event": "complete",
+            "report": values.get("final_report", ""),
+        })
+        restarted = False
+
+    print(f"[Conversation] 会话已恢复: {session_id}, pending={pending}, filename={session.filename}")
+    return {"session_id": session_id, "alive": True, "restored": True,
+            "restarted": restarted, "filename": session.filename}
+
+
 # ============== Multi-Agent 协作模式 API（方案A）==============
 # Structure Analyzer → Chapter Auditor ×N (Send API fan-out) → Report Synthesizer
 
@@ -1790,7 +1981,8 @@ class MultiAgentSession:
     def __init__(self, session_id: str, config: dict):
         self.session_id = session_id
         self.config = config
-        self.queue: asyncio.Queue = asyncio.Queue()
+        # 同 ConversationSession：EventChannel 支持回放（见其注释）
+        self.queue = EventChannel()
         self.awaiting_input = False
         self.task: Optional[asyncio.Task] = None
         self.filename = ""
@@ -2101,6 +2293,14 @@ async def multi_agent_conversation_start(
         session.awaiting_input = True
         _multi_agent_sessions[session_id] = session
 
+        # P0 优化：会话元数据落库（mode=multi）
+        owner = await get_owner(session_id)
+        if owner:
+            await upsert_session_meta(
+                session_id, owner, mode="multi",
+                filename="", audit_type=audit_type, section_count=0,
+            )
+
         await session.queue.put({
             "event": "checkpoint",
             "checkpoint": "free_chat",
@@ -2170,6 +2370,14 @@ async def multi_agent_conversation_start(
         session.filename = filename
         _multi_agent_sessions[session_id] = session
 
+        # P0 优化：会话元数据落库（mode=multi）
+        owner = await get_owner(session_id)
+        if owner:
+            await upsert_session_meta(
+                session_id, owner, mode="multi", filename=filename,
+                audit_type=audit_type, section_count=len(sections),
+            )
+
         session.task = asyncio.create_task(
             _run_multi_agent_and_push_events(session, initial_state)
         )
@@ -2213,6 +2421,7 @@ async def multi_agent_conversation_message(
 
     session = _multi_agent_sessions[session_id]
     session.touch()
+    await touch_session_meta(session_id)  # P0 优化：驱动会话列表排序
 
     if not message or not message.strip():
         raise HTTPException(status_code=400, detail="消息内容不能为空")
@@ -2417,10 +2626,11 @@ async def multi_agent_conversation_message(
 
 
 @app.get("/api/multi-agent/conversation/stream/{session_id}", dependencies=[Depends(require_session_access)])
-async def multi_agent_conversation_stream(session_id: str):
-    """多 Agent 协作模式 SSE 端点。
+async def multi_agent_conversation_stream(session_id: str, from_seq: Optional[int] = Query(None)):
+    """多 Agent 协作模式 SSE 端点（P0 优化：支持 from_seq 断线回放，同单 Agent 端点）。
 
     事件: token / node_complete / chapter_done / complete / error / heartbeat
+    （每条事件额外携带 seq 字段，重连时传 ?from_seq=<最后收到的 seq> 续传）
     """
     if session_id not in _multi_agent_sessions:
         async def error_stream():
@@ -2430,18 +2640,22 @@ async def multi_agent_conversation_stream(session_id: str):
 
     session = _multi_agent_sessions[session_id]
     session.touch()
+    channel = session.queue  # EventChannel
 
     async def event_stream():
+        cursor = from_seq if from_seq is not None else channel.last_seq
         try:
             while True:
-                try:
-                    event = await asyncio.wait_for(session.queue.get(), timeout=60.0)
+                for seq, event in channel.events_after(cursor):
+                    cursor = seq
                     session.touch()
-                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    payload = dict(event)
+                    payload["seq"] = seq
+                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
                     if event.get("event") in ("complete", "error"):
-                        break
-                except asyncio.TimeoutError:
+                        return
+                if not await channel.wait_for_more(cursor, 60.0):
                     # 心跳同时刷新 last_active，避免本地大模型慢推理期间
                     # 会话被 sweeper 误清理
                     session.touch()
@@ -2516,6 +2730,111 @@ async def multi_agent_conversation_report(session_id: str):
         "chapter_count": len(state_values.get("chapter_results", []) or []),
         "section_count": len(state_values.get("subsection_results", []) or []),
     }
+
+
+@app.get("/api/multi-agent/conversation/stream/status/{session_id}", dependencies=[Depends(require_session_access)])
+async def multi_agent_stream_status(session_id: str):
+    """多 Agent 流状态探测（P0 优化：语义同单 Agent 的 stream/status）"""
+    session = _multi_agent_sessions.get(session_id)
+    if session is None:
+        return {"session_id": session_id, "exists": False, "alive": False,
+                "last_seq": 0, "awaiting_input": False, "filename": "",
+                "restorable": bool(multi_agent_graph)}
+    return {
+        "session_id": session_id,
+        "exists": True,
+        "alive": bool(session.task and not session.task.done()) or session.awaiting_input,
+        "last_seq": session.queue.last_seq,
+        "awaiting_input": session.awaiting_input,
+        "filename": session.filename,
+        "restorable": False,  # 会话仍在内存，无需恢复
+    }
+
+
+@app.get("/api/multi-agent/conversation/history/{session_id}", dependencies=[Depends(require_session_access)])
+async def multi_agent_history(session_id: str):
+    """多 Agent 会话历史（P0 优化：从 checkpoint 重建，语义同单 Agent 端点）
+
+    多 Agent 图的 messages 键可能为空（supervisor 图不走消息 reducer），
+    此时 messages 返回空列表，前端以 checkpoint/报告字段为主恢复界面。
+    """
+    if not multi_agent_graph:
+        raise HTTPException(status_code=503, detail="Multi-Agent 协作服务未就绪")
+    snap = await multi_agent_graph.aget_state(
+        {"configurable": {"thread_id": f"multi-agent-{session_id}"}})
+    values = snap.values if snap else {}
+    if not values:
+        raise HTTPException(status_code=404, detail="会话不存在或已过期（自由对话会话重启后不保留）")
+
+    session = _multi_agent_sessions.get(session_id)
+    meta = await get_session_meta(session_id)
+    chapter_results = values.get("chapter_results", []) or []
+    return {
+        "session_id": session_id,
+        "mode": "multi",
+        "filename": (session.filename if session else (meta or {}).get("filename", "")),
+        "audit_type": (meta or {}).get("audit_type", ""),
+        "current_stage": values.get("current_stage", ""),
+        "finished": bool(values.get("finished", False)),
+        "awaiting_input": bool(getattr(snap, "interrupts", None)),
+        "has_interrupts": bool(getattr(snap, "interrupts", None)),
+        "section_count": len(values.get("sections") or []),
+        "audited_count": len(values.get("subsection_results") or []),
+        "chapter_count": len(chapter_results),
+        "final_report": values.get("final_report", "") or "",
+        "checkpoint": _interrupt_payload(snap),
+        "messages": _messages_to_history(values),
+    }
+
+
+@app.post("/api/multi-agent/conversation/restore/{session_id}", dependencies=[Depends(require_session_access)])
+async def multi_agent_restore(session_id: str):
+    """恢复多 Agent 会话（P0 优化：语义同单 Agent restore，thread 前缀 multi-agent-）"""
+    if session_id in _multi_agent_sessions:
+        return {"session_id": session_id, "alive": True, "restored": True,
+                "restarted": False}
+    if not multi_agent_graph:
+        raise HTTPException(status_code=503, detail="Multi-Agent 协作服务未就绪")
+
+    snap = await multi_agent_graph.aget_state(
+        {"configurable": {"thread_id": f"multi-agent-{session_id}"}})
+    values = snap.values if snap else {}
+    if not values:
+        raise HTTPException(status_code=404,
+                            detail="会话不存在或已过期（自由对话会话重启后不保留）")
+    sections = values.get("sections") or []
+
+    # recursion_limit 对齐 multi start 的算法：max(100, 25 + 章节数×3)
+    config = {
+        "configurable": {"thread_id": f"multi-agent-{session_id}"},
+        "recursion_limit": max(100, 25 + len(sections) * 3),
+    }
+    session = MultiAgentSession(session_id=session_id, config=config)
+    meta = await get_session_meta(session_id)
+    session.filename = (meta or {}).get("filename", "") or ""
+    _multi_agent_sessions[session_id] = session
+    await touch_session_meta(session_id)
+
+    pending = bool(getattr(snap, "next", None)) or bool(getattr(snap, "interrupts", None))
+    if pending:
+        # None 输入 = 从 checkpoint 恢复（中断处重新出 checkpoint 事件等待输入）
+        session.task = asyncio.create_task(
+            _run_multi_agent_and_push_events(session, None))
+        restarted = True
+    else:
+        # 已完成的线程：补发 complete（含章节统计）让前端拿到最终报告
+        session.awaiting_input = False
+        await session.queue.put({
+            "event": "complete",
+            "report": values.get("final_report", "") or "",
+            "chapter_count": len(values.get("chapter_results", []) or []),
+            "section_count": len(values.get("subsection_results", []) or []),
+        })
+        restarted = False
+
+    print(f"[MultiAgent:Conversation] 会话已恢复: {session_id}, pending={pending}, filename={session.filename}")
+    return {"session_id": session_id, "alive": True, "restored": True,
+            "restarted": restarted, "filename": session.filename}
 
 
 # ============== 逐段审核 API ==============
@@ -2989,6 +3308,80 @@ def _add_formatted_text(paragraph, text: str):
             run = paragraph.add_run(part)
         run.font.name = '微软雅黑'
         run.element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
+
+
+# ============== 会话管理 API（P0 优化：会话列表 + 删除）==============
+@app.get("/api/sessions", dependencies=[Depends(require_user)])
+async def list_sessions(user: str = Depends(require_user)):
+    """当前用户的审核会话列表（按 updated_at 倒序，跨单/多 Agent）
+
+    alive=True 表示内存会话仍在（可直接连流续传）；False 表示需先调
+    restore 端点恢复。注意：本路径不含 conversation/segment/history
+    关键字，wire_review_auth 的路由锁只施加 require_user —— 用户隔离
+    由 list_session_meta(username) 的查询条件保证。
+    """
+    rows = await list_session_meta(user)
+    out = []
+    for r in rows:
+        sid = r["session_id"]
+        if r.get("mode") == "multi":
+            alive = sid in _multi_agent_sessions
+        else:
+            alive = sid in _conversation_sessions
+        out.append({
+            "session_id": sid,
+            "mode": r.get("mode", "single"),
+            "filename": r.get("filename", ""),
+            "audit_type": r.get("audit_type", ""),
+            "section_count": r.get("section_count", 0),
+            "created_at": r.get("created_at", ""),
+            "updated_at": r.get("updated_at", ""),
+            "alive": alive,
+        })
+    return {"username": user, "sessions": out}
+
+
+@app.delete("/api/sessions/{session_id}", dependencies=[Depends(require_user)])
+async def delete_session(session_id: str, user: str = Depends(require_user)):
+    """删除审核会话：归属校验 → 清内存态 → 清元数据/归属行 → 清 checkpoint
+
+    checkpoint 清理对两个 aiosqlite 连接执行原生 SQL（表结构同
+    langgraph-checkpoint-sqlite：checkpoints / checkpoint_writes /
+    checkpoint_blobs），失败仅记日志不阻断（残留只影响磁盘占用）。
+    """
+    owner = await get_owner(session_id)
+    if owner is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    if owner != user:
+        raise HTTPException(status_code=403, detail="无权删除该审核会话")
+
+    # 1) 内存态（单/多两个 dict 都清，容错 mode 不一致的历史数据）
+    await _cleanup_session(session_id)
+    await _cleanup_multi_agent_session(session_id)
+
+    # 2) 元数据 + 归属行
+    await delete_session_rows(session_id)
+
+    # 3) checkpoint 线程（两个库各自的 thread_id）
+    purged = {}
+    for label, conn, tid in (
+        ("conversation", _conversation_db_conn, session_id),
+        ("multi_agent", _multi_agent_db_conn, f"multi-agent-{session_id}"),
+    ):
+        if conn is None:
+            continue
+        try:
+            purged[label] = 0
+            for table in ("checkpoints", "checkpoint_writes", "checkpoint_blobs"):
+                cur = await conn.execute(
+                    f"DELETE FROM {table} WHERE thread_id = ?", (tid,))
+                purged[label] += cur.rowcount or 0
+            await conn.commit()
+        except Exception as e:
+            logger.warning(f"[sessions] 清理 {label} checkpoint 失败（忽略）: {e}")
+
+    print(f"[Sessions] 会话已删除: {session_id} (by {user}, purged={purged})")
+    return {"session_id": session_id, "deleted": True, "purged_rows": purged}
 
 
 # ============== 导出接口 ==============

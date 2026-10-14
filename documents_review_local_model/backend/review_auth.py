@@ -83,7 +83,11 @@ def verify_token(authorization: Optional[str]) -> str:
 
 
 async def init_owner_table() -> None:
-    """建表（幂等）"""
+    """建表（幂等）：session_owners 归属表 + session_meta 会话元数据表
+
+    session_meta（P0 优化 2026-10-13 新增）：支撑 /api/sessions 会话列表与
+    刷新/重启后的会话恢复。mode 区分 single（单 Agent）/ multi（多 Agent）。
+    """
     def _c():
         os.makedirs(os.path.dirname(_db_file()), exist_ok=True)
         with _conn() as conn:
@@ -93,7 +97,93 @@ async def init_owner_table() -> None:
                 " username TEXT NOT NULL,"
                 " created_at TEXT NOT NULL)"
             )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS session_meta ("
+                " session_id TEXT PRIMARY KEY,"
+                " username TEXT NOT NULL,"
+                " mode TEXT NOT NULL DEFAULT 'single',"
+                " filename TEXT NOT NULL DEFAULT '',"
+                " audit_type TEXT NOT NULL DEFAULT '',"
+                " section_count INTEGER NOT NULL DEFAULT 0,"
+                " created_at TEXT NOT NULL,"
+                " updated_at TEXT NOT NULL)"
+            )
     await asyncio.to_thread(_c)
+
+
+# ============== 会话元数据 CRUD（/api/sessions 支撑） ==============
+
+_META_COLS = ("session_id", "username", "mode", "filename",
+              "audit_type", "section_count", "created_at", "updated_at")
+
+
+async def upsert_session_meta(
+    session_id: str, username: str, mode: str = "single",
+    filename: str = "", audit_type: str = "", section_count: int = 0,
+) -> None:
+    """新建/更新会话元数据（会话创建与恢复时调用）"""
+    def _w():
+        now = datetime.datetime.now().isoformat(timespec="seconds")
+        with _conn() as conn:
+            conn.execute(
+                "INSERT INTO session_meta (session_id, username, mode, filename,"
+                " audit_type, section_count, created_at, updated_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT(session_id) DO UPDATE SET"
+                "  mode=excluded.mode, filename=excluded.filename,"
+                "  audit_type=excluded.audit_type,"
+                "  section_count=excluded.section_count, updated_at=excluded.updated_at",
+                (session_id, username, mode, filename, audit_type,
+                 int(section_count), now, now),
+            )
+    await asyncio.to_thread(_w)
+
+
+async def touch_session_meta(session_id: str) -> None:
+    """刷新会话 updated_at（发消息/恢复会话时调用，驱动列表排序）"""
+    def _w():
+        now = datetime.datetime.now().isoformat(timespec="seconds")
+        with _conn() as conn:
+            conn.execute(
+                "UPDATE session_meta SET updated_at = ? WHERE session_id = ?",
+                (now, session_id),
+            )
+    await asyncio.to_thread(_w)
+
+
+async def get_session_meta(session_id: str) -> Optional[dict]:
+    """单条会话元数据；不存在返回 None"""
+    def _q():
+        with _conn() as conn:
+            cur = conn.execute(
+                "SELECT %s FROM session_meta WHERE session_id = ?" % ",".join(_META_COLS),
+                (session_id,),
+            )
+            row = cur.fetchone()
+            return dict(zip(_META_COLS, row)) if row else None
+    return await asyncio.to_thread(_q)
+
+
+async def list_session_meta(username: str) -> list:
+    """某用户的全部会话元数据（updated_at 倒序）"""
+    def _q():
+        with _conn() as conn:
+            cur = conn.execute(
+                "SELECT %s FROM session_meta WHERE username = ?"
+                " ORDER BY updated_at DESC" % ",".join(_META_COLS),
+                (username,),
+            )
+            return [dict(zip(_META_COLS, row)) for row in cur.fetchall()]
+    return await asyncio.to_thread(_q)
+
+
+async def delete_session_rows(session_id: str) -> None:
+    """删除会话的归属与元数据行（调用方须已完成归属校验）"""
+    def _w():
+        with _conn() as conn:
+            conn.execute("DELETE FROM session_meta WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM session_owners WHERE session_id = ?", (session_id,))
+    await asyncio.to_thread(_w)
 
 
 async def get_owner(session_id: str) -> Optional[str]:

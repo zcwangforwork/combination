@@ -279,13 +279,24 @@ def create_audit_tools(retriever_instance, llm_client):
     if hasattr(retriever_instance, "_DOC_TYPE_LABELS"):
         _DOC_TYPE_LABELS = retriever_instance._DOC_TYPE_LABELS
 
-    return [
+    tools = [
         parse_document,
         rag_search,
         check_regulation,
         assess_completeness,
         audit_section,
     ]
+
+    # MCP 外部工具（联网搜索/网页抓取等）— main.py 启动时 load_mcp_tools 已装入
+    # mcp_manager 模块缓存；此处同步取缓存合入 tool-calling agent 的工具集。
+    # 未加载/依赖缺失/未配置时为空列表，工具集与原来完全一致（零影响回退）。
+    try:
+        from mcp_manager import get_mcp_tools
+        tools.extend(get_mcp_tools())
+    except Exception as e:
+        logger.warning(f"MCP 工具合入跳过: {e}")
+
+    return tools
 
 
 # ============ 工具列表（Phase 1） ============

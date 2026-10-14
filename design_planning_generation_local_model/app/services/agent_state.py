@@ -54,6 +54,10 @@ class AgentState(TypedDict, total=False):
     # ── 文档类型 ──
     doc_type: Optional[str]  # 目标文档类型 (design_development_plan, risk_management_plan, etc.)
 
+    # ── 受控文件形态（方案模块四：版本升版状态机 + 修订记录条目）──
+    doc_version: str  # 当前文档版本号，首次生成 V1.0
+    revision_entries: list  # 修订记录行：[{version, source, summary, revisor, effective_date}]
+
     # ── 自动模式 ──
     auto_mode: Optional[bool]  # True时跳过所有HITL确认
 
@@ -171,6 +175,9 @@ def create_initial_state() -> AgentState:
         attachment_chapter_map=None,
         template_chapter_map=None,
         document_format=None,
+        doc_type=None,
+        doc_version="V1.0",
+        revision_entries=[],
     )
 
 

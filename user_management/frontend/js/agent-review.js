@@ -108,7 +108,39 @@ let lastReport = '';
 let lastFilename = '';
 let currentStage = '';
 let agentMode = 'single';  // 'single' | 'multi' — 启动会话时确定
+// P0 优化：会话持久化与恢复状态
+let lastSeq = 0;              // 已收到的最大事件 seq（SSE 断线续传游标）
+let sessionFinished = false;  // complete 后不再自动重连
+let sseReconnectTimer = null;
 function apiBase() { return agentMode === 'multi' ? REVIEW_BASE + '/api/multi-agent' : REVIEW_BASE + '/api/agent'; }
+
+// ── P0 优化：会话保存/恢复（localStorage 键按用户隔离）──
+// 嵌入管理系统版从 UM JWT 取 sub 作用户键；standalone 无 token 时用 'local'
+function getCurrentUserKey() {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.sub) return payload.sub;
+    }
+  } catch (_) { /* standalone 或 token 格式异常 */ }
+  return 'local';
+}
+function sessionStoreKey() { return 'agentReviewSession:' + getCurrentUserKey(); }
+function saveCurrentSession() {
+  if (!sessionId) return;
+  try {
+    localStorage.setItem(sessionStoreKey(), JSON.stringify({
+      sessionId: sessionId, mode: agentMode, filename: lastFilename, savedAt: Date.now(),
+    }));
+  } catch (_) {}
+}
+function clearSavedSession() {
+  try { localStorage.removeItem(sessionStoreKey()); } catch (_) {}
+}
+function loadSavedSession() {
+  try { return JSON.parse(localStorage.getItem(sessionStoreKey()) || 'null'); } catch (_) { return null; }
+}
 
 // DOM elements（[PORT] 原为顶层 const 立即取值 + 顶层事件绑定；SPA 登录前
 // v-if 分支未渲染 DOM 不存在 → let 延迟到 _bindDom() 绑定，由 _doInit 调用）
@@ -169,6 +201,9 @@ function formatSize(bytes) {
 async function startConversation() {
   startConvBtn.disabled = true;
   agentMode = document.getElementById('ar-agentMode').value;  // 'single' | 'multi'
+  // P0 优化：新会话从零开始计事件游标
+  lastSeq = 0;
+  sessionFinished = false;
 
   const formData = new FormData();
   if (selectedFile) {
@@ -200,6 +235,7 @@ async function startConversation() {
     const data = await resp.json();
     sessionId = data.session_id;
     lastFilename = data.filename || '';
+    saveCurrentSession();  // P0 优化：记住当前会话，刷新后可恢复
 
     if (data.mode === 'free_chat') {
       // 自由对话模式：不展示进度条，header 显示上传入口
@@ -239,6 +275,10 @@ function returnToUpload() {
   lastFilename = '';
   currentStage = '';
   isAwaitingInput = false;
+  // P0 优化：放弃当前会话（回到上传界面不再恢复）
+  clearSavedSession();
+  lastSeq = 0;
+  sessionFinished = false;
   // 清空聊天消息
   chatMessages.innerHTML = '';
   // 隐藏聊天 UI 与上传入口按钮
@@ -260,19 +300,23 @@ function returnToUpload() {
 }
 
 // SSE connection（[PORT-AUTH] 原为 EventSource——无法携带 Authorization 头，
-// 服务端流端点已挂 require_session_access 鉴权 → 改 fetch 流式读取：
-// 逐块解析 data: 行语义等价；正常结束/网络错误 3s 重连保持原行为）
-function connectSSE() {
+// 服务端流端点已挂 require_session_access 鉴权 → 改 fetch 流式读取。
+// P0 优化同步：seq 游标 from_seq 续传 / restore 全量重放 / 完成会话不重连 /
+// 断线先探测会话状态再决定 restore 或续连）
+function connectSSE(replayAll = false) {
   if (sseController) { try { sseController.abort(); } catch (e) {} }
+  if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
   sseAlive = false;
-  const url = `${apiBase()}/conversation/stream/${sessionId}`;
+  const qs = replayAll ? '?from_seq=0' : (lastSeq > 0 ? `?from_seq=${lastSeq}` : '');
+  const url = `${apiBase()}/conversation/stream/${sessionId}${qs}`;
   sseController = new AbortController();
   const ctl = sseController;
   const _fail = () => {
     if (sseController === ctl) sseController = null;
     sseAlive = false;
-    console.warn('SSE connection lost, reconnecting in 3s...');
-    setTimeout(connectSSE, 3000);
+    if (sessionFinished) return;  // 已完成的会话无需重连
+    console.warn('SSE connection lost, probing session state before reconnect...');
+    sseReconnectTimer = setTimeout(reconnectWithProbe, 2000);
   };
   fetch(url, { signal: ctl.signal }).then(resp => {
     if (!resp.ok || !resp.body) throw new Error('SSE HTTP ' + resp.status);
@@ -290,7 +334,9 @@ function connectSSE() {
         for (const line of chunk.split('\n')) {
           if (line.startsWith('data:')) {
             try {
-              handleSSEEvent(JSON.parse(line.slice(5).trim()));
+              const event = JSON.parse(line.slice(5).trim());
+              if (event.seq && event.seq > lastSeq) lastSeq = event.seq;
+              handleSSEEvent(event);
             } catch (err) {
               console.error('SSE parse error:', err);
             }
@@ -306,7 +352,186 @@ function connectSSE() {
   });
 }
 
+// 断线重连前探测（P0 优化）：内存会话不在（服务重启/过期）则先 restore 再重连；
+// restore 失败（404）提示用户从「🕘 历史会话」重新选择
+async function reconnectWithProbe() {
+  if (!sessionId) return;
+  let alive = false;
+  let justRestored = false;
+  try {
+    const r = await fetch(`${apiBase()}/conversation/stream/status/${sessionId}`);
+    if (r.ok) alive = !!(await r.json()).alive;
+  } catch (_) {}
+  if (!alive) {
+    try {
+      const r = await fetch(`${apiBase()}/conversation/restore/${sessionId}`, { method: 'POST' });
+      if (r.status === 404) {
+        addMessage('system', '会话已过期且无法恢复，请刷新页面或从「🕘 历史会话」重新选择。');
+        clearSavedSession();
+        return;
+      }
+      if (r.ok) { alive = true; justRestored = true; }
+    } catch (_) {}
+  }
+  if (!alive) { sseReconnectTimer = setTimeout(reconnectWithProbe, 5000); return; }
+  if (justRestored) lastSeq = 0;  // 新通道从头收
+  sseReconnectTimer = setTimeout(() => connectSSE(justRestored), 1000);
+}
+
+// 恢复已保存的会话（P0 优化）：探测内存态 → 不在则 restore → 拉 history 重建界面
+async function tryRestoreSession(saved) {
+  agentMode = saved.mode === 'multi' ? 'multi' : 'single';
+  const sid = saved.sessionId;
+  try { document.getElementById('ar-agentMode').value = agentMode; } catch (_) {}
+
+  let alive = false;
+  try {
+    const r = await fetch(`${apiBase()}/conversation/stream/status/${sid}`);
+    if (r.ok) alive = !!(await r.json()).alive;
+  } catch (_) {}
+  if (!alive) {
+    try {
+      const r = await fetch(`${apiBase()}/conversation/restore/${sid}`, { method: 'POST' });
+      if (r.status === 404) { clearSavedSession(); return false; }
+      if (!r.ok) return false;
+    } catch (_) { return false; }
+  }
+
+  let hist = null;
+  try {
+    const r = await fetch(`${apiBase()}/conversation/history/${sid}`);
+    if (!r.ok) { clearSavedSession(); return false; }
+    hist = await r.json();
+  } catch (_) { return false; }
+
+  sessionId = sid;
+  sessionFinished = false;
+  lastSeq = 0;
+  applyHistoryToUI(hist, alive);
+  saveCurrentSession();
+  // 刚 restore 的通道需从 0 重放（checkpoint/complete 事件在 restore 时补发）
+  connectSSE(!alive);
+  return true;
+}
+
+// 用 history 数据重绘界面（P0 优化）。alive 会话不重放事件 → 检查点/报告直接
+// 从 history 渲染；刚 restore 的会话 → 仅绘消息与阶段，checkpoint/complete 由
+// 重放事件绘（避免双重渲染）
+function applyHistoryToUI(hist, alive) {
+  uploadOverlay.classList.add('hidden');
+  inputArea.style.display = 'block';
+  chatMessages.innerHTML = '';
+  lastFilename = hist.filename || '';
+  lastReport = hist.final_report || '';
+  const modeLabel = hist.mode === 'multi' ? '多 Agent 协作' : '单 Agent';
+  if (lastFilename) {
+    progressBarWrap.style.display = 'block';
+    document.getElementById('ar-uploadDocBtn').classList.add('hidden');
+    addMessage('system', `已恢复会话（${modeLabel}）：**${escapeHtml(lastFilename)}** — ${hist.section_count || 0} 章节`);
+  } else {
+    progressBarWrap.style.display = 'none';
+    document.getElementById('ar-uploadDocBtn').classList.remove('hidden');
+    addMessage('system', `已恢复会话（${modeLabel}，自由对话）`);
+  }
+  (hist.messages || []).forEach(m => addMessage(m.role === 'user' ? 'user' : 'agent', m.content));
+  if (alive) {
+    if (hist.finished) {
+      sessionFinished = true;
+      updateStage('complete');
+      if (lastReport) addMessage('agent', renderMarkdown(lastReport));
+      addQuickActions(['export']);
+    } else if (hist.checkpoint) {
+      handleCheckpoint(hist.checkpoint);
+    } else {
+      updateStage(hist.current_stage || 'intake');
+    }
+  } else {
+    if (hist.finished) { sessionFinished = true; updateStage('complete'); }
+    else { updateStage(hist.current_stage || 'intake'); }
+  }
+  enableInput(true);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// ── P0 优化：历史会话列表（/api/sessions）──
+async function openSessionList() {
+  document.getElementById('ar-sessionListOverlay').classList.remove('hidden');
+  await refreshSessionList();
+}
+function closeSessionList() {
+  document.getElementById('ar-sessionListOverlay').classList.add('hidden');
+}
+async function refreshSessionList() {
+  const body = document.getElementById('ar-sessionListBody');
+  body.innerHTML = '<p class="sl-empty">加载中...</p>';
+  let data;
+  try {
+    const r = await fetch(REVIEW_BASE + '/api/sessions');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    data = await r.json();
+  } catch (e) {
+    body.innerHTML = '<p class="sl-empty">加载失败: ' + escapeHtml(e.message) + '</p>';
+    return;
+  }
+  const sessions = data.sessions || [];
+  if (!sessions.length) {
+    body.innerHTML = '<p class="sl-empty">暂无历史会话</p>';
+    return;
+  }
+  body.innerHTML = '';
+  sessions.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'sl-item';
+    const title = s.filename || '自由对话';
+    const time = (s.updated_at || '').replace('T', ' ');
+    item.innerHTML =
+      '<span class="sl-dot' + (s.alive ? ' alive' : '') + '" title="' + (s.alive ? '进行中' : '已中断（可恢复）') + '"></span>' +
+      '<div class="sl-main" title="打开该会话">' +
+        '<div class="sl-title">' + escapeHtml(title) + '</div>' +
+        '<div class="sl-meta">' + escapeHtml(time) + ' · ' + (s.section_count || 0) + '章节</div>' +
+      '</div>' +
+      '<span class="sl-badge">' + (s.mode === 'multi' ? '多Agent' : '单Agent') + '</span>' +
+      '<button class="sl-del" title="删除会话">删除</button>';
+    item.querySelector('.sl-main').onclick = () => { closeSessionList(); switchToSession(s.session_id, s.mode); };
+    item.querySelector('.sl-del').onclick = () => deleteSessionFromList(s.session_id);
+    body.appendChild(item);
+  });
+}
+async function deleteSessionFromList(sid) {
+  if (!confirm('确定删除该会话？删除后不可恢复。')) return;
+  try {
+    const r = await fetch(REVIEW_BASE + `/api/sessions/${sid}`, { method: 'DELETE' });
+    if (!r.ok) {
+      let detail = 'HTTP ' + r.status;
+      try { detail = (await r.json()).detail || detail; } catch (_) {}
+      alert('删除失败: ' + detail);
+      return;
+    }
+  } catch (e) {
+    alert('删除失败: ' + e.message);
+    return;
+  }
+  if (sessionId === sid) {
+    // 删除的是当前会话 → 清界面并回到全新自由对话
+    if (sseController) { try { sseController.abort(); } catch (e) {} sseController = null; }
+  sseAlive = false;
+    clearSavedSession();
+    chatMessages.innerHTML = '';
+    startConversation();
+  }
+  refreshSessionList();
+}
+async function switchToSession(sid, mode) {
+  if (sseController) { try { sseController.abort(); } catch (e) {} sseController = null; }
+  sseAlive = false;
+  sessionId = null;
+  const ok = await tryRestoreSession({ sessionId: sid, mode: mode });
+  if (!ok) addMessage('system', '会话恢复失败（可能已过期），请从「🕘 历史会话」重新选择。');
+}
+
 function handleSSEEvent(event) {
+  // P0 优化：推进事件游标（断线重连时以 from_seq=lastSeq 续传）
+  if (event.seq && event.seq > lastSeq) lastSeq = event.seq;
   switch (event.event) {
     case 'token':
       handleToken(event);
@@ -324,6 +549,7 @@ function handleSSEEvent(event) {
       handleAgentMessage(event);
       break;
     case 'resuming':
+      sessionFinished = false;  // 恢复执行（重审/继续）后重新允许断线重连
       handleResuming(event);
       break;
     case 'complete':
@@ -506,6 +732,7 @@ async function handleCheckpoint(event) {
 }
 
 function handleComplete(event) {
+  sessionFinished = true;  // P0 优化：完成的会话断线后无需重连
   updateStage('complete');
   isAwaitingInput = false;
   finalizeStreamingBubble();
@@ -897,24 +1124,34 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// 页面加载：优先恢复上次会话（P0 优化 — 刷新/服务重启后不丢上下文），
+// 无可恢复会话时新建自由对话；可随时点「📄 上传文档审核」进入结构化审核
+async function initPage() {
+  const saved = loadSavedSession();
+  if (saved && saved.sessionId && await tryRestoreSession(saved)) return;
+  startConversation();
+}
 // ── Init（[PORT] 原为脚本尾顶层立即调用；改为 activate() 首次触发，一次性执行。
-// 后续菜单切换不重跑——v-show 视图与页面共存亡，等价于原页面持续打开）──
+// 后续菜单切换不重跑——v-show 视图与页面共存亡，等价于原页面持续打开。
+// 注意：initPage 定义必须保留在产物内——_doInit 调用它，旧版 NEW_TAIL 曾把
+// 定义随顶层调用一起删掉，导致 activate 抛 ReferenceError、视图卡占位符）──
 let _inited = false;
 function _doInit() {
   if (_inited) return;
   _inited = true;
   _bindDom();
-  // 原语义：页面加载即进入自由对话模式（无上传覆盖层），可随时点「上传文档审核」
-  startConversation();
+  initPage();
 }
 
     // ── 内联事件处理器导出（自动生成）──
     // 审核 HTML（静态 + JS 动态生成）使用 onclick="fn()" 原生全局解析，
     // IIFE 内必须显式挂到 window。清单 = 内联引用 ∩ JS 函数声明。
-    window.handleFileSelect = handleFileSelect;
+    window.closeSessionList = closeSessionList;
+    window.arHandleFileSelect = handleFileSelect;
+    window.openSessionList = openSessionList;
     window.removeFile = removeFile;
     window.returnToUpload = returnToUpload;
-    window.sendMessage = sendMessage;
+    window.arSendMessage = sendMessage;
     window.startConversation = startConversation;
 
     // ── 对外接口（SPA 调用）──
@@ -940,6 +1177,10 @@ function _doInit() {
             try { if (sseController) sseController.abort(); } catch (e) { /* ignore */ }
             sseController = null;
             sseAlive = false;
+            // P0 优化：取消待执行的探测式重连，避免登出后仍拉起 SSE
+            try {
+                if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+            } catch (e) { /* ignore */ }
             try {
                 if (autoResumeTimer) { clearInterval(autoResumeTimer); autoResumeTimer = null; }
             } catch (e) { /* ignore */ }

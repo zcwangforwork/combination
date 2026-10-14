@@ -134,8 +134,8 @@ project_0428_beta/
 │  │  旧版 API          单 Agent API          多 Agent API           │  │
 │  │  /api/chat         /api/agent/analyze    /api/multi-agent/...   │  │
 │  │  /api/upload       /api/agent/conv/*     /api/multi-agent/conv/*│  │
-│  │  /api/analyze      (SSE 流式)            (SSE 流式)             │  │
-│  │  /api/segment-*    /api/export-review                           │  │
+│  │  /api/analyze      (conv/* 为 SSE 流式，analyze 为同步 JSON)     │  │
+│  │  /api/segment-*    /api/export-review   /api/sessions          │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 │                              │                                        │
 │         ┌────────────────────┼─────────────────────┐                 │
@@ -324,24 +324,37 @@ opt-in 的本地视觉文档解析服务：
 | 方法 | 路径 | 功能 |
 |------|------|------|
 | GET | `/agent` | Agent 对话前端页面 |
-| POST | `/api/agent/analyze` | Agent 审核（SSE 流式） |
+| POST | `/api/agent/analyze` | Agent 审核（同步 JSON，等待全部完成后返回；流式请用下方 conversation 系列） |
 | POST | `/api/agent/conversation/start` | 启动对话审核 |
-| GET | `/api/agent/conversation/stream/{session_id}` | 对话流（SSE） |
+| GET | `/api/agent/conversation/stream/{session_id}` | 对话流（SSE，支持 `?from_seq=N` 断线回放） |
+| GET | `/api/agent/conversation/stream/status/{session_id}` | 流状态（last_seq / 会话存活，重连前探测） |
 | POST | `/api/agent/conversation/message` | 发送对话消息 |
 | POST | `/api/agent/conversation/reaudit` | 请求重审 |
 | GET | `/api/agent/conversation/state/{session_id}` | 获取审核状态 |
 | GET | `/api/agent/conversation/report/{session_id}` | 获取审核报告 |
+| GET | `/api/agent/conversation/history/{session_id}` | 会话历史（从 LangGraph checkpoint 重建，刷新/重启后恢复用） |
+| POST | `/api/agent/conversation/restore/{session_id}` | 恢复会话（重启后从 checkpoint 续跑/续等输入） |
 
 ### 5.3 ★ 多 Agent API
 
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| POST | `/api/multi-agent/analyze` | 多 Agent 审核（SSE 流式） |
+| POST | `/api/multi-agent/analyze` | 多 Agent 审核（同步 JSON；流式请用 conversation 系列） |
 | POST | `/api/multi-agent/conversation/start` | 启动多 Agent 对话审核 |
 | POST | `/api/multi-agent/conversation/message` | 发送对话消息 |
-| GET | `/api/multi-agent/conversation/stream/{session_id}` | 对话流（SSE） |
+| GET | `/api/multi-agent/conversation/stream/{session_id}` | 对话流（SSE，支持 `?from_seq=N` 断线回放） |
+| GET | `/api/multi-agent/conversation/stream/status/{session_id}` | 流状态（last_seq / 会话存活，重连前探测） |
 | GET | `/api/multi-agent/conversation/state/{session_id}` | 获取审核状态 |
 | GET | `/api/multi-agent/conversation/report/{session_id}` | 获取审核报告 |
+| GET | `/api/multi-agent/conversation/history/{session_id}` | 会话历史（从 checkpoint 重建） |
+| POST | `/api/multi-agent/conversation/restore/{session_id}` | 恢复会话（重启后从 checkpoint 续跑） |
+
+### 5.5 会话管理 API（跨单/多 Agent）
+
+| 方法 | 路径 | 功能 |
+|------|------|------|
+| GET | `/api/sessions` | 当前用户的审核会话列表（按更新时间倒序） |
+| DELETE | `/api/sessions/{session_id}` | 删除会话（归属校验 + 清理内存态与元数据） |
 
 ### 5.4 分段审核 API
 

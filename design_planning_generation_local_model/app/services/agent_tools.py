@@ -29,6 +29,15 @@ _current_doc_type: contextvars.ContextVar[str] = contextvars.ContextVar(
     'doc_type', default='design_development_plan'
 )
 
+# 受控文件形态上下文（方案模块四）：当前版本号与修订记录条目，
+# 由 agent_engine 每轮从 state 同步，build_docx 渲染时读取
+_current_doc_version: contextvars.ContextVar[str] = contextvars.ContextVar(
+    'doc_version', default=''
+)
+_current_revision_entries: contextvars.ContextVar[list] = contextvars.ContextVar(
+    'revision_entries', default=None
+)
+
 
 _current_attachments: contextvars.ContextVar[list[dict]] = contextvars.ContextVar(
     'attachments', default=[]
@@ -328,11 +337,15 @@ def set_current_doc_context(
     supplementary_prompts: str = '',
     template_style_summary: str = '',
     memory_context: str = '',
+    doc_version: str = '',
+    revision_entries: list = None,
 ) -> None:
     """由 agent_engine 在每轮开始前调用，同步当前文档上下文"""
     _current_doc_type.set(doc_type)
     _current_product_name.set(product_name)
     _current_generated_markdown.set(markdown)
+    _current_doc_version.set(doc_version or '')
+    _current_revision_entries.set(revision_entries or [])
     _current_product_classification.set(product_classification or '')
     _current_product_intended_use.set(product_intended_use or '')
     _current_confirmed_standards.set(confirmed_standards or [])
@@ -1068,6 +1081,27 @@ def pop_pending_condensed_sections() -> dict:
     }
     _pending_condensed_sections.clear()
     return data
+
+
+# 升版事件旁路（方案模块四 §5.1）：revise_section 判定升版动作后写入，
+# agent_engine._after_tools_node 消费——应用 bump_version 并追加 state.revision_entries。
+_pending_revision_events: list = []
+
+
+def pop_pending_revision_events() -> list:
+    """读取并清空 revise_section 写入的升版事件列表。"""
+    events = list(_pending_revision_events)
+    _pending_revision_events.clear()
+    return events
+
+
+# 中文规范校验挡位（方案模块一 §2.5 CN_LINT_MODE 三档）：
+# enforce=Error 存在时导出中止（封顶 2 轮后转 HITL / 降级 warn）；
+# warn=照常导出但列明违规；off=跳过（应急回退通道）
+CN_LINT_MODE = os.getenv("CN_LINT_MODE", "enforce").strip().lower()
+_CN_LINT_MAX_AGENT_ROUNDS = 2   # enforce 下 Agent 自动修复重试轮数上限
+# enforce 拦截计数（模块级，与 _pending_condensed_sections 同模式）
+_CN_LINT_BLOCK_STATE: dict = {"rounds": 0}
 
 
 # 项目计划书类文档类型：不需要在文档中写明具体法规条款（其余文档须带明确条款号）
@@ -3334,7 +3368,254 @@ async def _build_risk_excel(doc_type: str, product_name: str) -> str:
     }, ensure_ascii=False)
 
 
+# ── 中文规范校验 ③号位闸门（方案模块一 §2.5/§2.6）──
+# 内部辅助函数（build_docx 直接调用），不注册为 Agent 工具——不加 @tool：
+# BaseTool 对象不可作为普通函数按位置调用，会导致闸门静默失效
+# 流程：autocorrect + 自研规则安全修复 → lint 复检 → 按 CN_LINT_MODE 分档：
+#   off   → 跳过
+#   warn  → 照常导出，报告随结果返回
+#   enforce→ Error 残余时：前 _CN_LINT_MAX_AGENT_ROUNDS 轮返回 cn_lint_blocked
+#           结果给 Agent 修复后重调；超轮次走 HITL 中断呈用户裁决（接受带缺陷导出
+#           = 本次降级 warn 放行 / 拒绝 = 中止导出）；auto_mode 或 interrupt
+#           不可用时降级 warn + 列明违规，绝不静默丢弃。
+async def _apply_cn_norm_gate(markdown: str, doc_type: str):
+    """返回 (修复后markdown, 拦截返回的JSON字符串或None, 报告dict或None)。"""
+    mode = CN_LINT_MODE
+    if mode == "off":
+        return markdown, None, None
+    try:
+        from app.services import cn_norm_lint
+    except ImportError:
+        return markdown, None, None
+
+    fixed_md, report = cn_norm_lint.lint_document(markdown, doc_type=doc_type)
+    report_dict = report.to_dict()
+    if fixed_md.strip() != markdown.strip():
+        print(f"[build_docx] 中文规范自动修复 {report.autofix_count} 处")
+    real_errors = report.error_count
+    if report.autofix_count or real_errors or report.warning_count:
+        print(f"[build_docx] cn_norm_lint: Error {real_errors} / "
+              f"Warning {report.warning_count} / 自动修复 {report.autofix_count} / "
+              f"豁免 {sum(report.exempted_hits.values())}")
+
+    if mode != "enforce" or not real_errors:
+        return fixed_md, None, report_dict
+
+    # ── enforce 且存在 Error ──
+    rounds = _CN_LINT_BLOCK_STATE.get("rounds", 0)
+    if rounds < _CN_LINT_MAX_AGENT_ROUNDS:
+        _CN_LINT_BLOCK_STATE["rounds"] = rounds + 1
+        lines = report.summary_lines(max_items=15)
+        msg = json.dumps({
+            "status": "cn_lint_blocked",
+            "round": rounds + 1,
+            "max_rounds": _CN_LINT_MAX_AGENT_ROUNDS,
+            "error_count": real_errors,
+            "violations": [v for v in report_dict["violations"]
+                           if v["severity"] == "Error" and not v["exempted"]][:15],
+            "message": (
+                "导出被中文规范校验拦截（GB/T 1.1 助动词/标点/结构等 Error 级违规 "
+                f"{real_errors} 处）。排版类问题已自动修复 {report.autofix_count} 处。\n"
+                + "\n".join(lines) +
+                "\n请用 revise_section 逐处修复上述违规（改用 应/宜/可/能 助动词体系、"
+                "补齐八股章节等），修复后重新调用 build_docx。"
+                "引用法规原文时将原文置于《》内可豁免。"),
+        }, ensure_ascii=False)
+        return fixed_md, msg, report_dict
+
+    # ── 超过自动修复轮次：HITL 中断呈用户裁决（复用 waiting_approval 通道）──
+    decision = None
+    try:
+        from langgraph.types import interrupt
+        decision = interrupt({
+            "type": "cn_lint_approval",
+            "error_count": real_errors,
+            "violations": [v for v in report_dict["violations"]
+                           if v["severity"] == "Error" and not v["exempted"]][:10],
+            "message": ("导出前中文规范校验经 "
+                        f"{_CN_LINT_MAX_AGENT_ROUNDS} 轮修复后仍有 {real_errors} 处 "
+                        "Error 级违规。是否接受带缺陷导出？"),
+        })
+        print(f"[build_docx] cn_lint HITL decision: {decision}")
+    except (ImportError, RuntimeError) as e:
+        print(f"[build_docx] interrupt 不可用，cn_lint 降级 warn 放行: {e}")
+        decision = "accept"
+
+    _CN_LINT_BLOCK_STATE["rounds"] = 0  # 无论裁决结果，拦截计数复位
+    if decision == "accept":
+        return fixed_md, None, report_dict  # 本次降级放行，报告仍随结果返回
+    msg = json.dumps({
+        "status": "cn_lint_rejected",
+        "error_count": real_errors,
+        "message": ("用户已拒绝带缺陷导出。请根据违规清单继续修复后，"
+                    "再重新调用 build_docx。"),
+    }, ensure_ascii=False)
+    return fixed_md, msg, report_dict
+
+
+# ═══════════════════════════════════════════════════════════
+# 中文规范独立校验工具（方案模块二 §3.6）：报告模式，不修改文档、不拦截导出。
+# 与 build_docx 内置的强制门互补 —— Agent 可在导出前主动自查，
+# 也可在用户质疑行文规范时即时出具报告。
+# ═══════════════════════════════════════════════════════════
+
 @tool
+async def lint_chinese_norms() -> str:
+    """对当前已生成的文档全文执行中文规范校验，返回违规报告（只读，不修改文档内容）。
+
+    覆盖 GB/T 1.1-2020 助动词体系（应当/应该/必须→应 等）、标点规范（重复标点、
+    中文句内半角、省略号、顿号、书名号配对）、数字用法（全角数字、单位混用、
+    概数、千分位）、结构规范（SOP八股六章、记录三要素、编号连续）、引用规范
+    （KF-编号有效性、标准号归一化）与术语词表（Nmpa→NMPA 等）。
+    《》引号内、条款号行、修订记录表格等上下文自动豁免。
+
+    适用场景：
+    - 导出前主动自查，提前发现 Error 级违规（build_docx 导出时同样会强制校验）
+    - 用户质疑"用词不符合GB/T 1.1"或"标点不规范"时，出具详细定位报告
+
+    Returns:
+        JSON 字符串：violations 列表（rule_id/位置/摘录/建议）、豁免统计、
+        Error/Warning 计数。Error 级违规建议用 revise_section 修复后复查。
+    """
+    markdown = _current_generated_markdown.get()
+    if not markdown or not markdown.strip():
+        return json.dumps({
+            "status": "no_content",
+            "message": "当前没有已生成的文档内容，请先生成文档后再校验。",
+        }, ensure_ascii=False)
+
+    doc_type = _current_doc_type.get() or ""
+    try:
+        from app.services import cn_norm_lint
+    except ImportError:
+        return json.dumps({
+            "status": "unavailable",
+            "message": "cn_norm_lint 模块不可用。",
+        }, ensure_ascii=False)
+
+    # 报告模式：autofix=False，如实反映当前文本；排版类问题导出时会自动修复
+    _, report = cn_norm_lint.lint_document(markdown, doc_type=doc_type, autofix=False)
+    return json.dumps({
+        "status": "ok",
+        "doc_type": doc_type,
+        "mode": CN_LINT_MODE,
+        **report.to_dict(),
+        "note": "排版类问题（重复标点/半角全角等）在 build_docx 导出时会自动修复；"
+                "Error 级违规（助动词体系/结构缺失等）需用 revise_section 修复。",
+    }, ensure_ascii=False)
+
+
+# ═══════════════════════════════════════════════════════════
+# 审核就绪度自查工具（方案模块六）：按 audit_checklist.json 对当前文档做证据核查。
+# 清单数据当前为草稿（待RA专家双人两源核对），工具先行落地核查框架。
+# ═══════════════════════════════════════════════════════════
+
+def _audit_checklist_path() -> str:
+    """审核自查清单路径（app/data/audit_checklist.json，可用 AUDIT_CHECKLIST_PATH 覆盖）"""
+    default = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data", "audit_checklist.json",
+    )
+    return os.getenv("AUDIT_CHECKLIST_PATH", default)
+
+
+@tool
+async def check_audit_readiness() -> str:
+    """按审核自查清单对当前生成的文档做核查就绪度自查，输出证据覆盖自查表。
+
+    逐条核对清单核查要求与文档内容：按证据关键词在全文中检索，
+    判定 满足/部分满足/缺失/不适用（未定义证据关键词的条目留人工判定），
+    输出 Markdown 自查表（含条款依据、常见缺陷提示、关键项标记）。
+
+    适用场景：
+    - 文档定稿前自查证据覆盖缺口（哪些核查要求在文中找不到落点）
+    - 用户要求"模拟审核员视角查一遍"时出具自查表
+
+    注意：清单数据为草稿（待RA专家双人两源核对，条目标注【示例占位】者
+    条款依据不可直接采信），自查结论仅供内部预检参考。
+
+    Returns:
+        Markdown 自查表 + 统计摘要；无清单或无文档内容时返回说明。
+    """
+    markdown = _current_generated_markdown.get()
+    if not markdown or not markdown.strip():
+        return "当前没有已生成的文档内容，请先生成文档后再做核查就绪度自查。"
+
+    doc_type = _current_doc_type.get() or ""
+    path = _audit_checklist_path()
+    if not os.path.exists(path):
+        return (f"审核自查清单不存在（{path}）。请先在 app/data/audit_checklist.json "
+                "配置核查清单（需RA专家双人两源核对后启用）。")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return f"审核自查清单读取失败: {e}"
+
+    items = data.get("items", [])
+    checklist_status = data.get("status", "")
+    # 按 doc_type 过滤："*" 表示适用全部文档类型
+    matched = [
+        it for it in items
+        if "*" in it.get("applicable_doc_types", []) or doc_type in it.get("applicable_doc_types", [])
+    ]
+    if not matched:
+        return (f"审核自查清单中没有适用于文档类型 {doc_type or '(未知)'} 的条目"
+                f"（清单共 {len(items)} 条）。")
+
+    md_lower = markdown.lower()
+    rows = []
+    stat = {"满足": 0, "部分满足": 0, "缺失": 0, "不适用": 0}
+    for it in matched:
+        keywords = [k for k in it.get("keywords", []) if k]
+        if not keywords:
+            status = "不适用"
+            detail = "未定义证据关键词，需人工判定"
+        else:
+            hits = sum(1 for k in keywords if k.lower() in md_lower)
+            if hits == len(keywords):
+                status = "满足"
+            elif hits > 0:
+                status = "部分满足"
+            else:
+                status = "缺失"
+            missing = [k for k in keywords if k.lower() not in md_lower]
+            detail = f"证据命中 {hits}/{len(keywords)}" + (f"，缺：{'、'.join(missing)}" if missing else "")
+        stat[status] += 1
+        crit = "★" if it.get("critical") else ""
+        rows.append(
+            f"| {crit}{it.get('item_id', '')} | {it.get('clause', '')} | "
+            f"{it.get('requirement', '')} | {status} | {detail} |"
+        )
+
+    lines = [
+        "## 审核就绪度自查表",
+        "",
+        f"- 文档类型：{doc_type or '(未知)'}",
+        f"- 清单条目：{len(matched)} 条（按 doc_type 过滤自 {len(items)} 条）",
+        f"- 判定统计：满足 {stat['满足']} / 部分满足 {stat['部分满足']} / "
+        f"缺失 {stat['缺失']} / 不适用 {stat['不适用']}",
+        "",
+        "| 编号 | 核查条款依据 | 核查要求 | 判定 | 说明 |",
+        "|---|---|---|---|---|",
+        *rows,
+        "",
+        "常见缺陷提示（关键项 ★）：",
+    ]
+    for it in matched:
+        if it.get("critical") and it.get("common_defects"):
+            lines.append(f"- ★ {it.get('item_id', '')}: {it.get('common_defects', '')}")
+    if checklist_status:
+        lines.append("")
+        lines.append(f"> 清单状态：{checklist_status} —— 清单数据为草稿，"
+                     "条款依据需经RA专家双人两源核对后方可作为正式核查依据；"
+                     "标注【示例占位】的条款不可直接采信。")
+    lines.append("")
+    lines.append("> 建议：『缺失』条目用 revise_section 补充对应证据内容后复查；"
+                 "『不适用』条目由人工判定后在清单中补充证据关键词。")
+    return "\n".join(lines)
+
+
 async def build_docx(doc_type: str = "", product_name: str = "", markdown: str = "") -> str:
     """将已生成的文档内容构建为可下载文件并提供下载。
 
@@ -3384,6 +3665,7 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
         #    保证 review 页与下载文件一致。风险矩阵类已在上面提前返回。──
         condense_stats = None
         strip_stats = None
+        lint_report_dict = None
         _pending_condensed_sections.clear()  # 清空上轮旁路，避免本轮未精简时残留旧数据
         original_markdown = markdown
         try:
@@ -3419,6 +3701,24 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
                     for sec in _split_full_markdown(markdown) if sec.get("name")
                 }
                 _pending_condensed_sections["stats"] = condense_stats or {}
+
+            # ③ 中文规范校验（方案模块一：在 ①法规剥离、②字数收敛之后、模板渲染之前，
+            #    对最终呈现内容把关）。autocorrect + 自研规则先做安全修复（同步回上文
+            #    _pending_condensed_sections），残余 Error 按 CN_LINT_MODE 分档处置。
+            markdown, lint_block_msg, lint_report_dict = _apply_cn_norm_gate(
+                markdown, doc_type)
+            if markdown.strip() != original_markdown.strip():
+                _pending_condensed_sections["sections"] = {
+                    sec["name"]: sec["content"]
+                    for sec in _split_full_markdown(markdown) if sec.get("name")
+                }
+                _pending_condensed_sections.setdefault("stats", {})
+                _pending_condensed_sections["stats"] = dict(
+                    _pending_condensed_sections.get("stats") or {},
+                    cn_norm_autofix=(lint_report_dict or {}).get("autofix_count", 0),
+                )
+            if lint_block_msg is not None:
+                return lint_block_msg
         except Exception as e:
             print(f"[build_docx] 导出前处理失败，改用原文导出: {type(e).__name__}: {e}")
             condense_stats = None
@@ -3432,6 +3732,8 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
                 product_name=product_name,
                 doc_type=doc_type,
                 format_overrides=dict(_current_document_format.get() or {}),
+                doc_version=_current_doc_version.get() or "",
+                revision_entries=list(_current_revision_entries.get() or []),
             )
             file_bytes = template_service.document_to_bytes(doc)
             return file_bytes
@@ -3444,6 +3746,7 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
         filename = f"{product_name}_{label}.docx"
 
         download_id = _store_docx(file_bytes, filename)
+        _CN_LINT_BLOCK_STATE["rounds"] = 0  # 导出成功，lint 拦截计数复位
 
         return json.dumps({
             "status": "ok",
@@ -3452,6 +3755,7 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
             "size_bytes": len(file_bytes),
             "word_count": condense_stats,
             "regulation_stripped": strip_stats,
+            "cn_lint": lint_report_dict,
             "message": f"文档「{filename}」已生成，点击下载按钮即可获取。",
         }, ensure_ascii=False)
 
@@ -3477,15 +3781,19 @@ async def build_docx(doc_type: str = "", product_name: str = "", markdown: str =
 
 _REVISION_VERIFY_ROUNDS = int(os.getenv("REVISION_VERIFY_ROUNDS", "2"))
 
-_VERIFY_REVISION_SYSTEM = """你是文档修改审查专家。给定用户的修改指令、修改前的原文和修改后的内容，请严格审查两点：
+_VERIFY_REVISION_SYSTEM = """你是文档修改审查专家。给定用户的修改指令、修改前的原文和修改后的内容，请严格审查三点：
 1. 指令落实：修改后内容是否完整落实了用户指令的全部要求？列出未落实或落实不到位的点
 2. 额外更改：是否存在用户指令之外的更改（改动了指令未涉及的内容、措辞、结构、数据）？逐条列出具体位置
+3. 合规底线（中国体系文档写作规范核查维度）：修改后内容是否守住合规底线——
+   条款引用是否有明确条款号且与原文一致（不得因修改丢失/篡改条款号）、技术参数数值与单位未被改动、
+   助动词未退化为"应该/建议"等模糊表述、未引入原文没有的标准号或条款号。发现违规逐条列出
 输出严格 JSON（无围栏无解释）：
 {"instruction_followed": true/false,
  "missing_points": ["未落实点…"],
  "has_unauthorized_changes": true/false,
- "unauthorized_changes": ["指令外更改的具体描述…"]}
-审查标准：宁可严格——不确定是否属于指令范围的更改也列出来；两项都通过才输出 true。"""
+ "unauthorized_changes": ["指令外更改的具体描述…"],
+ "compliance_violations": ["合规底线违规描述…，无违规输出空数组"]}
+审查标准：宁可严格——不确定是否属于指令范围的更改也列出来；三项全部通过才输出 true。"""
 
 
 async def _verify_revision_once(instruction: str, original: str, revised: str) -> dict:
@@ -3523,12 +3831,12 @@ async def _verify_revision_compliance(instruction: str, original: str, revised: 
 
     Returns:
         (最终内容, 报告 dict)。报告: {"rounds", "passed"（True/False/None=验证不可用）,
-        "missing_points", "unauthorized_changes", "repaired"}。
+        "missing_points", "unauthorized_changes", "compliance_violations", "repaired"}。
         验证不可用时返回原内容且不阻塞修改流程。
     """
     content = revised
     report = {"rounds": 0, "passed": None, "missing_points": [],
-              "unauthorized_changes": [], "repaired": False}
+              "unauthorized_changes": [], "compliance_violations": [], "repaired": False}
     try:
         for round_i in range(1, max_rounds + 1):
             report["rounds"] = round_i
@@ -3542,9 +3850,11 @@ async def _verify_revision_compliance(instruction: str, original: str, revised: 
             if verdict.get("has_unauthorized_changes"):
                 unauth = [str(x).strip() for x in (verdict.get("unauthorized_changes") or [])
                           if str(x).strip()]
+            compliance = [str(x).strip() for x in (verdict.get("compliance_violations") or [])
+                          if str(x).strip()]
             followed = bool(verdict.get("instruction_followed")) and not missing
 
-            if followed and not unauth:
+            if followed and not unauth and not compliance:
                 report["passed"] = True
                 print(f"[revise_section] 修改自检通过（第 {round_i} 轮）")
                 return content, report
@@ -3552,6 +3862,7 @@ async def _verify_revision_compliance(instruction: str, original: str, revised: 
             # 未通过 → 构造审查反馈，带反馈修复后进入下一轮验证
             report["missing_points"] = missing
             report["unauthorized_changes"] = unauth
+            report["compliance_violations"] = compliance
             feedback_parts = []
             if missing:
                 feedback_parts.append(
@@ -3560,6 +3871,10 @@ async def _verify_revision_compliance(instruction: str, original: str, revised: 
                 feedback_parts.append(
                     "以下更改超出了用户指令范围，必须恢复为修改前原文的对应内容"
                     "（只保留指令明确要求的部分）：\n- " + "\n- ".join(unauth))
+            if compliance:
+                feedback_parts.append(
+                    "以下内容触碰合规底线（条款号/参数/助动词/编造引用），必须改回"
+                    "合规表述（条款号与数值以修改前原文为准）：\n- " + "\n- ".join(compliance))
             repair_user = (
                 revision_user_prompt
                 + "\n\n# ⚠️ 修改审查反馈（上一版修改未通过审查，本次输出必须同时满足"
@@ -3780,8 +4095,26 @@ async def revise_section(section_name: str, instruction: str, doc_type: str = "d
                 verify_note = ("\n\n（⚠️ 自检报告：经 "
                                f"{verify_report.get('rounds')} 轮审查修复后仍有以下待确认项——"
                                f"疑似未落实: {verify_report.get('missing_points') or '无'}；"
-                               f"疑似额外更改: {verify_report.get('unauthorized_changes') or '无'}。"
+                               f"疑似额外更改: {verify_report.get('unauthorized_changes') or '无'}；"
+                               f"合规底线存疑: {verify_report.get('compliance_violations') or '无'}。"
                                "回复用户时必须如实说明这些待确认项，由用户决定是否进一步调整。）")
+            # ── 升版事件旁路（方案模块四 §5.1）：判定 minor/major 并交由
+            #    agent_engine 应用 bump_version + 追加 revision_entries ──
+            try:
+                from app.services import doc_control as _dc
+                _action, _source = _dc.classify_revision(instruction)
+                if _action != "none":
+                    _pending_revision_events.append({
+                        "section_name": section_name,
+                        "instruction": instruction,
+                        "action": _action,           # minor / major
+                        "source": _source,           # 用户指令/审校修复/法规变更/参数变更
+                        "summary": _dc.summarize_revision(instruction),
+                    })
+                    print(f"[revise_section] 升版事件: {_action} ({_source}) "
+                          f"— {section_name}")
+            except Exception as e:
+                print(f"[revise_section] 升版事件记录失败（忽略）: {e}")
             return (
                 f"[已修改: {section_name}]\n\n{response}\n\n"
                 "（系统提示：以上修改后全文已保存进文档。回复用户时不要复述全文，"
@@ -8589,4 +8922,7 @@ PHASE1_TOOLS = [
     calculate_statistics,
     # 动态子代理派生（2026-09-29 集成）
     spawn_subagent,
+    # 中文规范校验与审核就绪度自查（合规提升方案 2026-10-12 集成）
+    lint_chinese_norms,
+    check_audit_readiness,
 ]

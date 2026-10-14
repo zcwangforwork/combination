@@ -12,6 +12,8 @@ langgraph>=0.2.0,<1.0.0
 langgraph-checkpoint-sqlite>=2.0
 aiosqlite>=0.20.0
 langchain-openai>=0.3.0
+# JWT 鉴权（combination 移植新增，review_auth.py 运行必需）
+PyJWT>=2.8.0
 # MinerU 文档解析（opt-in，需设置 USE_MINERU=true 启用）
 # 启用后优先使用本地 MinerU2.5-Pro-2605-1.2B 视觉语言模型解析文档；
 # 未启用或模型不可用时，自动回退到 python-docx / pdfplumber 解析器。
@@ -21,3 +23,5 @@ transformers>=4.56.0
 PyMuPDF>=1.24.0
 Pillow>=10.0.0
 pywin32>=305; sys_platform == 'win32'
+# MCP 外部工具（联网搜索/网页抓取 — mcp_manager.py，千问远程 MCP 适配）
+langchain-mcp-adapters>=0.3.0

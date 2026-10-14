@@ -1,0 +1,41 @@
+# autocorrect 配置（中国体系文档写作合规提升 方案 §2.3 规则采用决策表）
+# 自动修复只做"改得对、不用人看"的排版项；要人判断的归自研 cn_norm_lint。
+rules:
+  # 中英文之间加空格（pangu 规则集核心，GB/T 15834/15835 中文排版惯例）
+  space-word: 1
+  # 标点前后空格修正
+  space-punctuation: 1
+  # 括号空格修正
+  space-bracket: 1
+  # 连字符两侧加空格 —— 必须关闭：标准号与文件编号大量使用连字符
+  # （GB/T 42061-2022、KF-CGM-2-0004），加空格即破坏编号
+  space-dash: 0
+  # 美元符号场景，关闭
+  space-dollar: 0
+  # 中文语境标点转全角（GB/T 15834）
+  fullwidth: 1
+  # 全角标点前后去空格
+  no-space-fullwidth: 1
+  # 全角字母数字转半角（GB/T 15835，与自研 N01 呼应）
+  halfwidth-word: 1
+  # 英文语境标点转半角
+  halfwidth-punctuation: 1
+
+# 拼写检查 —— 关闭：官方标注实验特性；术语校验由自研 T01 词表规则承担
+spellcheck:
+  words: []
+
+# 固定文本豁免：法规与标准书名整串不改动（原文引用保留原貌）
+textRules:
+  - text: 《医疗器械生产质量管理规范》
+    rules:
+      fullwidth: 0
+      space-word: 0
+  - text: 《医疗器械注册质量管理体系核查指南》
+    rules:
+      fullwidth: 0
+      space-word: 0
+  - text: 《医疗器械注册申报资料要求及说明》
+    rules:
+      fullwidth: 0
+      space-word: 0

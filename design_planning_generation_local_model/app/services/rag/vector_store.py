@@ -36,7 +36,9 @@ class VectorStore:
     # 查询时使用的目标 collection 列表（优先级从高到低）
     # 注意: 这里使用的是 ChromaDB 中的实际 collection 名。
     # insulin_pump_kb 无前缀（历史遗留），uploads 实际名为 qms_doc_uploads。
-    QUERY_COLLECTIONS = ["insulin_pump_kb", "qms_doc_uploads"]
+    # qms_doc_regulations 为法规结构化库（ingest_regulation.py 摄入，
+    # 带章/条元数据标签，方案模块三）：缺失该 collection 时静默跳过。
+    QUERY_COLLECTIONS = ["insulin_pump_kb", "qms_doc_uploads", "qms_doc_regulations"]
 
     # 额外的 ChromaDB 目录及其 collection 列表
     # 格式: {db_path: [collection_names]}

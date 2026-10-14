@@ -62,6 +62,7 @@ OUTLINE_AGENT_PROMPT = """你是医疗器械注册文档的框架设计师。
       "title": "第X章 章节标题",
       "description": "本章覆盖范围（一句话，≤30字）",
       "key_standards": ["GB XXXX-XXXX", "ISO XXXX:XXXX"],
+      "key_regulations": ["GMP(107号) 第X章第X条", "GMP(64号) 第X条"],
       "sections": [
         {
           "title": "X.1 节标题",
@@ -85,6 +86,9 @@ OUTLINE_AGENT_PROMPT = """你是医疗器械注册文档的框架设计师。
 - `subsections` 为三级层级（小节），必填，每节 2-6 个小节
 - `sub_subsections` 为四级层级（子小节），可选，仅当小节内容较复杂时使用
 - `content_points` 为短句要点列表，每点 ≤30 字，风格如"支持X"/"参数：Y"/"协议：Z"
+- `key_regulations` 为法规条款挂靠（与 key_standards 标准挂靠并列的双挂靠）：
+  从知识库检索命中的法规条目标签反查填写（如"医疗器械生产质量管理规范(2025年第107号) 第六章 设计开发 第X条"），
+  检索不到可靠法规条目时填空数组 []，禁止编造条款号
 
 ## 设计原则
 - 章节数通常15-30+章，视文档类型而定，宁多勿少

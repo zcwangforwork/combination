@@ -1,0 +1,42 @@
+[
+  {
+    "query": "医疗器械生产质量管理规范 107号 设计开发 策划",
+    "relevant_chunk_ids": [],
+    "relevant_source_files": ["医疗器械生产质量管理规范（2025年第107号）.txt"],
+    "query_type": "regulation_no",
+    "notes": "【数据待入库】法规结构化库（qms_doc_regulations）摄入官方原文后，回填 relevant_chunk_ids（reg::<文件名>::<条序号> 格式）。命中目标：107号 设计开发章 设计开发策划相关条款",
+    "reviewed": false
+  },
+  {
+    "query": "107号 生产质量管理规范 数智化 电子记录",
+    "relevant_chunk_ids": [],
+    "relevant_source_files": ["医疗器械生产质量管理规范（2025年第107号）.txt"],
+    "query_type": "regulation_no",
+    "notes": "【数据待入库】命中目标：107号新增数智化/电子记录相关条款（新章要点）。数据红线：条款号以双人两源核对后的官方原文为准",
+    "reviewed": false
+  },
+  {
+    "query": "64号 生产质量管理规范 2014 设计开发",
+    "relevant_chunk_ids": [],
+    "relevant_source_files": ["医疗器械生产质量管理规范（2014年第64号）.txt"],
+    "query_type": "regulation_no",
+    "notes": "【数据待入库】旧版 64号 设计开发条款——新旧映射对照评测的基础锚点",
+    "reviewed": false
+  },
+  {
+    "query": "医疗器械生产质量管理规范 培训 人员卫生",
+    "relevant_chunk_ids": [],
+    "relevant_source_files": ["医疗器械生产质量管理规范（2025年第107号）.txt"],
+    "query_type": "regulation_clause",
+    "notes": "【数据待入库】无公告号的语义条款查询（测 BM25 路 + 向量路对条款正文的召回）",
+    "reviewed": false
+  },
+  {
+    "query": "107号 施行日期 废止 64号",
+    "relevant_chunk_ids": [],
+    "relevant_source_files": ["医疗器械生产质量管理规范（2025年第107号）.txt"],
+    "query_type": "regulation_meta",
+    "notes": "【数据待入库】施行状态元数据查询（命中目标：附则/施行条款 chunk，标签头含施行状态与新旧映射）",
+    "reviewed": false
+  }
+]

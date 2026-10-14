@@ -50,32 +50,41 @@ class MiniMaxEmbeddingFunction:
                     "model": self.model,
                     "input": text[:8000]
                 }
+                # 【质量修复 2026-10-13】嵌入失败/维度异常一律显式报错。
+                # 原实现回退随机向量：查询结果失真无提示，入库则造成无语义 chunk
+                # 污染向量库（build_all_medical.py 曾整库随机向量，检索质量隐患）。
                 try:
                     response = client.post(self.api_url, headers=headers, json=payload)
-                    if response.status_code == 200:
-                        result = response.json()
-                        data = result.get("data", [])
-                        if data:
-                            embedding = data[0].get("embedding", [])
-                            # 如果需要，截断到指定维度
-                            if len(embedding) > self.dimension:
-                                embedding = embedding[:self.dimension]
-                            elif len(embedding) < self.dimension:
-                                # 如果太短，用随机数填充
-                                import random
-                                while len(embedding) < self.dimension:
-                                    embedding.append(random.uniform(-1, 1))
-                            embeddings.append(embedding)
-                        else:
-                            # 失败时使用随机向量
-                            import random
-                            embeddings.append([random.uniform(-1, 1) for _ in range(self.dimension)])
-                    else:
-                        import random
-                        embeddings.append([random.uniform(-1, 1) for _ in range(self.dimension)])
-                except Exception:
-                    import random
-                    embeddings.append([random.uniform(-1, 1) for _ in range(self.dimension)])
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Embedding 服务不可达（{self.api_url}）: {e}。"
+                        "请确认 Ollama embedding 服务已启动（qwen3-embedding:4b）。"
+                    ) from e
+                if response.status_code != 200:
+                    raise RuntimeError(
+                        f"Embedding 服务返回 {response.status_code}: {response.text[:200]}。"
+                        "请检查 embedding 服务状态与模型名称。"
+                    )
+                result = response.json()
+                data = result.get("data", [])
+                if not data:
+                    raise RuntimeError(
+                        f"Embedding 响应缺少 data（model={self.model}）。"
+                        "请检查 embedding 服务是否正确加载模型。"
+                    )
+                embedding = data[0].get("embedding", [])
+                if not embedding:
+                    raise RuntimeError("Embedding 响应的 embedding 字段为空。")
+                # 如果需要，截断到指定维度
+                if len(embedding) > self.dimension:
+                    embedding = embedding[:self.dimension]
+                if len(embedding) < self.dimension:
+                    # 维度不符说明模型/配置错位，随机填充会污染尾部维度 → 报错
+                    raise RuntimeError(
+                        f"Embedding 维度异常：期望 {self.dimension}，实际 {len(embedding)}。"
+                        "请检查 embedding 模型与 dimension 配置是否匹配。"
+                    )
+                embeddings.append(embedding)
 
         return embeddings
 

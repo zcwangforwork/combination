@@ -2790,3 +2790,240 @@ MinerU 启用 GPU 后，首次加载模型 + 多页推理可能超过原 30 秒�
 
 ## 待办
 - 方案 Step 1.4 阈值校准未在本轮范围；golden set 人工复核；多查询融合需在线观测
+
+# 2026-10-12 18:46 - 任务开始：中国体系文档写作合规提升 方案 P0+P1 代码实施（会话续）
+
+- 项目路径: E:\A_nrf_sample_codes\working_team_work\public\project\git_project\combination\design_planning_generation_local_model
+- 任务: 按《中国体系文档写作合规提升_实施方案_20261012.md》对项目代码做 P0+P1 全量实施
+- 用户确认: 跳过 /plan-eng-review；范围=P0+P1 一次做完（外部依赖受阻项只落框架+占位）
+- 方案源: e:\A_nrf_sample_codes\working_team_work\public\docs\researcher_docs\中国体系文档写作合规提升_实施方案_20261012.md
+
+## 2026-10-12 18:46 - Analysis
+- Topic: 实施范围盘点（P0+P1）
+- Finding: 模块一(lint)/模块二(提示词+SOP八股)/模块四(受控形态)/模块五(技能卡)可全代码化；模块三(法规库)/模块六(审核清单)数据侧受双人两源核对红线约束，只落框架+【示例占位】
+- Decision: 先落代码与数据框架，再补测试，最后日志/周报
+
+## 2026-10-12 18:46 - File Edited
+- File: app/services/agent_tools.py
+- Change: revise_section 修改自检闭环升级为三维审查（_VERIFY_REVISION_SYSTEM 增加 compliance_violations JSON 字段；_verify_revision_compliance 消费该维度并纳入通过门与修复反馈；verify_note 向用户如实呈报合规存疑项）
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: app/data/audit_checklist.json
+- Change: 新建审核就绪度自查清单（模块六数据框架）：3 条示例条目（AUD-001/002/003），status=draft_pending_ra_review，条款依据全部标注【示例占位】待 RA 双人两源核对
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: ingest_regulation.py
+- Change: 新建法规结构化摄入 CLI（模块三框架）：章/条拆分、chunk 标签头（公告号/来源/状态/新旧映射/关联 doc_type）写入正文与 section_title、collection=regulations、[SEC] 经 add_chunks 收口打标、acl_version 附 REG_DB_VERSION 批次标记、自动维护 doc_registry.json（R01 数据源）、双人两源核对 y/n 确认
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: seed_skills.py
+- Change: 新建预置技能卡种子写入脚本（模块五）：5 张【系统预置】卡（GB/T 1.1 助动词/中文排版/SOP 八股/记录表单/新旧 GMP 速查），幂等跳过同名（用户治理优先）；新旧 GMP 卡仅用方案已交叉验证的结构级事实并显式标注条号映射待核对
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: evals/golden_regulation.json
+- Change: 新建法规检索评测集骨架：5 题（regulation_no/clause/meta 三类），relevant_chunk_ids 留空标注【数据待入库】，待官方原文摄入后回填 reg:: id
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: .env.example
+- Change: 追加「中国体系文档写作合规提升」环境变量段：CN_LINT_MODE/CN_LINT_CONFIG_PATH/CN_NORM_TERMS_PATH/DOC_VERSION_POLICY/DOC_CONTROLLED_STATUS/REG_BASIS_DEFAULT/REG_DB_VERSION/AUDIT_CHECKLIST_PATH（各附中文注释）
+- Result: Success
+
+## 2026-10-12 18:46 - File Edited
+- File: requirements.txt
+- Change: 追加 autocorrect-py>=0.1.0（cn_norm_lint 排版自动修复底层引擎）
+- Result: Success
+
+## 2026-10-12 18:46 - Bash Command Executed
+- Command: `python -m py_compile app/services/agent_tools.py app/services/cn_norm_lint.py app/services/doc_control.py ingest_regulation.py seed_skills.py`（env_01）
+- Working Dir: E:\A_nrf_sample_codes\working_team_work\public\project\git_project\combination\design_planning_generation_local_model
+- Purpose: 新增/改动 Python 文件语法校验
+- Result: Success - PY_COMPILE OK
+
+## 2026-10-12 18:46 - Bash Command Executed
+- Command: `python -c "<json.load 校验 audit_checklist.json / golden_regulation.json / doc_registry.json>"`
+- Working Dir: 同上
+- Purpose: JSON 数据文件合法性校验
+- Result: Success - 3 items / 5 entries / documents 字段结构有效
+
+# 2026-10-12 19:2x - 任务继续（上下文压缩后恢复）：补测试 + 修 bug + 日志
+
+## 2026-10-12 19:30 - Analysis
+- Topic: 导出闸门 _apply_cn_norm_gate 可调用性
+- Finding: 该内部辅助函数被 @tool 装饰（BaseTool 对象不可按位置调用），build_docx 3707 行直接调用会 TypeError 且被外层 except 吞掉 → ③号位中文规范闸门静默失效，从未真正运行
+- Decision: 去掉 @tool（内部函数不注册为 Agent 工具），并加回归测试 test_gate_is_plain_coroutine_function
+- Result: langchain 最小复现确认 'StructuredTool' object is not callable
+
+## 2026-10-12 19:31 - File Edited
+- File: app/services/agent_tools.py
+- Change: 移除 _apply_cn_norm_gate 上的 @tool 装饰器（注释说明原因）；该函数仅由 build_docx 内部调用，PHASE1_TOOLS 未注册过它，行为面无变化
+- Result: Success
+
+## 2026-10-12 19:33 - Analysis
+- Topic: 测试驱动的 cn_norm_lint 两处缺陷
+- Finding: ①_check_sop_chapters 第557行 `k` 未定义（keys 误写）→ S01 规则必崩，会被导出链 except 吞掉；②N02 数值-单位空格检查 `(?<![A-Za-z0-9])(\d)(mm...)` 单数字捕获把 45mm 等多位数也排除在外；③N04 千分位会对标准号 GB/T 42061-2022 的数字段误报
+- Decision: S01 改 any(any(k in n for k in keys))；N02 改 `(?<![A-Za-z0-9.])(\d+(?:\.\d+)?)(单位)`；N04 增加 _STD_TOKEN 覆盖区间跳过
+- Result: 修复后 3 组测试转绿
+
+## 2026-10-12 19:35 - File Edited
+- File: app/services/cn_norm_lint.py
+- Change: 三处修复——_check_sop_chapters 变量名 k→keys 嵌套 any；N02 空格检查支持多位数与小数；N04 千分位跳过标准号 token 覆盖区间内数字段
+- Result: Success
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_cn_norm_lint.py（新建）
+- Change: 模块一规则测试 27 用例：autofix P01/P02/P03/N01；M01-M06 助动词；引号/修订表豁免；P05/N02/N03/N04；S01 缺章与六章通过；S03 跳号；R01 登记表；R02 标准号归一；T01 命中与规范形态内嵌跳过；报告结构
+- Result: Success - 27 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_cn_norm_export_gate.py（新建）
+- Change: 闸门三档测试 8 用例：@tool 回归防护；off 跳过；warn 只报告；enforce 无错放行/有错两轮 cn_lint_blocked/超轮次 HITL accept 降级与 reject 中止、计数复位
+- Result: Success - 8 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_doc_control.py（新建）
+- Change: 模块四纯函数测试 20 用例：bump_version 四分支；classify_revision 六场景+来源枚举；summarize_revision 前缀剥离/截断/兜底；build_revision_entry 结构与链路集成；get_reg_basis 强制/auto 双轨切换与前瞻性标注；reg_basis_cover_line 稳定部分
+- Result: Success - 20 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_template_controlled.py（新建）
+- Change: 受控形态模板层测试 6 用例：受控状态默认/三态 env 覆盖+页眉同步；编制依据行；修订表 5 列首行新增+升版条目追加（修订人/生效日期留空）；正文节页眉三要素；doc_version 透传
+- Result: Success - 6 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_skill_seed.py（新建）
+- Change: 模块五种子卡测试 4 用例：字段长度约束；首次全量写入；幂等；同名用户卡不被覆盖（tmp 存储隔离）
+- Result: Success - 4 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_audit_readiness.py（新建）
+- Change: 模块六自查工具测试 6 用例：无内容/清单缺失提示；doc_type 过滤；满足/部分满足（列缺失词）/缺失/不适用 四态；★关键项与缺陷提示；草稿状态脚注
+- Result: Success - 6 passed
+
+## 2026-10-12 19:40 - File Edited
+- File: tests/test_sop_chapters.py（新建）
+- Change: SOP 八股六章一致性测试 4 用例：六章顺序与字段；与 S01 近义词组交叉一致（防两处定义漂移）；生成骨架过 S01 校验
+- Result: Success - 4 passed
+
+## 2026-10-12 19:41 - File Edited
+- File: tests/test_revision_verify.py
+- Change: 追加合规底线维度 2 用例：compliance_violations 单独触发修复轮（反馈含"合规底线"部分）；持续不通过时报告字段与 passed=False（修复轮 mock 为空返回避免真实 LLM 调用）
+- Result: Success - 连同原 3 用例 5 passed
+
+## 2026-10-12 19:42 - Bash Command Executed
+- Command: `python -m pytest tests/test_cn_norm_lint.py tests/test_doc_control.py tests/test_sop_chapters.py tests/test_skill_seed.py tests/test_revision_verify.py -q`（env_01）
+- Working Dir: 同上
+- Purpose: 快速组回归
+- Result: Success - 60 passed in 0.53s
+
+## 2026-10-12 19:43 - Bash Command Executed
+- Command: `python -m pytest tests/test_cn_norm_export_gate.py tests/test_audit_readiness.py tests/test_template_controlled.py -q`（env_01）
+- Working Dir: 同上
+- Purpose: 重量级组（agent_tools 导入 + docx 构建）回归
+- Result: Success - 20 passed in 1.26s
+
+## 2026-10-12 19:44 - Bash Command Executed
+- Command: `python -m pytest tests/ -q`（env_01）
+- Working Dir: 同上
+- Purpose: 全量测试套件回归
+- Result: 运行中（超 600s 转后台，任务 ID b8prhqyyj）——部分存量测试疑似依赖本地 Ollama/网络服务，待完成核对
+
+## 2026-10-12 20:05 - File Edited
+- File: `E:\nrf_sample_codes\working_team_work\public\docs\code_writer_docs\合规提升方案_代码实施完成报告_20261012.md`
+- Change: 新建完成报告——P0+P1 六模块实施内容、79 测试用例、3 缺陷修复、数据红线遗留项、变更清单与建议提交信息
+- Result: Success
+
+## 2026-10-12 20:08 - Bash Command Executed
+- Command: `wc -c + tail -c 3000 <b8prhqyyj.output>`
+- Working Dir: `E:\A_nrf_sample_codes\working_team_work\public\project\git_project\combination\design_planning_generation_local_model`
+- Purpose: 检查后台全量 pytest 输出进度
+- Result: Success - 仅 741 字节环境噪声（tail 管道缓冲+GBK 线程报错），无测试进度可见，判定疑似挂起
+
+## 2026-10-12 20:10 - Bash Command Executed
+- Command: `TaskStop b8prhqyyj`
+- Working Dir: 同上
+- Purpose: 终止挂起的全量 pytest 后台任务
+- Result: Success
+
+## 2026-10-12 20:12 - Bash Command Executed
+- Command: `python -m pytest tests/ -q --ignore=<12 个嫌疑文件> | tail -25`
+- Working Dir: 同上
+- Purpose: 排除网络依赖嫌疑文件后重跑全量回归
+- Result: Failure - 600s 超时转后台（bm45rla4n），说明剩余文件中仍有挂起点
+
+## 2026-10-12 20:20 - Bash Command Executed
+- Command: `grep -l -E "search_kb|add_chunks|Embedder|embed|ollama|1143[45]|127.0.0.1|localhost|openviking|chroma|qdrant|milvus|weaviate|_call_minimax_api|httpx|requests.|urllib|socket" tests/*.py`
+- Working Dir: 同上
+- Purpose: 扩大网络/本地服务依赖排查（首轮 grep 词表不够全）
+- Result: Success - 新增 5 嫌疑：test_dynamic_subagent / test_openviking_integration / test_prompt_eval / test_sec_no_bypass / test_sql_prompt
+
+## 2026-10-12 20:22 - Bash Command Executed
+- Command: `TaskStop bm45rla4n` → `python -m pytest tests/ -q --ignore=<16 个嫌疑文件>`（后台 bmdb6exjh，无 tail 管道直写输出）
+- Working Dir: 同上
+- Purpose: 排除全部 16 个服务依赖嫌疑文件后的干净回归
+- Result: 进行中
+
+## 2026-10-12 20:25 - File Edited
+- File: `E:\nrf_sample_codes\working_team_work\public\docs\code_writer_docs\session-2026-10-12-184600.md`
+- Change: 追加会话续篇——收尾阶段对话记录、操作日志、总结（任务完成状态与遗留事项）
+- Result: Success
+
+## 2026-10-12 20:35 - Bash Command Executed
+- Command: `for f in test_agent_auth test_agent_retention test_agent_search test_agent_streams test_attachment_refs test_attachment_search test_doc_format test_extract_cache test_rag_no_rebuild test_rerank_ab test_sec_filter test_sec_leak test_skill_library test_sql_db test_sql_tools; do timeout 90 pytest tests/$f.py; done`
+- Working Dir: `design_planning_generation_local_model`
+- Purpose: 逐文件运行中段测试文件定位失败与挂起点
+- Result: Success - 全部通过（test_rerank_ab 无用例）
+
+## 2026-10-12 20:40 - Bash Command Executed
+- Command: `for f in test_template_front_matter test_template_prompt test_template_tools test_user_requirements test_word_limit_condense; do timeout 120 pytest tests/$f.py; done`
+- Working Dir: 同上
+- Purpose: 逐文件运行后段测试文件
+- Result: Failure - front_matter 4F/13P、prompt 15F、tools 3F/9P、word_limit 挂起（timeout 杀）
+
+## 2026-10-12 20:45 - Bash Command Executed
+- Command: `git stash push -m wip-compliance-verify && pytest <3 个 template 文件> && timeout 100 pytest tests/test_word_limit_condense.py && git stash pop`
+- Working Dir: 同上
+- Purpose: 回到 HEAD 运行失败测试，判定新回归 vs 存量问题
+- Result: Success - HEAD 上 7 failed（<22）、word_limit 同样挂起 → 存在 15 个新回归 + word_limit 为存量挂起
+
+## 2026-10-12 20:50 - Bash Command Executed
+- Command: `git stash push + pytest 两次取 HEAD/工作区 FAILED 清单 + comm 对比`
+- Working Dir: 同上
+- Purpose: 精确 diff 两边失败用例
+- Result: Success - 新回归 15 个：front_matter 分页 1 + prompt 14；存量 7 个（HEAD-only 为空）
+
+## 2026-10-12 20:55 - File Edited
+- File: `app/services/agent_prompt.py`
+- Change: 删除 build_system_prompt 中残留的悬空 `if writing_style == "concise":`（前序插入 CN_NORM_STYLE_BLOCK 时引入的 IndentationError，致模块不可导入、14 个 prompt 测试失败、Agent 系统提示词组装实际不可用）
+- Result: Success - 语法检查通过，test_template_prompt 14/15 转绿
+
+## 2026-10-12 21:00 - File Edited
+- File: `tests/test_template_front_matter.py`
+- Change: `_page_break_count` 计数口径扩展——显式分页符 + 换页起始的分节符（受控形态将目录→正文显式分页升级为正文独立节 NEW_PAGE 起始以支撑页眉三要素，行为未退化，仅测试计数未覆盖分节符）
+- Result: Success
+
+## 2026-10-12 21:05 - Bash Command Executed
+- Command: `pytest tests/ -q --ignore=<16 服务依赖文件> --ignore=tests/test_word_limit_condense.py`
+- Working Dir: 同上
+- Purpose: 最终干净回归
+- Result: Success - 259 passed / 7 failed（13.77s）；7 个失败与 HEAD 存量完全一致，本次改动零回归
+
+## 2026-10-12 21:08 - File Edited
+- File: `E:\nrf_sample_codes\working_team_work\public\docs\code_writer_docs\合规提升方案_代码实施完成报告_20261012.md`
+- Change: 更新测试结论（259/7 与存量对照）、缺陷清单（新增 agent_prompt 语法错误、分页测试口径 2 项）、变更清单与提交信息
+- Result: Success
+
+## 2026-10-12 21:20 - File Edited
+- File: `E:\A_nrf_sample_codes\working_team_work\code_writer\summary\王子辰-FlexiPod周总结vs计划表_2026(8)_.xlsx`
+- Change: zip/XML 级补丁（脚本 code_writer/temp/patch_weekly_20261012.py，备份 .bak-20261012-2）——本周 sheet「10月12日-10月16日」(sheet8.xml) 追加本周总结第 2 项（合规提升方案 P0+P1 代码落地，E7/F7/G7）与下周计划 3 项（B19:C21：法规原文核对入库/自查清单 RA 定稿/本地 LLM 联调 smoke）
+- Result: Success - openpyxl 只读校验值正确，8 个 sheet 与 xl/cellimages.xml 均完整
+- 备注: 该 sheet 字符串为 inlineStr 内联（t="inlineStr"><is><t>），无 sharedStrings 依赖；rels 带 ns0: 前缀需放宽标签匹配
+
+## 2026-10-12 21:22 - File Edited
+- File: `E:\A_nrf_sample_codes\working_team_work\code_writer\temp\patch_weekly_20261012.py`
+- Change: 新建周报补丁脚本（3 次迭代修复：f-string 嵌套引号语法错误 / rels ns0: 前缀匹配 / 正则贪婪跨吞单元格 → 改 inlineStr 精准原位替换）
+- Result: Success

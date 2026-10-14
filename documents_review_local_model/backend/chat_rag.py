@@ -7,13 +7,17 @@
 3. 将检索结果注入 LLM prompt，生成带引用的回答
 
 支持单 agent 与多 agent 两种对话模式共用。
+
+MCP 增强（联网搜索/网页抓取）：mcp_manager 加载了外部 MCP 工具时，
+answer_with_rag 自动切换为 tool-calling 回答——LLM 可自主调用联网搜索、
+网页抓取、知识库检索、条款查询后再作答；MCP 未加载时保持原直接调用路径。
 """
 from __future__ import annotations
 
 import logging
 from typing import Any, Optional
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +81,60 @@ def retrieve_knowledge_context(
         text = doc.get("text", "")[:1500]
         parts.append(f"--- 参考 {i} (来源: {source}) ---\n{text}")
     return "\n\n".join(parts)
+
+
+def _build_free_chat_tools(llm: Any, retriever: Any) -> list:
+    """构建自由对话工具集：MCP 外部工具（联网搜索/网页抓取）+ 知识库检索/条款查询。
+
+    仅当 mcp_manager 已加载 MCP 工具时启用（否则返回空列表，answer_with_rag
+    走原直接调用路径，行为与引入 MCP 前完全一致）。复用
+    agent_tools.create_audit_tools 完成模块级 retriever/llm 注入，再筛掉
+    审核流程专属工具（parse_document/audit_section/assess_completeness）
+    保持对话提示词精简。
+    """
+    try:
+        from mcp_manager import get_mcp_tools
+        mcp_tools = get_mcp_tools()
+    except Exception:
+        return []
+    if not mcp_tools:
+        return []  # MCP 未加载 → 保持原路径
+    try:
+        from agent_tools import create_audit_tools
+        full = create_audit_tools(retriever, llm)
+        keep = {"rag_search", "check_regulation"}
+        return [t for t in full if t.name in keep] + list(mcp_tools)
+    except Exception as e:
+        logger.warning(f"[chat_rag] 工具集构建失败: {e}")
+        return []
+
+
+async def _answer_with_tools(llm: Any, tools: list, system_text: str, question: str) -> str:
+    """tool-calling 回答：LLM 可在作答前自主调用联网搜索/网页抓取/知识库检索。
+
+    返回最终回答文本；任何失败抛异常由调用方回退直接调用路径。
+    """
+    try:
+        from langchain.agents import create_agent
+    except ImportError:
+        try:
+            from langgraph.prebuilt import create_react_agent as create_agent  # type: ignore
+        except ImportError:
+            raise RuntimeError("create_agent / create_react_agent 不可用")
+
+    agent = create_agent(model=llm, tools=tools)
+    result = await agent.ainvoke({"messages": [
+        SystemMessage(content=system_text),
+        HumanMessage(content=question),
+    ]})
+    # 取最后一条非工具调用的 AI 消息作为回答
+    for m in reversed(result.get("messages", [])):
+        if getattr(m, "type", "") == "tool":
+            continue
+        content = getattr(m, "content", "")
+        if content and not (getattr(m, "tool_calls", None)):
+            return content if isinstance(content, str) else str(content)
+    return ""
 
 
 async def answer_with_rag(
@@ -144,6 +202,18 @@ async def answer_with_rag(
         parts.append("请基于专业知识详细回答。")
 
     prompt = "\n\n".join(parts)
+
+    # MCP 工具增强（联网搜索/网页抓取）：有已加载的 MCP 工具时优先走
+    # tool-calling 回答，LLM 可自主联网搜索/读网页/查知识库后再作答；
+    # 失败或无工具回退下方直接调用路径（行为与引入 MCP 前一致）
+    tools = _build_free_chat_tools(llm, retriever)
+    if tools:
+        try:
+            answer = await _answer_with_tools(llm, tools, prompt, question)
+            if answer:
+                return answer
+        except Exception as e:
+            logger.warning(f"[chat_rag] tool-calling 回答失败，回退直接调用: {e}")
 
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])

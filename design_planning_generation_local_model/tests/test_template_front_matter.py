@@ -72,7 +72,11 @@ def _all_text(doc) -> str:
 
 
 def _page_break_count(doc) -> int:
-    return doc.element.xml.count('w:type="page"')
+    # 显式分页符 + 换页起始的分节符（受控形态方案将"目录→正文"的显式分页
+    # 升级为正文独立节 NEW_PAGE 起始，以支持正文节统一页眉三要素；
+    # 文档末尾的收尾 sectPr 不计）
+    xml = doc.element.xml
+    return xml.count('w:type="page"') + max(0, xml.count("<w:sectPr") - 1)
 
 
 def _find_revision_table(doc):

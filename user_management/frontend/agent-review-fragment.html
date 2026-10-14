@@ -14,6 +14,10 @@
   </div>
   <div class="nav">
     <button class="ar-back-btn" onclick="AgentReview.backToSystem()" title="返回体系文档管理系统">⟵ 返回系统</button>
+    <button id="ar-historyBtn" onclick="openSessionList()"
+            style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
+      🕘 历史会话
+    </button>
     <button id="ar-uploadDocBtn" onclick="returnToUpload()"
             style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">
       📄 上传文档审核
@@ -49,8 +53,8 @@
   <div class="input-area" id="ar-inputArea">
     <div class="input-row">
       <input type="text" id="ar-messageInput" placeholder="输入反馈或建议..."
-             onkeydown="if(event.key==='Enter')sendMessage()" disabled>
-      <button id="ar-sendBtn" onclick="sendMessage()" disabled>发送</button>
+             onkeydown="if(event.key==='Enter')arSendMessage()" disabled>
+      <button id="ar-sendBtn" onclick="arSendMessage()" disabled>发送</button>
     </div>
   </div>
 </div>
@@ -65,7 +69,7 @@
       <p>点击或拖拽上传文件</p>
       <div class="file-types">支持 .docx / .pdf</div>
     </div>
-    <input type="file" id="ar-fileInput" accept=".docx,.pdf" style="display:none" onchange="handleFileSelect(event)">
+    <input type="file" id="ar-fileInput" accept=".docx,.pdf" style="display:none" onchange="arHandleFileSelect(event)">
     <div class="file-selected" id="ar-fileInfo">
       <span class="remove" onclick="removeFile()">✕</span>
       <div class="name" id="ar-fileName"></div>
@@ -97,6 +101,17 @@
     <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;text-align:center;">
       提示：不上传文档也可开始自由对话，直接提问法规/体系问题
     </p>
+  </div>
+</div>
+
+<!-- P0 优化：历史会话列表弹层 -->
+<div class="session-list-overlay hidden" id="ar-sessionListOverlay">
+  <div class="session-list-card">
+    <div class="session-list-head">
+      <h3>🕘 历史会话</h3>
+      <button class="sl-close" onclick="closeSessionList()">✕</button>
+    </div>
+    <div class="sl-body" id="ar-sessionListBody"></div>
   </div>
 </div>
 

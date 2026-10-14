@@ -1,0 +1,39 @@
+{
+  "_说明": "审核就绪度自查清单（方案模块六）。当前为草稿：条款依据(clause)与证据关键词需经 RA 专家双人两源核对（官方原文）后方可作为正式核查依据。标注【示例占位】的条款仅为格式示例，不可直接采信。字段说明：item_id=条目编号；clause=核查条款依据（法规/标准条款号）；requirement=核查要求；check_method=核查方法；evidence_form=证据形式；common_defects=常见缺陷；critical=关键项(★)；keywords=证据关键词（在文档全文中检索，全部命中=满足/部分命中=部分满足/全未命中=缺失/未定义=不适用留人工判定）；applicable_doc_types=适用文档类型（'*'=全部，其余取 doc_types.py 键名）。",
+  "status": "draft_pending_ra_review",
+  "items": [
+    {
+      "item_id": "AUD-001",
+      "clause": "【示例占位】医疗器械生产质量管理规范（2025年第107号）第六章 设计开发 —— 具体条款号待双人两源核对",
+      "requirement": "设计开发策划文件应明确划分设计开发阶段、各阶段的评审/验证/确认安排及职责分工",
+      "check_method": "检查文档是否包含阶段划分表、各阶段评审安排与职责分工（岗位/角色栏位不得留空）",
+      "evidence_form": "阶段划分表 + 职责分工表 + 评审安排说明",
+      "common_defects": "阶段划分缺失或粒度过粗；职责分工只写部门不写角色；评审安排未覆盖全部阶段",
+      "critical": true,
+      "keywords": ["设计开发阶段", "职责", "评审"],
+      "applicable_doc_types": ["design_development_plan", "software_development_plan"]
+    },
+    {
+      "item_id": "AUD-002",
+      "clause": "【示例占位】GB 9706.224 / YY 9706.102 —— 具体条款号待双人两源核对",
+      "requirement": "风险管理文档应覆盖全生命周期，且与风险可接受准则、剩余风险评价结论闭环",
+      "check_method": "检查是否含风险可接受准则、剩余风险评价与综合剩余风险可接受性结论",
+      "evidence_form": "风险分析总表 + 剩余风险评价记录 + 综合剩余风险结论",
+      "common_defects": "风险控制措施与验证方法未一一对应；剩余风险无评价结论；未覆盖生产与生产后阶段",
+      "critical": true,
+      "keywords": ["风险可接受准则", "剩余风险"],
+      "applicable_doc_types": ["*"]
+    },
+    {
+      "item_id": "AUD-003",
+      "clause": "【示例占位】IEC 62304 §5.1（软件安全等级确定）—— 具体条款号待双人两源核对",
+      "requirement": "软件安全等级判定依据应与器械危害分析结论一致（软件失效可致死亡 → C级全流程）",
+      "check_method": "检查软件安全性分级描述与危害分析推导链条是否一致",
+      "evidence_form": "软件安全等级声明 + 分级依据推导说明",
+      "common_defects": "等级结论无推导依据；分级与危害分析结论矛盾；B/C级过程裁剪缺失理由",
+      "critical": false,
+      "keywords": ["软件安全等级"],
+      "applicable_doc_types": ["software_development_plan", "software_requirements_spec", "software_architecture_doc"]
+    }
+  ]
+}
