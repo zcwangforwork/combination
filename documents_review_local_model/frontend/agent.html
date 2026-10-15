@@ -6,17 +6,18 @@
 <title>对话式文档审核 Agent — 贴敷式胰岛素泵体系文件智能审核</title>
 <style>
   :root {
-    --bg-primary: #0d1117;
-    --bg-secondary: #161b22;
-    --bg-tertiary: #21262d;
-    --border: #30363d;
-    --text-primary: #c9d1d9;
-    --text-secondary: #8b949e;
-    --accent: #58a6ff;
-    --accent-green: #3fb950;
-    --accent-orange: #d2991d;
-    --accent-red: #f85149;
-    --accent-purple: #a371f7;
+    --bg-primary: #F7F8F6;      /* 纸白页底 */
+    --bg-secondary: #FFFFFF;    /* 白色面板/顶栏 */
+    --bg-tertiary: #EAF0EF;     /* 青釉浅晕: hover/阶段底 */
+    --border: #D8DCD9;          /* 规线 */
+    --text-primary: #24312F;    /* 仪灰·深 */
+    --text-secondary: #5A6663;  /* 仪灰 */
+    --accent: #2F7A6F;          /* 青釉: 链接/聚焦/用户侧 */
+    --accent-green: #25705F;    /* 深青釉: 成功/完成 */
+    --accent-orange: #B97A1F;   /* 琥珀: 待定/警告 */
+    --accent-red: #B3362E;      /* 印章红: 严重错误 */
+    --accent-purple: #1E4B47;   /* 墨青: Agent 徽记/主按钮 */
+    --font-serif: "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -35,7 +36,7 @@
     padding: 12px 24px; background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
   }
-  .header .logo { font-size: 18px; font-weight: 700; }
+  .header .logo { font-size: 18px; font-weight: 700; font-family: var(--font-serif); letter-spacing: 0.04em; }
   .header .logo .agent-badge {
     display: inline-block; background: var(--accent-purple);
     color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px;
@@ -75,7 +76,7 @@
   }
   .progress-stage.active .dot {
     background: var(--accent-purple); border-color: var(--accent-purple);
-    color: #fff; box-shadow: 0 0 8px rgba(163,113,247,0.4);
+    color: #fff; box-shadow: 0 0 8px rgba(30,75,71,0.28);
   }
   .progress-stage.done .dot {
     background: var(--accent-green); border-color: var(--accent-green);
@@ -126,7 +127,7 @@
     border-top-right-radius: 4px;
   }
   .msg.system .bubble {
-    background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3);
+    background: rgba(179,54,46,0.08); border: 1px solid rgba(179,54,46,0.35);
     color: var(--accent-red); font-size: 13px; align-self: center;
   }
 
@@ -158,7 +159,7 @@
     border: 1px solid var(--border); padding: 4px 8px; text-align: left;
   }
   .msg .bubble th { background: var(--bg-tertiary); }
-  .msg .bubble strong { color: #fff; }
+  .msg .bubble strong { color: #1E4B47; }
   .msg .bubble hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
   /* Streaming bubble: blinking caret to indicate live token rendering */
@@ -195,15 +196,15 @@
     border-radius: 10px;
     font-size: 11px;
     line-height: 1.6;
-    background: #eee;
-    color: #333;
+    background: #EFF1EE;
+    color: #24312F;
   }
-  .badge.depth-deep { background: #ffe0e0; color: #b00; }
-  .badge.depth-standard { background: #fff3cd; color: #856404; }
-  .badge.depth-quick { background: #d4edda; color: #155724; }
-  .badge.sev-critical { background: #d9534f; color: #fff; }
-  .badge.sev-warn { background: #f0ad4e; color: #fff; }
-  .badge.sev-ok { background: #5cb85c; color: #fff; }
+  .badge.depth-deep { background: #F8EBEA; color: #B3362E; }
+  .badge.depth-standard { background: #F8F0E4; color: #8F5B12; }
+  .badge.depth-quick { background: #E9F0EE; color: #25705F; }
+  .badge.sev-critical { background: #B3362E; color: #fff; }
+  .badge.sev-warn { background: #B97A1F; color: #fff; }
+  .badge.sev-ok { background: #25705F; color: #fff; }
 
   /* Phase 3.4: tool-call 状态条 */
   .tool-call {
@@ -214,25 +215,25 @@
     font-size: 13px;
   }
   .tool-call code {
-    background: #f0f0f0;
+    background: #EFF1EE;
     padding: 1px 6px;
     border-radius: 4px;
     font-family: monospace;
     font-size: 12px;
   }
   .tool-args {
-    color: #666;
+    color: #5A6663;
     font-size: 11px;
     font-family: monospace;
   }
-  .tool-status[data-status="pending"] { color: #f0ad4e; }
-  .tool-status[data-status="done"] { color: #5cb85c; }
+  .tool-status[data-status="pending"] { color: #B97A1F; }
+  .tool-status[data-status="done"] { color: #25705F; }
   .tool-output {
     width: 100%;
     margin-top: 4px;
     padding: 4px 6px;
-    background: #f8f8f8;
-    border-left: 2px solid #ccc;
+    background: #F7F8F6;
+    border-left: 2px solid #C9CFCC;
     font-size: 12px;
     white-space: pre-wrap;
     max-height: 120px;
@@ -241,7 +242,7 @@
 
   /* Progress message */
   .msg.progress .bubble {
-    background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.3);
+    background: rgba(47,122,111,0.08); border-color: rgba(47,122,111,0.35);
     font-size: 13px;
   }
   .mini-progress {
@@ -264,7 +265,7 @@
     transition: all 0.2s;
   }
   .quick-actions button:hover {
-    border-color: var(--accent); background: rgba(88,166,255,0.1);
+    border-color: var(--accent); background: rgba(47,122,111,0.10);
   }
   .quick-actions button.primary {
     background: var(--accent-purple); border-color: var(--accent-purple);
@@ -297,7 +298,7 @@
   /* Upload overlay */
   .upload-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8); display: flex; align-items: center;
+    background: rgba(36,49,47,0.5); display: flex; align-items: center;
     justify-content: center; z-index: 100;
   }
   .upload-card {
@@ -312,13 +313,13 @@
     transition: all 0.2s; margin-bottom: 16px;
   }
   .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--accent); background: rgba(88,166,255,0.05);
+    border-color: var(--accent); background: rgba(47,122,111,0.06);
   }
   .upload-zone .icon { font-size: 40px; margin-bottom: 8px; }
   .upload-zone p { color: var(--text-secondary); font-size: 13px; }
   .upload-zone .file-types { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
   .file-selected {
-    background: rgba(63,185,80,0.1); border: 1px solid var(--accent-green);
+    background: rgba(37,112,95,0.10); border: 1px solid var(--accent-green);
     border-radius: 6px; padding: 10px 14px; font-size: 13px;
     display: none; margin-bottom: 16px;
   }
@@ -340,12 +341,12 @@
     border-radius: 16px; font-size: 13px; cursor: pointer;
     margin-left: 8px;
   }
-  .export-btn:hover { background: rgba(63,185,80,0.1); }
+  .export-btn:hover { background: rgba(37,112,95,0.10); }
 
   /* P0 优化：历史会话列表弹层 */
   .session-list-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.55);
+    background: rgba(36,49,47,0.5);
     display: flex; align-items: center; justify-content: center;
   }
   .session-list-card {
@@ -390,6 +391,8 @@
     padding: 4px 8px; font-size: 12px; cursor: pointer; flex-shrink: 0;
   }
   .sl-del:hover { color: var(--accent-red); border-color: var(--accent-red); }
+  /* 数据表数字等宽（受控档案台账） */
+  .card-table { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>

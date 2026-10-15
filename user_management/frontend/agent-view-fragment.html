@@ -30,7 +30,7 @@
     <div class="dialog-overlay" id="autoGenDialog">
         <div class="dialog-box">
             <h3>⚡ 一键生成设计开发文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">Agent将按SOP全流程自动执行，无需逐步确认</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">Agent将按SOP全流程自动执行，无需逐步确认</p>
             <label>文档类型</label>
             <select id="agDocType">
                 <option value="design_development_plan">项目开发计划书</option>
@@ -58,7 +58,7 @@
     <div class="dialog-overlay" id="summarizeDialog">
         <div class="dialog-box">
             <h3>✂️ 精简文档内容</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">对已生成文档的每个 ### 小节由 LLM 精简，用精简后内容替换原小节。严格保留法规条款号、技术参数、表格数据和核心结论。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">对已生成文档的每个 ### 小节由 LLM 精简，用精简后内容替换原小节。严格保留法规条款号、技术参数、表格数据和核心结论。</p>
             <label>精简范围</label>
             <select id="sumRange">
                 <option value="">全部章节</option>
@@ -81,7 +81,7 @@
     <div class="dialog-overlay" id="flowchartDialog">
         <div class="dialog-box" style="width:860px;max-width:95vw">
             <h3>🔀 流程图编辑器</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">用自然语言描述流程，AI 生成 mermaid 流程图；可在源码框手动微调，或用自然语言继续修改。生成后插入文档（后端渲染为图片）。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">用自然语言描述流程，AI 生成 mermaid 流程图；可在源码框手动微调，或用自然语言继续修改。生成后插入文档（后端渲染为图片）。</p>
             <label>流程描述</label>
             <div style="display:flex;gap:8px">
                 <textarea id="fcPrompt" rows="2" style="flex:1" placeholder="例如：贴敷式胰岛素泵风险管理流程，从风险分析到风险控制再到剩余风险评价"></textarea>
@@ -89,7 +89,7 @@
             </div>
             <div id="fcEditorWrap" style="display:none;margin-top:12px">
                 <label>预览</label>
-                <div id="fcPreview" style="min-height:120px;max-height:360px;overflow:auto;border:1px solid #e0e0e0;border-radius:8px;background:#fff;padding:12px;text-align:center"></div>
+                <div id="fcPreview" style="min-height:120px;max-height:360px;overflow:auto;border:1px solid #D8DCD9;border-radius:8px;background:#fff;padding:12px;text-align:center"></div>
                 <label style="margin-top:12px">mermaid 源码（可手动微调）</label>
                 <textarea id="fcMermaid" rows="8" style="width:100%;font-family:monospace;font-size:12px" onchange="previewFlowchartMermaid(this.value)"></textarea>
                 <label style="margin-top:12px">修改指令（自然语言）</label>
@@ -100,7 +100,7 @@
                 <label style="margin-top:12px">插入到章节</label>
                 <div style="display:flex;gap:8px;align-items:center">
                     <select id="fcSection" style="flex:1"><option value="">（新增独立「流程图」章节）</option></select>
-                    <button class="btn-start" onclick="insertFlowchart()" style="background:#4caf50;white-space:nowrap">插入文档</button>
+                    <button class="btn-start" onclick="insertFlowchart()" style="background:#25705F;white-space:nowrap">插入文档</button>
                     <button class="btn-cancel" onclick="exportFlowchartPng()" style="white-space:nowrap">⬇ 导出 PNG</button>
                 </div>
             </div>
@@ -114,9 +114,9 @@
     <div class="dialog-overlay" id="modifyDialog">
         <div class="dialog-box">
             <h3>✏️ 修改上传文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">将用 Agent 根据指令修改文档副本，不影响原附件和已生成的目标文档。修改完成后可在聊天区下载修改版。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">将用 Agent 根据指令修改文档副本，不影响原附件和已生成的目标文档。修改完成后可在聊天区下载修改版。</p>
             <label>目标文档</label>
-            <input id="modFileName" readonly style="background:#f5f5f5">
+            <input id="modFileName" readonly style="background:#EFF1EE">
             <input type="hidden" id="modFileId">
             <label>修改指令</label>
             <textarea id="modInstruction" rows="3" placeholder="例如：把技术参数表中电池寿命改为3年，并更新相关描述"></textarea>
@@ -131,12 +131,12 @@
     <div class="dialog-overlay" id="enrichDialog">
         <div class="dialog-box">
             <h3>📝 修改文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">上传或选择一篇文档，并描述处理需求（修改、精简、补全等），由 Agent 处理生成新文档供下载，不影响原文档和已生成的目标文档。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">上传或选择一篇文档，并描述处理需求（修改、精简、补全等），由 Agent 处理生成新文档供下载，不影响原文档和已生成的目标文档。</p>
             <label>处理目标文档</label>
             <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
                 <button type="button" onclick="document.getElementById('enrichFileInput').click()"
-                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">📤 上传新文档</button>
-                <span id="enrichFileName" style="font-size:12px;color:#999">未选择文件</span>
+                    style="padding:8px 16px;background:#2F7A6F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">📤 上传新文档</button>
+                <span id="enrichFileName" style="font-size:12px;color:#8A938F">未选择文件</span>
             </div>
             <input type="file" id="enrichFileInput" style="display:none"
                 accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.md"
@@ -158,7 +158,7 @@
     <div class="dialog-overlay" id="templateDialog">
         <div class="dialog-box">
             <h3>📄 添加模板</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">上传参考文档作为生成模板，支持一次选择多个文件，也可多次追加选择。Agent将参照模板的章节结构和写作风格生成你需要的文档。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">上传参考文档作为生成模板，支持一次选择多个文件，也可多次追加选择。Agent将参照模板的章节结构和写作风格生成你需要的文档。</p>
             <label>模板名称（留空则使用文件名）</label>
             <input id="tplName" placeholder="留空则使用文件名">
             <label>目标文档类型（可选）</label>
@@ -179,8 +179,8 @@
                 onchange="handleTemplateFileSelect(event)">
             <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
                 <button type="button" onclick="document.getElementById('tplFileInput').click()"
-                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">选择文件（可多选/可追加）</button>
-                <span id="tplFileName" style="font-size:12px;color:#999">未选择文件</span>
+                    style="padding:8px 16px;background:#2F7A6F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">选择文件（可多选/可追加）</button>
+                <span id="tplFileName" style="font-size:12px;color:#8A938F">未选择文件</span>
             </div>
             <div id="tplSelectedList" style="display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:160px;overflow-y:auto"></div>
             <div class="dialog-btns">
@@ -194,13 +194,13 @@
     <div class="dialog-overlay" id="skillsDialog">
         <div class="dialog-box" style="max-width:640px">
             <h3>🧩 我的技能库</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">把常用指导命令/生成规则沉淀为技能，随时快捷复用。「发送」把技能作为指令发给 Agent（Agent 会把它并入补充提示词，后续生成持续生效）；「插入」放进输入框可再编辑。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">把常用指导命令/生成规则沉淀为技能，随时快捷复用。「发送」把技能作为指令发给 Agent（Agent 会把它并入补充提示词，后续生成持续生效）；「插入」放进输入框可再编辑。</p>
             <div id="skillList" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
-            <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
+            <hr style="border:none;border-top:1px solid #EBEDEB;margin:12px 0">
             <label>技能名称 *</label>
             <input id="skillNameInput" placeholder="如：三线表规则">
             <label>技能内容 *（发给 Agent 的指令/规则原文）</label>
-            <textarea id="skillContentInput" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" placeholder="如：所有表格统一使用三线表；表头加粗；数值列右对齐"></textarea>
+            <textarea id="skillContentInput" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #D8DCD9;border-radius:6px;font-size:13px" placeholder="如：所有表格统一使用三线表；表头加粗；数值列右对齐"></textarea>
             <label>备注（可选）</label>
             <input id="skillDescInput" placeholder="备注说明，便于识别">
             <div class="dialog-btns">
@@ -213,9 +213,9 @@
     <div class="dialog-overlay" id="kbFilesDialog">
         <div class="dialog-box" style="max-width:600px">
             <h3>📋 知识库文件列表</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:12px">已上传到 upload 向量知识库的文件，供所有会话的 RAG 检索使用。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:12px">已上传到 upload 向量知识库的文件，供所有会话的 RAG 检索使用。</p>
             <div id="kbFilesContent" style="max-height:400px;overflow-y:auto">
-                <p style="color:#999;text-align:center;padding:20px">加载中...</p>
+                <p style="color:#8A938F;text-align:center;padding:20px">加载中...</p>
             </div>
             <div class="dialog-btns">
                 <button class="btn-cancel" onclick="closeKbFilesDialog()">关闭</button>
@@ -240,16 +240,16 @@
                 <option value="concise">📄 精炼简洁（默认）</option>
                 <option value="detailed">📄 严谨详细</option>
             </select>
-            <button id="flowchartBtn" onclick="showFlowchartDialog()" style="padding:6px 14px;background:#7c4dff;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="流程图编辑器：AI 生成初稿，画布拖拽微调，导出 PNG 或插入文档">🔀 流程图</button>
-            <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
-            <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
-            <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
-            <button id="clearChatBtn" onclick="clearConversation()" style="padding:6px 14px;background:#78909c;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="清空当前聊天的所有对话消息（已生成的文档内容、附件、模板不受影响）">🧹 清空对话</button>
-            <button id="compressCtxBtn" onclick="compressContext()" style="padding:6px 14px;background:#5e35b1;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="手动压缩对话上下文：把较早的消息压缩为摘要，保留最近15条完整消息（文档/附件/模板不受影响）">🗜️ 压缩上下文</button>
-            <a href="#" id="reviewLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
-            <a href="#" id="downloadLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px" onclick="downloadDocument()">下载文档</a>
-            <a href="#" id="downloadExcelLink" style="font-size:12px;color:#388e3c;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
-            <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#7c4dff;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
+            <button id="flowchartBtn" onclick="showFlowchartDialog()" style="padding:6px 14px;background:#1E4B47;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="流程图编辑器：AI 生成初稿，画布拖拽微调，导出 PNG 或插入文档">🔀 流程图</button>
+            <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#25705F;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
+            <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#B97A1F;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
+            <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#B3362E;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
+            <button id="clearChatBtn" onclick="clearConversation()" style="padding:6px 14px;background:#5A6663;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="清空当前聊天的所有对话消息（已生成的文档内容、附件、模板不受影响）">🧹 清空对话</button>
+            <button id="compressCtxBtn" onclick="compressContext()" style="padding:6px 14px;background:#5A6663;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="手动压缩对话上下文：把较早的消息压缩为摘要，保留最近15条完整消息（文档/附件/模板不受影响）">🗜️ 压缩上下文</button>
+            <a href="#" id="reviewLink" style="font-size:12px;color:#25705F;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
+            <a href="#" id="downloadLink" style="font-size:12px;color:#25705F;text-decoration:none;margin-right:16px" onclick="downloadDocument()">下载文档</a>
+            <a href="#" id="downloadExcelLink" style="font-size:12px;color:#1E4B47;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
+            <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#B97A1F;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
         </div>
         <!-- 独立的知识库上传文件选择（不绑定项目，直接入库 uploads 向量库） -->
         <input type="file" id="kbFileInput" style="display:none" multiple
@@ -259,7 +259,7 @@
             <div class="empty-state">
                 <h3>👋 你好！我是设计开发文档写作助手</h3>
                 <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
-                <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+                <p style="margin-top:12px;color:#8A938F">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
             </div>
         </div>
         <div class="attachment-area" id="attachmentArea">
@@ -283,7 +283,7 @@
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
                 oninput="updateClearBtn()"></textarea>
             <button id="clearBtn" onclick="clearInput()" title="清空输入" style="display:none">×</button>
-            <button id="pauseBtn" onclick="pauseGeneration()" title="暂停当前生成（中止后台任务），之后可直接输入新消息" style="display:none;padding:6px 12px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">⏸ 暂停</button>
+            <button id="pauseBtn" onclick="pauseGeneration()" title="暂停当前生成（中止后台任务），之后可直接输入新消息" style="display:none;padding:6px 12px;background:#B97A1F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">⏸ 暂停</button>
             <button id="sendBtn" onclick="sendMessage()">发送</button>
         </div>
     </div>

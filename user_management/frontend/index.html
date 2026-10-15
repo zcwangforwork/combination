@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>贴敷式胰岛素泵 - 体系文档管理系统</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/agent-chat.css?v=57a84a7d22">
-    <link rel="stylesheet" href="css/agent-review.css?v=6c7889e402">
+    <link rel="stylesheet" href="css/agent-chat.css?v=a08968709a">
+    <link rel="stylesheet" href="css/agent-review.css?v=42ceda9696">
 </head>
 <body>
     <div id="app">
         <!-- Login View -->
         <div v-if="!isLoggedIn" class="login-container">
-            <div class="login-card">
+            <div class="login-card" :class="{ sealed: loginSealed }">
+                <!-- 印章时刻：登录成功瞬间盖下（唯一装饰性动效，见 tokens.css 降级） -->
+                <div class="login-seal" aria-hidden="true"><span>受&nbsp;控</span></div>
                 <div class="login-header">
                     <h1>贴敷式胰岛素泵</h1>
                     <p>体系文档管理系统</p>
@@ -36,6 +39,7 @@
                 </el-form>
                 <div v-if="loginError" class="login-error">{{ loginError }}</div>
             </div>
+            <p class="login-footer">受控系统 · 限内部使用 · 操作留痕可审计</p>
         </div>
 
         <!-- Main Layout (after login) -->
@@ -47,7 +51,7 @@
                     <p>体系文档管理系统</p>
                 </div>
                 <el-menu :default-active="activeMenu" @select="handleMenuSelect"
-                    background-color="#304156" text-color="#bfcbd9" active-text-color="#409eff">
+                    background-color="#1E4B47" text-color="#C9D7D4" active-text-color="#FFFFFF">
                     <el-menu-item index="dashboard">
                         <el-icon><DataAnalysis /></el-icon>
                         <span>工作台</span>
@@ -118,21 +122,24 @@
                 <div class="page-content">
                     <!-- Dashboard -->
                     <div v-show="activeMenu === 'dashboard'">
-                        <el-row :gutter="20">
-                            <el-col :span="6" v-for="card in statCards" :key="card.label">
-                                <el-card shadow="hover" class="stat-card" :body-style="{padding:'20px'}">
-                                    <div class="stat-card-inner">
-                                        <div class="stat-icon" :style="{backgroundColor: card.color}">
-                                            <el-icon size="28" color="#fff"><component :is="card.icon" /></el-icon>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-value">{{ card.value }}</div>
-                                            <div class="stat-label">{{ card.label }}</div>
-                                        </div>
-                                    </div>
-                                </el-card>
-                            </el-col>
-                        </el-row>
+                        <!-- 台账头：宋体标题 + 日期/身份 右对齐（tabular 数字） -->
+                        <div class="ledger-head">
+                            <div class="ledger-title">
+                                <h2>文档工作台</h2>
+                                <p>体系运行台账</p>
+                            </div>
+                            <div class="ledger-meta">
+                                <span class="ledger-date">{{ ledgerDate }}</span>
+                                <span class="ledger-user">{{ currentRoleName }} · {{ currentUserName }}</span>
+                            </div>
+                        </div>
+                        <!-- 受控统计表：一张四列规线表，替代影子卡片 -->
+                        <div class="ledger-stats">
+                            <div v-for="card in statCards" :key="card.label" class="ledger-stat">
+                                <div class="ledger-stat-value">{{ card.value }}</div>
+                                <div class="ledger-stat-label">{{ card.label }}</div>
+                            </div>
+                        </div>
 
                         <el-row :gutter="20" style="margin-top:20px">
                             <el-col :span="12">
@@ -303,7 +310,7 @@
                             <el-table-column label="版本" width="80">
                                 <template #default="{row}">
                                     <span v-if="row.version">{{ row.version }}</span>
-                                    <span v-else style="color:#909399">-</span>
+                                    <span v-else style="color:#5A6663">-</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="状态" width="90">
@@ -416,7 +423,7 @@
                             <el-table-column label="版本" width="80">
                                 <template #default="{row}">
                                     <span v-if="row.version">{{ row.version }}</span>
-                                    <span v-else style="color:#909399">-</span>
+                                    <span v-else style="color:#5A6663">-</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="状态" width="90">
@@ -676,7 +683,7 @@
                             <el-table-column prop="itemName" label="物料/项目" min-width="200" show-overflow-tooltip></el-table-column>
                             <el-table-column label="成本价" width="130">
                                 <template #default="{row}">
-                                    <span style="font-weight:600; color:#f56c6c">
+                                    <span style="font-weight:600; color:#B3362E">
                                         {{ row.costPrice }} {{ row.currency }}
                                     </span>
                                 </template>
@@ -729,7 +736,7 @@
         <!-- Agent 服务不可用横幅（由 agent-chat.js 控制） -->
         <div class="agent-service-error" id="agentServiceError" style="display:none">
             <div>⚠ 无法连接设计开发文档写作 Agent 服务（已尝试端口 8002 / 8003 / 8004）。</div>
-            <div style="font-size:12px;color:#b71c1c;margin-top:4px">请确认 Agent 服务已启动（见 combination/README.md），然后重试。</div>
+            <div style="font-size:12px;color:#B3362E;margin-top:4px">请确认 Agent 服务已启动（见 combination/README.md），然后重试。</div>
             <button onclick="AgentChat.activate(true)">重试连接</button>
         </div>
     <!-- Toast notifications (knowledge base upload feedback) -->
@@ -755,7 +762,7 @@
     <div class="dialog-overlay" id="autoGenDialog">
         <div class="dialog-box">
             <h3>⚡ 一键生成设计开发文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">Agent将按SOP全流程自动执行，无需逐步确认</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">Agent将按SOP全流程自动执行，无需逐步确认</p>
             <label>文档类型</label>
             <select id="agDocType">
                 <option value="design_development_plan">项目开发计划书</option>
@@ -783,7 +790,7 @@
     <div class="dialog-overlay" id="summarizeDialog">
         <div class="dialog-box">
             <h3>✂️ 精简文档内容</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">对已生成文档的每个 ### 小节由 LLM 精简，用精简后内容替换原小节。严格保留法规条款号、技术参数、表格数据和核心结论。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">对已生成文档的每个 ### 小节由 LLM 精简，用精简后内容替换原小节。严格保留法规条款号、技术参数、表格数据和核心结论。</p>
             <label>精简范围</label>
             <select id="sumRange">
                 <option value="">全部章节</option>
@@ -806,7 +813,7 @@
     <div class="dialog-overlay" id="flowchartDialog">
         <div class="dialog-box" style="width:860px;max-width:95vw">
             <h3>🔀 流程图编辑器</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">用自然语言描述流程，AI 生成 mermaid 流程图；可在源码框手动微调，或用自然语言继续修改。生成后插入文档（后端渲染为图片）。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">用自然语言描述流程，AI 生成 mermaid 流程图；可在源码框手动微调，或用自然语言继续修改。生成后插入文档（后端渲染为图片）。</p>
             <label>流程描述</label>
             <div style="display:flex;gap:8px">
                 <textarea id="fcPrompt" rows="2" style="flex:1" placeholder="例如：贴敷式胰岛素泵风险管理流程，从风险分析到风险控制再到剩余风险评价"></textarea>
@@ -814,7 +821,7 @@
             </div>
             <div id="fcEditorWrap" style="display:none;margin-top:12px">
                 <label>预览</label>
-                <div id="fcPreview" style="min-height:120px;max-height:360px;overflow:auto;border:1px solid #e0e0e0;border-radius:8px;background:#fff;padding:12px;text-align:center"></div>
+                <div id="fcPreview" style="min-height:120px;max-height:360px;overflow:auto;border:1px solid #D8DCD9;border-radius:8px;background:#fff;padding:12px;text-align:center"></div>
                 <label style="margin-top:12px">mermaid 源码（可手动微调）</label>
                 <textarea id="fcMermaid" rows="8" style="width:100%;font-family:monospace;font-size:12px" onchange="previewFlowchartMermaid(this.value)"></textarea>
                 <label style="margin-top:12px">修改指令（自然语言）</label>
@@ -825,7 +832,7 @@
                 <label style="margin-top:12px">插入到章节</label>
                 <div style="display:flex;gap:8px;align-items:center">
                     <select id="fcSection" style="flex:1"><option value="">（新增独立「流程图」章节）</option></select>
-                    <button class="btn-start" onclick="insertFlowchart()" style="background:#4caf50;white-space:nowrap">插入文档</button>
+                    <button class="btn-start" onclick="insertFlowchart()" style="background:#25705F;white-space:nowrap">插入文档</button>
                     <button class="btn-cancel" onclick="exportFlowchartPng()" style="white-space:nowrap">⬇ 导出 PNG</button>
                 </div>
             </div>
@@ -839,9 +846,9 @@
     <div class="dialog-overlay" id="modifyDialog">
         <div class="dialog-box">
             <h3>✏️ 修改上传文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">将用 Agent 根据指令修改文档副本，不影响原附件和已生成的目标文档。修改完成后可在聊天区下载修改版。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">将用 Agent 根据指令修改文档副本，不影响原附件和已生成的目标文档。修改完成后可在聊天区下载修改版。</p>
             <label>目标文档</label>
-            <input id="modFileName" readonly style="background:#f5f5f5">
+            <input id="modFileName" readonly style="background:#EFF1EE">
             <input type="hidden" id="modFileId">
             <label>修改指令</label>
             <textarea id="modInstruction" rows="3" placeholder="例如：把技术参数表中电池寿命改为3年，并更新相关描述"></textarea>
@@ -856,12 +863,12 @@
     <div class="dialog-overlay" id="enrichDialog">
         <div class="dialog-box">
             <h3>📝 修改文档</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">上传或选择一篇文档，并描述处理需求（修改、精简、补全等），由 Agent 处理生成新文档供下载，不影响原文档和已生成的目标文档。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">上传或选择一篇文档，并描述处理需求（修改、精简、补全等），由 Agent 处理生成新文档供下载，不影响原文档和已生成的目标文档。</p>
             <label>处理目标文档</label>
             <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
                 <button type="button" onclick="document.getElementById('enrichFileInput').click()"
-                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">📤 上传新文档</button>
-                <span id="enrichFileName" style="font-size:12px;color:#999">未选择文件</span>
+                    style="padding:8px 16px;background:#2F7A6F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">📤 上传新文档</button>
+                <span id="enrichFileName" style="font-size:12px;color:#8A938F">未选择文件</span>
             </div>
             <input type="file" id="enrichFileInput" style="display:none"
                 accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.md"
@@ -883,7 +890,7 @@
     <div class="dialog-overlay" id="templateDialog">
         <div class="dialog-box">
             <h3>📄 添加模板</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">上传参考文档作为生成模板，支持一次选择多个文件，也可多次追加选择。Agent将参照模板的章节结构和写作风格生成你需要的文档。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">上传参考文档作为生成模板，支持一次选择多个文件，也可多次追加选择。Agent将参照模板的章节结构和写作风格生成你需要的文档。</p>
             <label>模板名称（留空则使用文件名）</label>
             <input id="tplName" placeholder="留空则使用文件名">
             <label>目标文档类型（可选）</label>
@@ -904,8 +911,8 @@
                 onchange="handleTemplateFileSelect(event)">
             <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
                 <button type="button" onclick="document.getElementById('tplFileInput').click()"
-                    style="padding:8px 16px;background:#00897b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">选择文件（可多选/可追加）</button>
-                <span id="tplFileName" style="font-size:12px;color:#999">未选择文件</span>
+                    style="padding:8px 16px;background:#2F7A6F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">选择文件（可多选/可追加）</button>
+                <span id="tplFileName" style="font-size:12px;color:#8A938F">未选择文件</span>
             </div>
             <div id="tplSelectedList" style="display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:160px;overflow-y:auto"></div>
             <div class="dialog-btns">
@@ -919,13 +926,13 @@
     <div class="dialog-overlay" id="skillsDialog">
         <div class="dialog-box" style="max-width:640px">
             <h3>🧩 我的技能库</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:8px">把常用指导命令/生成规则沉淀为技能，随时快捷复用。「发送」把技能作为指令发给 Agent（Agent 会把它并入补充提示词，后续生成持续生效）；「插入」放进输入框可再编辑。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:8px">把常用指导命令/生成规则沉淀为技能，随时快捷复用。「发送」把技能作为指令发给 Agent（Agent 会把它并入补充提示词，后续生成持续生效）；「插入」放进输入框可再编辑。</p>
             <div id="skillList" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
-            <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
+            <hr style="border:none;border-top:1px solid #EBEDEB;margin:12px 0">
             <label>技能名称 *</label>
             <input id="skillNameInput" placeholder="如：三线表规则">
             <label>技能内容 *（发给 Agent 的指令/规则原文）</label>
-            <textarea id="skillContentInput" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" placeholder="如：所有表格统一使用三线表；表头加粗；数值列右对齐"></textarea>
+            <textarea id="skillContentInput" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #D8DCD9;border-radius:6px;font-size:13px" placeholder="如：所有表格统一使用三线表；表头加粗；数值列右对齐"></textarea>
             <label>备注（可选）</label>
             <input id="skillDescInput" placeholder="备注说明，便于识别">
             <div class="dialog-btns">
@@ -938,9 +945,9 @@
     <div class="dialog-overlay" id="kbFilesDialog">
         <div class="dialog-box" style="max-width:600px">
             <h3>📋 知识库文件列表</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:12px">已上传到 upload 向量知识库的文件，供所有会话的 RAG 检索使用。</p>
+            <p style="font-size:12px;color:#8A938F;margin-bottom:12px">已上传到 upload 向量知识库的文件，供所有会话的 RAG 检索使用。</p>
             <div id="kbFilesContent" style="max-height:400px;overflow-y:auto">
-                <p style="color:#999;text-align:center;padding:20px">加载中...</p>
+                <p style="color:#8A938F;text-align:center;padding:20px">加载中...</p>
             </div>
             <div class="dialog-btns">
                 <button class="btn-cancel" onclick="closeKbFilesDialog()">关闭</button>
@@ -965,16 +972,16 @@
                 <option value="concise">📄 精炼简洁（默认）</option>
                 <option value="detailed">📄 严谨详细</option>
             </select>
-            <button id="flowchartBtn" onclick="showFlowchartDialog()" style="padding:6px 14px;background:#7c4dff;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="流程图编辑器：AI 生成初稿，画布拖拽微调，导出 PNG 或插入文档">🔀 流程图</button>
-            <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
-            <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
-            <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
-            <button id="clearChatBtn" onclick="clearConversation()" style="padding:6px 14px;background:#78909c;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="清空当前聊天的所有对话消息（已生成的文档内容、附件、模板不受影响）">🧹 清空对话</button>
-            <button id="compressCtxBtn" onclick="compressContext()" style="padding:6px 14px;background:#5e35b1;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="手动压缩对话上下文：把较早的消息压缩为摘要，保留最近15条完整消息（文档/附件/模板不受影响）">🗜️ 压缩上下文</button>
-            <a href="#" id="reviewLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
-            <a href="#" id="downloadLink" style="font-size:12px;color:#1976d2;text-decoration:none;margin-right:16px" onclick="downloadDocument()">下载文档</a>
-            <a href="#" id="downloadExcelLink" style="font-size:12px;color:#388e3c;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
-            <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#7c4dff;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
+            <button id="flowchartBtn" onclick="showFlowchartDialog()" style="padding:6px 14px;background:#1E4B47;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="流程图编辑器：AI 生成初稿，画布拖拽微调，导出 PNG 或插入文档">🔀 流程图</button>
+            <button id="autoGenBtn" onclick="showAutoGenDialog()" style="padding:6px 14px;background:#25705F;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px">⚡ 一键生成</button>
+            <button id="summarizeBtn" onclick="showSummarizeDialog()" style="padding:6px 14px;background:#B97A1F;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px;display:none">✂ 精简文档</button>
+            <button id="undoBtn" onclick="undoLast()" style="padding:6px 14px;background:#B3362E;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="回退到最近一次修改/生成/精简/附件修改之前">↩️ 回退</button>
+            <button id="clearChatBtn" onclick="clearConversation()" style="padding:6px 14px;background:#5A6663;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="清空当前聊天的所有对话消息（已生成的文档内容、附件、模板不受影响）">🧹 清空对话</button>
+            <button id="compressCtxBtn" onclick="compressContext()" style="padding:6px 14px;background:#5A6663;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:12px" title="手动压缩对话上下文：把较早的消息压缩为摘要，保留最近15条完整消息（文档/附件/模板不受影响）">🗜️ 压缩上下文</button>
+            <a href="#" id="reviewLink" style="font-size:12px;color:#25705F;text-decoration:none;margin-right:16px;display:none">审阅文档</a>
+            <a href="#" id="downloadLink" style="font-size:12px;color:#25705F;text-decoration:none;margin-right:16px" onclick="downloadDocument()">下载文档</a>
+            <a href="#" id="downloadExcelLink" style="font-size:12px;color:#1E4B47;text-decoration:none;margin-right:16px;display:none" onclick="downloadRiskExcel()">下载 Excel</a>
+            <a href="#" id="downloadModifiedLink" style="font-size:12px;color:#B97A1F;text-decoration:none;margin-right:16px" onclick="downloadLatestModified()" title="下载最近一次修改/补全/精简的附件文档（固定入口）">下载修改版</a>
         </div>
         <!-- 独立的知识库上传文件选择（不绑定项目，直接入库 uploads 向量库） -->
         <input type="file" id="kbFileInput" style="display:none" multiple
@@ -984,7 +991,7 @@
             <div class="empty-state">
                 <h3>👋 你好！我是设计开发文档写作助手</h3>
                 <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
-                <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+                <p style="margin-top:12px;color:#8A938F">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
             </div>
         </div>
         <div class="attachment-area" id="attachmentArea">
@@ -1008,7 +1015,7 @@
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
                 oninput="updateClearBtn()"></textarea>
             <button id="clearBtn" onclick="clearInput()" title="清空输入" style="display:none">×</button>
-            <button id="pauseBtn" onclick="pauseGeneration()" title="暂停当前生成（中止后台任务），之后可直接输入新消息" style="display:none;padding:6px 12px;background:#ff9800;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">⏸ 暂停</button>
+            <button id="pauseBtn" onclick="pauseGeneration()" title="暂停当前生成（中止后台任务），之后可直接输入新消息" style="display:none;padding:6px 12px;background:#B97A1F;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">⏸ 暂停</button>
             <button id="sendBtn" onclick="sendMessage()">发送</button>
         </div>
     </div>
@@ -1020,125 +1027,244 @@
 <!-- AGENT-VIEW-END -->
 
 <!-- AGENT-REVIEW-VIEW-START -->
-<div v-show="activeMenu === 'agent-review'" class="agent-review-page">
-<div id="ar-root" v-pre>
-
-        <!-- 审核服务不可用横幅（由 agent-review.js 控制） -->
-        <div class="ar-service-error" id="arServiceError" style="display:none">
-            <div>⚠ 无法连接文档审核 Agent 服务（已尝试端口 8012 / 8013 / 8014）。</div>
-            <div style="font-size:12px;color:#b71c1c;margin-top:4px">请确认审核服务已启动（见 combination/README.md），然后重试。</div>
-            <button onclick="AgentReview.activate(true)">重试连接</button>
-        </div>
-
-<div class="header">
-  <div class="logo">
-    文档审核数字员工<span class="agent-badge">对话模式</span>
-  </div>
-  <div class="nav">
-    <button class="ar-back-btn" onclick="AgentReview.backToSystem()" title="返回体系文档管理系统">⟵ 返回系统</button>
-    <button id="ar-historyBtn" onclick="openSessionList()"
-            style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
-      🕘 历史会话
-    </button>
-    <button id="ar-uploadDocBtn" onclick="returnToUpload()"
-            style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">
-      📄 上传文档审核
-    </button>
-  </div>
-</div>
-
-<div class="progress-bar-wrap" id="ar-progressBarWrap" style="display:none;">
-  <div class="progress-stages">
-    <div class="progress-stage" data-stage="intake">
-      <div class="dot">0</div><span class="label">文档接收</span>
-    </div>
-    <div class="progress-stage" data-stage="strategy">
-      <div class="dot">1</div><span class="label">策略规划</span>
-    </div>
-    <div class="progress-stage" data-stage="audit">
-      <div class="dot">2</div><span class="label">逐章审核</span>
-    </div>
-    <div class="progress-stage" data-stage="cross_validate">
-      <div class="dot">3</div><span class="label">交叉验证</span>
-    </div>
-    <div class="progress-stage" data-stage="report">
-      <div class="dot">4</div><span class="label">报告生成</span>
-    </div>
-    <div class="progress-stage" data-stage="revision">
-      <div class="dot">5</div><span class="label">交互修订</span>
-    </div>
-  </div>
-</div>
-
-<div class="chat-container" id="ar-chatContainer">
-  <div class="chat-messages" id="ar-chatMessages"></div>
-  <div class="input-area" id="ar-inputArea">
-    <div class="input-row">
-      <input type="text" id="ar-messageInput" placeholder="输入反馈或建议..."
-             onkeydown="if(event.key==='Enter')arSendMessage()" disabled>
-      <button id="ar-sendBtn" onclick="arSendMessage()" disabled>发送</button>
-    </div>
-  </div>
-</div>
-
-<!-- Upload overlay (hidden by default — page loads directly into chat) -->
-<div class="upload-overlay hidden" id="ar-uploadOverlay">
-  <div class="upload-card">
-    <h2>开始对话式审核</h2>
-    <p class="subtitle">上传一份体系文件，与 Agent 进行交互式审核</p>
-    <div class="upload-zone" id="ar-uploadZone" onclick="document.getElementById('ar-fileInput').click()">
-      <div class="icon">📄</div>
-      <p>点击或拖拽上传文件</p>
-      <div class="file-types">支持 .docx / .pdf</div>
-    </div>
-    <input type="file" id="ar-fileInput" accept=".docx,.pdf" style="display:none" onchange="arHandleFileSelect(event)">
-    <div class="file-selected" id="ar-fileInfo">
-      <span class="remove" onclick="removeFile()">✕</span>
-      <div class="name" id="ar-fileName"></div>
-      <div class="size" id="ar-fileSize"></div>
-    </div>
-    <div class="form-row">
-      <label for="ar-auditType">审核领域</label>
-      <select id="ar-auditType">
-        <option value="risk_management">风险管理专项</option>
-        <option value="design_dev">设计开发专项</option>
-        <option value="software_compliance">软件合规专项</option>
-        <option value="registration">注册申报专项</option>
-        <option value="production_quality">生产质量专项</option>
-        <option value="system_construction">体系建设专项</option>
-        <option value="general">综合体系审核</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label for="ar-agentMode">Agent 模式</label>
-      <select id="ar-agentMode">
-        <option value="single">单 Agent（支持交互修订）</option>
-        <option value="multi" selected>多 Agent 协作（章节级并行，速度更快）</option>
-      </select>
-    </div>
-    <button class="btn" id="ar-startConvBtn" onclick="startConversation()"
-            style="width:100%;padding:10px;background:var(--accent-purple);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
-      开始对话审核
-    </button>
-    <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;text-align:center;">
-      提示：不上传文档也可开始自由对话，直接提问法规/体系问题
-    </p>
-  </div>
-</div>
-
-<!-- P0 优化：历史会话列表弹层 -->
-<div class="session-list-overlay hidden" id="ar-sessionListOverlay">
-  <div class="session-list-card">
-    <div class="session-list-head">
-      <h3>🕘 历史会话</h3>
-      <button class="sl-close" onclick="closeSessionList()">✕</button>
-    </div>
-    <div class="sl-body" id="ar-sessionListBody"></div>
-  </div>
-</div>
-
-
-</div>
+<div v-show="activeMenu === 'agent-review'" class="agent-review-page">
+
+<div id="ar-root" v-pre>
+
+
+
+        <!-- 审核服务不可用横幅（由 agent-review.js 控制） -->
+
+        <div class="ar-service-error" id="arServiceError" style="display:none">
+
+            <div>⚠ 无法连接文档审核 Agent 服务（已尝试端口 8012 / 8013 / 8014）。</div>
+
+            <div style="font-size:12px;color:#B3362E;margin-top:4px">请确认审核服务已启动（见 combination/README.md），然后重试。</div>
+
+            <button onclick="AgentReview.activate(true)">重试连接</button>
+
+        </div>
+
+
+
+<div class="header">
+
+  <div class="logo">
+
+    文档审核数字员工<span class="agent-badge">对话模式</span>
+
+  </div>
+
+  <div class="nav">
+
+    <button class="ar-back-btn" onclick="AgentReview.backToSystem()" title="返回体系文档管理系统">⟵ 返回系统</button>
+
+    <button id="ar-historyBtn" onclick="openSessionList()"
+
+            style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
+
+      🕘 历史会话
+
+    </button>
+
+    <button id="ar-uploadDocBtn" onclick="returnToUpload()"
+
+            style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">
+
+      📄 上传文档审核
+
+    </button>
+
+  </div>
+
+</div>
+
+
+
+<div class="progress-bar-wrap" id="ar-progressBarWrap" style="display:none;">
+
+  <div class="progress-stages">
+
+    <div class="progress-stage" data-stage="intake">
+
+      <div class="dot">0</div><span class="label">文档接收</span>
+
+    </div>
+
+    <div class="progress-stage" data-stage="strategy">
+
+      <div class="dot">1</div><span class="label">策略规划</span>
+
+    </div>
+
+    <div class="progress-stage" data-stage="audit">
+
+      <div class="dot">2</div><span class="label">逐章审核</span>
+
+    </div>
+
+    <div class="progress-stage" data-stage="cross_validate">
+
+      <div class="dot">3</div><span class="label">交叉验证</span>
+
+    </div>
+
+    <div class="progress-stage" data-stage="report">
+
+      <div class="dot">4</div><span class="label">报告生成</span>
+
+    </div>
+
+    <div class="progress-stage" data-stage="revision">
+
+      <div class="dot">5</div><span class="label">交互修订</span>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<div class="chat-container" id="ar-chatContainer">
+
+  <div class="chat-messages" id="ar-chatMessages"></div>
+
+  <div class="input-area" id="ar-inputArea">
+
+    <div class="input-row">
+
+      <input type="text" id="ar-messageInput" placeholder="输入反馈或建议..."
+
+             onkeydown="if(event.key==='Enter')arSendMessage()" disabled>
+
+      <button id="ar-sendBtn" onclick="arSendMessage()" disabled>发送</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- Upload overlay (hidden by default — page loads directly into chat) -->
+
+<div class="upload-overlay hidden" id="ar-uploadOverlay">
+
+  <div class="upload-card">
+
+    <h2>开始对话式审核</h2>
+
+    <p class="subtitle">上传一份体系文件，与 Agent 进行交互式审核</p>
+
+    <div class="upload-zone" id="ar-uploadZone" onclick="document.getElementById('ar-fileInput').click()">
+
+      <div class="icon">📄</div>
+
+      <p>点击或拖拽上传文件</p>
+
+      <div class="file-types">支持 .docx / .pdf</div>
+
+    </div>
+
+    <input type="file" id="ar-fileInput" accept=".docx,.pdf" style="display:none" onchange="arHandleFileSelect(event)">
+
+    <div class="file-selected" id="ar-fileInfo">
+
+      <span class="remove" onclick="removeFile()">✕</span>
+
+      <div class="name" id="ar-fileName"></div>
+
+      <div class="size" id="ar-fileSize"></div>
+
+    </div>
+
+    <div class="form-row">
+
+      <label for="ar-auditType">审核领域</label>
+
+      <select id="ar-auditType">
+
+        <option value="risk_management">风险管理专项</option>
+
+        <option value="design_dev">设计开发专项</option>
+
+        <option value="software_compliance">软件合规专项</option>
+
+        <option value="registration">注册申报专项</option>
+
+        <option value="production_quality">生产质量专项</option>
+
+        <option value="system_construction">体系建设专项</option>
+
+        <option value="general">综合体系审核</option>
+
+      </select>
+
+    </div>
+
+    <div class="form-row">
+
+      <label for="ar-agentMode">Agent 模式</label>
+
+      <select id="ar-agentMode">
+
+        <option value="single">单 Agent（支持交互修订）</option>
+
+        <option value="multi" selected>多 Agent 协作（章节级并行，速度更快）</option>
+
+      </select>
+
+    </div>
+
+    <button class="btn" id="ar-startConvBtn" onclick="startConversation()"
+
+            style="width:100%;padding:10px;background:var(--accent-purple);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
+
+      开始对话审核
+
+    </button>
+
+    <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;text-align:center;">
+
+      提示：不上传文档也可开始自由对话，直接提问法规/体系问题
+
+    </p>
+
+  </div>
+
+</div>
+
+
+
+<!-- P0 优化：历史会话列表弹层 -->
+
+<div class="session-list-overlay hidden" id="ar-sessionListOverlay">
+
+  <div class="session-list-card">
+
+    <div class="session-list-head">
+
+      <h3>🕘 历史会话</h3>
+
+      <button class="sl-close" onclick="closeSessionList()">✕</button>
+
+    </div>
+
+    <div class="sl-body" id="ar-sessionListBody"></div>
+
+  </div>
+
+</div>
+
+
+
+
+
+</div>
+
 </div>
 <!-- AGENT-REVIEW-VIEW-END -->
             </div>
@@ -1353,7 +1479,7 @@
             <el-form label-width="80px">
                 <el-form-item label="新授权">
                     <div style="width:100%">
-                        <div style="margin-bottom:8px; color:#606266; font-size:13px">
+                        <div style="margin-bottom:8px; color:#24312F; font-size:13px">
                             勾选要授权的 RESEARCH 分类（SYSTEM 分类不可授权），点击"批量授权"：
                         </div>
                         <el-checkbox-group v-model="categoryAccessSelectedIds"
@@ -1478,7 +1604,7 @@
             <iframe v-else-if="previewIsPdf" :src="previewUrl"
                 style="width:100%; height:75vh; border:none"></iframe>
             <div v-else style="text-align:center; padding:40px">
-                <el-icon size="48" color="#909399"><Document /></el-icon>
+                <el-icon size="48" color="#5A6663"><Document /></el-icon>
                 <p style="margin-top:15px">该文件类型不支持在线预览</p>
                 <el-button type="primary" @click="handleDownload({id: null})">下载查看</el-button>
             </div>
@@ -1499,7 +1625,7 @@
                         placeholder="可选，本次发布的变更说明，将记录在修订历史中"></el-input>
                 </el-form-item>
                 <el-divider content-position="left">
-                    <span style="color:#e6a23c; font-weight:bold">
+                    <span style="color:#B97A1F; font-weight:bold">
                         <el-icon><Warning /></el-icon> 电子签名（FDA Part 11 合规）
                     </span>
                 </el-divider>
@@ -1536,7 +1662,7 @@
             :title="reviewForm.action === 'approve' ? '审批通过' : '审批驳回'" width="560px">
             <div v-if="currentDocForReview" style="margin-bottom:15px">
                 <strong>{{ currentDocForReview.title }}</strong>
-                <span style="color:#909399; margin-left:10px">
+                <span style="color:#5A6663; margin-left:10px">
                     当前版本：{{ currentDocForReview.version || '草稿' }}
                 </span>
             </div>
@@ -1548,7 +1674,7 @@
                             : '请详细说明驳回理由，提交者将根据此意见修订'"></el-input>
                 </el-form-item>
                 <el-divider content-position="left">
-                    <span style="color:#e6a23c; font-weight:bold">
+                    <span style="color:#B97A1F; font-weight:bold">
                         <el-icon><Warning /></el-icon> 电子签名（FDA Part 11 合规）
                     </span>
                 </el-divider>
@@ -1585,7 +1711,7 @@
         <el-dialog v-model="revisionDialogVisible" title="修订历史" width="900px" top="5vh">
             <div v-if="currentDocForRevision" style="margin-bottom:15px">
                 <strong>{{ currentDocForRevision.title }}</strong>
-                <span style="color:#909399; margin-left:10px">
+                <span style="color:#5A6663; margin-left:10px">
                     当前版本: {{ currentDocForRevision.version || '-' }}
                 </span>
             </div>
@@ -1596,7 +1722,7 @@
                 <el-table-column prop="changeLog" label="变更说明" min-width="200" show-overflow-tooltip>
                     <template #default="{row}">
                         <span v-if="row.changeLog">{{ row.changeLog }}</span>
-                        <span v-else style="color:#909399">-</span>
+                        <span v-else style="color:#5A6663">-</span>
                     </template>
                 </el-table-column>
                 <el-table-column prop="publishedByName" label="发布人" width="100"></el-table-column>
@@ -1674,7 +1800,7 @@
         <el-dialog v-model="shareDialogVisible" title="分享研发资料" width="600px">
             <div v-if="currentRmForShare" style="margin-bottom:15px">
                 <strong>{{ currentRmForShare.title }}</strong>
-                <span style="color:#909399; margin-left:10px">
+                <span style="color:#5A6663; margin-left:10px">
                     所有者: {{ currentRmForShare.ownerName }}
                 </span>
                 <el-tag :type="confidentialityTagType(currentRmForShare.confidentialityLevel)" size="small"
@@ -1702,7 +1828,7 @@
             </el-form>
             <!-- 已分享列表 -->
             <div v-if="shareList.length > 0" style="margin-top:15px">
-                <div style="margin-bottom:8px; color:#606266; font-size:14px">已分享给：</div>
+                <div style="margin-bottom:8px; color:#24312F; font-size:14px">已分享给：</div>
                 <el-table :data="shareList" border size="small" style="width:100%">
                     <el-table-column prop="sharedWithUserName" label="姓名" width="120"></el-table-column>
                     <el-table-column prop="sharedWithUserDepartment" label="部门" width="150"></el-table-column>
@@ -1731,11 +1857,11 @@
         <el-dialog v-model="rmConfDialogVisible" title="修改保密等级" width="440px">
             <div v-if="currentRmForConf" style="margin-bottom:12px;line-height:1.6">
                 <div>
-                    <span style="color:#606266">资料：</span>
+                    <span style="color:#24312F">资料：</span>
                     <strong>{{ currentRmForConf.title }}</strong>
                 </div>
                 <div style="margin-top:4px">
-                    <span style="color:#606266">当前等级：</span>
+                    <span style="color:#24312F">当前等级：</span>
                     <el-tag :type="confidentialityTagType(currentRmForConf.confidentialityLevel)" size="small">
                         {{ confidentialityLabel(currentRmForConf.confidentialityLevel) }}
                     </el-tag>
@@ -1851,8 +1977,8 @@
                 </el-form-item>
 
                 <!-- 扩展字段：测试记录 -->
-                <div v-if="rdForm.recordType === 'TEST_RECORD'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">测试记录字段</div>
+                <div v-if="rdForm.recordType === 'TEST_RECORD'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">测试记录字段</div>
                     <el-form-item label="测试项">
                         <el-input v-model="rdForm.testItem" placeholder="如 输注精度测试"></el-input>
                     </el-form-item>
@@ -1904,8 +2030,8 @@
                 </div>
 
                 <!-- 扩展字段：设计参数 -->
-                <div v-if="rdForm.recordType === 'DESIGN_PARAM'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">设计参数字段</div>
+                <div v-if="rdForm.recordType === 'DESIGN_PARAM'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">设计参数字段</div>
                     <el-row :gutter="16">
                         <el-col :span="8">
                             <el-form-item label="参数名">
@@ -1943,8 +2069,8 @@
                 </div>
 
                 <!-- 扩展字段：实验记录 -->
-                <div v-if="rdForm.recordType === 'EXPERIMENT'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">实验记录字段</div>
+                <div v-if="rdForm.recordType === 'EXPERIMENT'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">实验记录字段</div>
                     <el-form-item label="目的">
                         <el-input v-model="rdForm.objective"></el-input>
                     </el-form-item>
@@ -1969,8 +2095,8 @@
                 </div>
 
                 <!-- 扩展字段：故障记录 -->
-                <div v-if="rdForm.recordType === 'FAILURE'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">故障记录字段</div>
+                <div v-if="rdForm.recordType === 'FAILURE'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">故障记录字段</div>
                     <el-form-item label="故障现象">
                         <el-input v-model="rdForm.phenomenon" type="textarea" :rows="2"></el-input>
                     </el-form-item>
@@ -1996,8 +2122,8 @@
                 </div>
 
                 <!-- 扩展字段：风险管理 (ISO 14971 FMEA) -->
-                <div v-if="rdForm.recordType === 'RISK'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">风险管理字段（ISO 14971 / YY/T 0316）</div>
+                <div v-if="rdForm.recordType === 'RISK'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">风险管理字段（ISO 14971 / YY/T 0316）</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="危害类型">
@@ -2054,8 +2180,8 @@
                 </div>
 
                 <!-- 扩展字段：生物相容性 (GB/T 16886) -->
-                <div v-if="rdForm.recordType === 'BIOCOMPAT'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">生物相容性字段（GB/T 16886 系列）</div>
+                <div v-if="rdForm.recordType === 'BIOCOMPAT'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">生物相容性字段（GB/T 16886 系列）</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="试验项目">
@@ -2105,8 +2231,8 @@
                 </div>
 
                 <!-- 扩展字段：软件验证 (IEC 62304 / YY/T 0664) -->
-                <div v-if="rdForm.recordType === 'SOFTWARE_VV'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">软件验证字段（IEC 62304 / YY/T 0664）</div>
+                <div v-if="rdForm.recordType === 'SOFTWARE_VV'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">软件验证字段（IEC 62304 / YY/T 0664）</div>
                     <el-row :gutter="16">
                         <el-col :span="8">
                             <el-form-item label="软件版本">
@@ -2153,8 +2279,8 @@
                 </div>
 
                 <!-- 扩展字段：EMC/电气安全 (GB 9706 / YY 9706) -->
-                <div v-if="rdForm.recordType === 'EMC_SAFETY'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">EMC/电气安全字段（GB 9706 / YY 9706）</div>
+                <div v-if="rdForm.recordType === 'EMC_SAFETY'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">EMC/电气安全字段（GB 9706 / YY 9706）</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="测试项">
@@ -2211,8 +2337,8 @@
                 </div>
 
                 <!-- 扩展字段：临床评价 -->
-                <div v-if="rdForm.recordType === 'CLINICAL'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">临床评价字段</div>
+                <div v-if="rdForm.recordType === 'CLINICAL'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">临床评价字段</div>
                     <el-form-item label="评价路径">
                         <el-select v-model="rdForm.evalPath" style="width:100%" clearable>
                             <el-option label="等同性比对" value="等同性比对"></el-option>
@@ -2244,8 +2370,8 @@
                 </div>
 
                 <!-- 扩展字段：验证/确认 -->
-                <div v-if="rdForm.recordType === 'VALIDATION'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">验证/确认字段（DV/IQ/OQ/PQ）</div>
+                <div v-if="rdForm.recordType === 'VALIDATION'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">验证/确认字段（DV/IQ/OQ/PQ）</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="验证/确认类型">
@@ -2315,8 +2441,8 @@
                 </div>
 
                 <!-- 扩展字段：物料/来料检验 -->
-                <div v-if="rdForm.recordType === 'MATERIAL'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">物料/来料检验字段（IQC）</div>
+                <div v-if="rdForm.recordType === 'MATERIAL'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">物料/来料检验字段（IQC）</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="物料名称">
@@ -2395,8 +2521,8 @@
                 </div>
 
                 <!-- 扩展字段：灭菌/包装/货架寿命 -->
-                <div v-if="rdForm.recordType === 'STERILIZATION'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">灭菌/包装/货架寿命字段</div>
+                <div v-if="rdForm.recordType === 'STERILIZATION'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">灭菌/包装/货架寿命字段</div>
                     <el-row :gutter="16">
                         <el-col :span="8">
                             <el-form-item label="灭菌方式">
@@ -2474,8 +2600,8 @@
                 </div>
 
                 <!-- 扩展字段：变更/偏差/CAPA -->
-                <div v-if="rdForm.recordType === 'CHANGE'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">变更/偏差/CAPA字段</div>
+                <div v-if="rdForm.recordType === 'CHANGE'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">变更/偏差/CAPA字段</div>
                     <el-row :gutter="16">
                         <el-col :span="12">
                             <el-form-item label="变更类型">
@@ -2532,8 +2658,8 @@
                 </div>
 
                 <!-- 扩展字段：其他（动态自定义） -->
-                <div v-if="rdForm.recordType === 'OTHER'" style="border-top:1px dashed #dcdfe6; padding-top:12px; margin-top:6px">
-                    <div style="margin-bottom:10px; color:#409eff; font-weight:bold">自定义字段（可自由添加键值对）</div>
+                <div v-if="rdForm.recordType === 'OTHER'" style="border-top:1px dashed #D8DCD9; padding-top:12px; margin-top:6px">
+                    <div style="margin-bottom:10px; color:#1E4B47; font-weight:bold">自定义字段（可自由添加键值对）</div>
                     <div v-for="(f, idx) in rdForm.dynamicFields" :key="idx"
                         style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
                         <el-input v-model="f.key" placeholder="字段名" style="width:44%"></el-input>
@@ -2560,11 +2686,11 @@
         <el-dialog v-model="rdConfDialogVisible" title="修改保密等级" width="440px">
             <div v-if="currentRdForConf" style="margin-bottom:12px;line-height:1.6">
                 <div>
-                    <span style="color:#606266">记录：</span>
+                    <span style="color:#24312F">记录：</span>
                     <strong>{{ currentRdForConf.title }}</strong>
                 </div>
                 <div style="margin-top:4px">
-                    <span style="color:#606266">当前等级：</span>
+                    <span style="color:#24312F">当前等级：</span>
                     <el-tag :type="confidentialityTagType(currentRdForConf.confidentialityLevel)" size="small">
                         {{ confidentialityLabel(currentRdForConf.confidentialityLevel) }}
                     </el-tag>
@@ -2615,7 +2741,7 @@
 
                 <div v-if="currentRdDetail.extraData && Object.keys(currentRdDetail.extraData).length > 0"
                     style="margin-top:16px">
-                    <div style="margin-bottom:8px; color:#409eff; font-weight:bold">扩展字段</div>
+                    <div style="margin-bottom:8px; color:#1E4B47; font-weight:bold">扩展字段</div>
                     <el-descriptions :column="2" border>
                         <template v-for="(val, key) in currentRdDetail.extraData" :key="key">
                             <el-descriptions-item v-if="typeof val !== 'object'" :label="rdExtraLabel(key)">
@@ -2764,7 +2890,7 @@
             <el-descriptions :column="2" border>
                 <el-descriptions-item label="物料/项目">{{ crDetail.itemName }}</el-descriptions-item>
                 <el-descriptions-item label="成本价">
-                    <span style="color:#f56c6c; font-weight:600">
+                    <span style="color:#B3362E; font-weight:600">
                         {{ crDetail.costPrice }} {{ crDetail.currency }}
                     </span>
                 </el-descriptions-item>
@@ -2802,13 +2928,13 @@
                     <el-empty v-if="notifTodos.length === 0" description="暂无待办审批"></el-empty>
                     <div v-for="n in notifTodos" :key="n.id"
                          @click="handleNotificationClick(n)"
-                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #ebeef5;">
+                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #D8DCD9;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <el-tag :type="notifTypeTag(n.type)" size="small">{{ n.typeLabel }}</el-tag>
                             <span style="font-weight:600;">{{ n.title }}</span>
-                            <span style="margin-left:auto; color:#909399; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
+                            <span style="margin-left:auto; color:#5A6663; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
                         </div>
-                        <div style="color:#606266; margin-top:4px; font-size:13px;">{{ n.content }}</div>
+                        <div style="color:#24312F; margin-top:4px; font-size:13px;">{{ n.content }}</div>
                     </div>
                 </el-tab-pane>
                 <!-- 全部通知 -->
@@ -2816,15 +2942,15 @@
                     <el-empty v-if="notifList.length === 0" description="暂无通知"></el-empty>
                     <div v-for="n in notifList" :key="n.id"
                          @click="handleNotificationClick(n)"
-                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #ebeef5;"
-                         :style="n.read ? '' : 'background:#f5f7fa;'">
+                         style="cursor:pointer; padding:10px 8px; border-bottom:1px solid #D8DCD9;"
+                         :style="n.read ? '' : 'background:#EAF0EF;'">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <el-tag :type="notifTypeTag(n.type)" size="small">{{ n.typeLabel }}</el-tag>
                             <span style="font-weight:600;">{{ n.title }}</span>
-                            <span v-if="!n.read" style="width:8px;height:8px;border-radius:50%;background:#f56c6c;display:inline-block;"></span>
-                            <span style="margin-left:auto; color:#909399; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
+                            <span v-if="!n.read" style="width:8px;height:8px;border-radius:50%;background:#B3362E;display:inline-block;"></span>
+                            <span style="margin-left:auto; color:#5A6663; font-size:12px;">{{ formatDateTime(n.createdAt) }}</span>
                         </div>
-                        <div style="color:#606266; margin-top:4px; font-size:13px;">{{ n.content }}</div>
+                        <div style="color:#24312F; margin-top:4px; font-size:13px;">{{ n.content }}</div>
                     </div>
                     <div v-if="notifTotal > 0" style="display:flex; justify-content:center; margin-top:12px;">
                         <el-pagination background layout="prev, pager, next"
@@ -2861,7 +2987,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/agent-chat.js?v=50e6eef400"></script>
+    <script src="js/agent-chat.js?v=4c3efbe048"></script>
     <script src="js/agent-review.js?v=831f5ac366"></script>
 </body>
 </html>

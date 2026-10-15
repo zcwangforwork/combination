@@ -316,7 +316,7 @@
                 chatReasoningDiv.innerHTML =
                     '<div class="chat-reasoning-header" onclick="this.nextElementSibling.style.display=' +
                     "(this.nextElementSibling.style.display === 'none' ? 'block' : 'none')\">" +
-                    '🧠 思维链 <span style="color:#999">▾</span></div>' +
+                    '🧠 思维链 <span style="color:#8A938F">▾</span></div>' +
                     '<div class="chat-reasoning-body"></div>';
                 document.getElementById('chatArea').appendChild(chatReasoningDiv);
             }
@@ -493,10 +493,10 @@
             const progressDiv = document.createElement('div');
             progressDiv.className = 'folder-progress-container';
             progressDiv.innerHTML = `
-                <div class="folder-progress-text" id="folderTitle">📁 正在上传「${escapeHtml(folderName)}」（${fileList.length} 个文件）... <a style="cursor:pointer;color:#f44336;margin-left:8px;text-decoration:none" onclick="cancelUpload('${folderUploadId}')" title="取消上传">取消</a></div>
+                <div class="folder-progress-text" id="folderTitle">📁 正在上传「${escapeHtml(folderName)}」（${fileList.length} 个文件）... <a style="cursor:pointer;color:#B3362E;margin-left:8px;text-decoration:none" onclick="cancelUpload('${folderUploadId}')" title="取消上传">取消</a></div>
                 <div class="folder-progress"><div class="folder-progress-fill" id="folderFill" style="width:0%"></div></div>
-                <div style="margin:10px 0;padding:8px;background:#fafafa;border:1px solid #eee;border-radius:6px;font-size:12px;max-height:180px;overflow-y:auto">
-                    <div style="color:#666;margin-bottom:4px">目录结构：</div>
+                <div style="margin:10px 0;padding:8px;background:#F7F8F6;border:1px solid #EBEDEB;border-radius:6px;font-size:12px;max-height:180px;overflow-y:auto">
+                    <div style="color:#5A6663;margin-bottom:4px">目录结构：</div>
                     ${treeHtml}
                 </div>
                 <div id="folderFileList" style="font-size:12px"></div>
@@ -512,8 +512,8 @@
                     case 'file_start': {
                         const row = document.createElement('div');
                         row.id = `folder-file-${data.index}`;
-                        row.style.cssText = 'padding:4px 0;border-bottom:1px solid #f5f5f5;color:#555';
-                        row.innerHTML = `<span style="color:#999">[${data.index}/${data.total}]</span> ⏳ ${escapeHtml(data.topic || data.filename)} <span style="color:#bbb">· 解析中...</span>`;
+                        row.style.cssText = 'padding:4px 0;border-bottom:1px solid #EFF1EE;color:#5A6663';
+                        row.innerHTML = `<span style="color:#8A938F">[${data.index}/${data.total}]</span> ⏳ ${escapeHtml(data.topic || data.filename)} <span style="color:#8A938F">· 解析中...</span>`;
                         fileListEl.appendChild(row);
                         fillEl.style.width = `${Math.round((data.index - 1) / data.total * 100)}%`;
                         break;
@@ -523,8 +523,8 @@
                         if (row) {
                             const icon = data.status === 'ok' ? '✅' : (data.status === 'empty' || data.status === 'binary') ? 'ℹ️' : '⚠️';
                             const summary = data.summary ? ` — ${escapeHtml(data.summary)}` : '';
-                            row.innerHTML = `<span style="color:#999">[${data.index}/${data.total}]</span> ${icon} ${escapeHtml(data.topic || data.filename)}${summary}`;
-                            row.style.color = data.status === 'ok' ? '#2e7d32' : '#d32f2f';
+                            row.innerHTML = `<span style="color:#8A938F">[${data.index}/${data.total}]</span> ${icon} ${escapeHtml(data.topic || data.filename)}${summary}`;
+                            row.style.color = data.status === 'ok' ? '#25705F' : '#B3362E';
                         }
                         fillEl.style.width = `${Math.round(data.index / data.total * 100)}%`;
                         break;
@@ -536,7 +536,7 @@
                     }
                     case 'error': {
                         const row = document.createElement('div');
-                        row.style.cssText = 'color:#c62828;padding:4px 0';
+                        row.style.cssText = 'color:#B3362E;padding:4px 0';
                         row.innerHTML = `❌ ${escapeHtml(data.message)}`;
                         fileListEl.appendChild(row);
                         break;
@@ -554,7 +554,7 @@
                     titleEl.innerHTML = `⏹️ 已取消上传「${escapeHtml(folderName)}」`;
                 } else {
                     const row = document.createElement('div');
-                    row.style.cssText = 'color:#c62828;padding:4px 0';
+                    row.style.cssText = 'color:#B3362E;padding:4px 0';
                     row.innerHTML = '❌ 文件夹上传失败: ' + escapeHtml(err.message);
                     fileListEl.appendChild(row);
                 }
@@ -837,9 +837,9 @@
                 const folderName = (folderFiles[0].relative_path || '').split('/')[0] || '文件夹';
                 const folderHeader = document.createElement('span');
                 folderHeader.className = 'att-chip folder-header';
-                folderHeader.style.background = '#ede7f6';
-                folderHeader.style.borderColor = '#d1c4e9';
-                folderHeader.style.color = '#5e35b1';
+                folderHeader.style.background = '#EFF1EE';
+                folderHeader.style.borderColor = '#E3E6E3';
+                folderHeader.style.color = '#1E4B47';
                 folderHeader.innerHTML = `<span class="att-name" title="${escapeHtml(folderName)}">📁 ${escapeHtml(folderName)}</span><span class="att-size">${folderFiles.length} 文件</span>`;
                 area.appendChild(folderHeader);
 
@@ -1004,12 +1004,12 @@
             container.innerHTML = '';
             _selectedTemplateFiles.forEach((file, idx) => {
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;background:#e0f2f1;border:1px solid #b2dfdb;border-radius:6px;font-size:12px;color:#00695c';
+                row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;background:#E9F0EE;border:1px solid #C1D7D4;border-radius:6px;font-size:12px;color:#25705F';
                 const sizeKB = (file.size / 1024).toFixed(1);
                 row.innerHTML = `
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(file.name)}">📄 ${escapeHtml(file.name)}</span>
-                    <span style="color:#80cbc4;font-size:10px;flex-shrink:0">${sizeKB}KB</span>
-                    <span style="cursor:pointer;color:#999;font-size:14px;line-height:1;flex-shrink:0" onclick="removeSelectedTemplateFile(${idx})" title="移除该文件">×</span>
+                    <span style="color:#C1D7D4;font-size:10px;flex-shrink:0">${sizeKB}KB</span>
+                    <span style="cursor:pointer;color:#8A938F;font-size:14px;line-height:1;flex-shrink:0" onclick="removeSelectedTemplateFile(${idx})" title="移除该文件">×</span>
                 `;
                 container.appendChild(row);
             });
@@ -1180,7 +1180,7 @@
                 chip.innerHTML = `
                     <span class="tpl-name" title="${escapeHtml(t.filename)}">${t.status === 'uploading' ? '⏳ ' : '📄 '}${escapeHtml(t.name || t.filename)}</span>
                     <span class="tpl-type">${escapeHtml(TPL_DOC_TYPE_LABELS[t.doc_type] || t.doc_type || '模板')}</span>
-                    <span style="color:#80cbc4;font-size:10px;flex-shrink:0">${sizeText}</span>
+                    <span style="color:#C1D7D4;font-size:10px;flex-shrink:0">${sizeText}</span>
                     ${t.status === 'uploading'
                         ? `<span class="tpl-remove" onclick="cancelUpload('${t.template_id}')" title="取消上传">×</span>`
                         : `<span class="tpl-remove" onclick="removeTemplate('${t.template_id}')" title="移除模板">×</span>`}
@@ -1427,26 +1427,26 @@
             window._skills = skills;
             const box = document.getElementById('skillList');
             if (!skills.length) {
-                box.innerHTML = '<p style="color:#999;text-align:center;padding:12px">暂无技能，用下方表单创建第一个</p>';
+                box.innerHTML = '<p style="color:#8A938F;text-align:center;padding:12px">暂无技能，用下方表单创建第一个</p>';
                 return;
             }
             box.innerHTML = '';
-            const btnStyle = 'padding:3px 10px;border:1px solid #ddd;background:#fff;border-radius:5px;font-size:11px;cursor:pointer';
+            const btnStyle = 'padding:3px 10px;border:1px solid #D8DCD9;background:#fff;border-radius:5px;font-size:11px;cursor:pointer';
             skills.forEach(s => {
                 const item = document.createElement('div');
-                item.style.cssText = 'border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px';
+                item.style.cssText = 'border:1px solid #D8DCD9;border-radius:8px;padding:8px 10px';
                 const content = s.content.length > 120 ? s.content.slice(0, 120) + '…' : s.content;
                 item.innerHTML =
                     `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
                         <strong style="font-size:13px">🧩 ${escapeHtml(s.name)}</strong>
                         <span style="display:flex;gap:5px;flex-shrink:0">
-                            <button style="${btnStyle};color:#2e7d32" onclick="useSkillSend('${s.id}')" title="把技能作为指令发送给 Agent">发送</button>
-                            <button style="${btnStyle};color:#1565c0" onclick="useSkillInsert('${s.id}')" title="插入输入框，可再编辑">插入</button>
+                            <button style="${btnStyle};color:#25705F" onclick="useSkillSend('${s.id}')" title="把技能作为指令发送给 Agent">发送</button>
+                            <button style="${btnStyle};color:#25705F" onclick="useSkillInsert('${s.id}')" title="插入输入框，可再编辑">插入</button>
                             <button style="${btnStyle}" onclick="editSkill('${s.id}')">编辑</button>
-                            <button style="${btnStyle};color:#c62828" onclick="deleteSkill('${s.id}')">删除</button>
+                            <button style="${btnStyle};color:#B3362E" onclick="deleteSkill('${s.id}')">删除</button>
                         </span>
                     </div>
-                    <div style="font-size:12px;color:#666;margin-top:4px;white-space:pre-wrap">${escapeHtml(content)}</div>`;
+                    <div style="font-size:12px;color:#5A6663;margin-top:4px;white-space:pre-wrap">${escapeHtml(content)}</div>`;
                 box.appendChild(item);
             });
         }
@@ -1930,7 +1930,7 @@
                 area.innerHTML = `<div class="empty-state">
                     <h3>👋 你好！我是设计开发文档写作助手</h3>
                     <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
-                    <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+                    <p style="margin-top:12px;color:#8A938F">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
                 </div>`;
                 // 重置流式相关状态
                 chatReasoningDiv = null; _reasoningBuf = '';
@@ -1995,7 +1995,7 @@
                 area.innerHTML = `<div class="empty-state">
                     <h3>👋 你好！我是设计开发文档写作助手</h3>
                     <p>我会按 SOP 流程引导你完成贴敷式胰岛素泵<br>设计开发阶段文档的编写。</p>
-                    <p style="margin-top:12px;color:#bbb">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
+                    <p style="margin-top:12px;color:#8A938F">你可以随时提问、跳过、或调整顺序。<br>输一条消息开始吧。</p>
                 </div>`;
             }
         }
@@ -2288,7 +2288,7 @@ async function showQuickDownloadBox() {
             <div class="dl-size">点击按钮下载已生成的文档</div>
         </div>
         <button onclick="downloadDocument()">下载文档</button>
-        ${RISK_EXCEL_DOC_TYPES.includes(currentDocType) ? `<button onclick="downloadRiskExcel()" style="background:#388e3c">下载 Excel</button>` : ''}
+        ${RISK_EXCEL_DOC_TYPES.includes(currentDocType) ? `<button onclick="downloadRiskExcel()" style="background:#1E4B47">下载 Excel</button>` : ''}
     `;
     area.appendChild(div);
     area.scrollTop = area.scrollHeight;
@@ -2590,7 +2590,7 @@ function editAndResume() {
                         switch (data.type) {
                             case 'start':
                                 progressHtml = `<div style="margin-bottom:8px">📋 精简任务已启动</div>` +
-                                    `<div style="font-size:12px;color:#666;margin-bottom:6px">模式: ${data.mode} | 总章节: ${data.total_sections} | 每章目标: ${data.per_section_target}</div>` +
+                                    `<div style="font-size:12px;color:#5A6663;margin-bottom:6px">模式: ${data.mode} | 总章节: ${data.total_sections} | 每章目标: ${data.per_section_target}</div>` +
                                     `<div id="sumProgressList"></div>`;
                                 agentDiv.innerHTML = progressHtml;
                                 break;
@@ -2600,8 +2600,8 @@ function editAndResume() {
                                 if (list) {
                                     const item = document.createElement('div');
                                     item.id = `sum-prog-${data.index}`;
-                                    item.style.cssText = 'padding:4px 0;font-size:12px;color:#555';
-                                    item.innerHTML = `<span style="color:#999">[${data.index}/${data.total}]</span> ⏳ 正在精简「${data.section_name}」...`;
+                                    item.style.cssText = 'padding:4px 0;font-size:12px;color:#5A6663';
+                                    item.innerHTML = `<span style="color:#8A938F">[${data.index}/${data.total}]</span> ⏳ 正在精简「${data.section_name}」...`;
                                     list.appendChild(item);
                                 }
                                 break;
@@ -2614,8 +2614,8 @@ function editAndResume() {
                                     const subInfo = data.subsections_count > 0
                                         ? `（${data.success_count}/${data.subsections_count} 小节成功）`
                                         : '';
-                                    item.innerHTML = `<span style="color:#999">[${data.index}/${data.total}]</span> ${icon} 「${data.section_name}」 ${data.orig_chars}→${data.new_chars} 字 (${ratio}%) ${subInfo}`;
-                                    item.style.color = data.status === 'ok' ? '#2e7d32' : '#d32f2f';
+                                    item.innerHTML = `<span style="color:#8A938F">[${data.index}/${data.total}]</span> ${icon} 「${data.section_name}」 ${data.orig_chars}→${data.new_chars} 字 (${ratio}%) ${subInfo}`;
+                                    item.style.color = data.status === 'ok' ? '#25705F' : '#B3362E';
                                 }
                                 break;
 
@@ -2623,21 +2623,21 @@ function editAndResume() {
                                 const totalRatio = data.total_orig_chars > 0
                                     ? Math.round(data.total_new_chars / data.total_orig_chars * 100)
                                     : 0;
-                                agentDiv.innerHTML += `<div style="margin-top:10px;padding:8px;background:#e8f5e9;border-radius:6px;font-size:13px">` +
+                                agentDiv.innerHTML += `<div style="margin-top:10px;padding:8px;background:#E9F0EE;border-radius:6px;font-size:13px">` +
                                     `🎉 精简完成！${data.success_count}/${data.total_sections} 章节成功，` +
                                     `总计 ${data.total_orig_chars} → ${data.total_new_chars} 字 (${totalRatio}%)` +
                                     `</div>`;
                                 break;
 
                             case 'error':
-                                agentDiv.innerHTML += `<div style="margin-top:8px;padding:6px;background:#ffebee;color:#c62828;border-radius:4px;font-size:12px">❌ ${data.message}</div>`;
+                                agentDiv.innerHTML += `<div style="margin-top:8px;padding:6px;background:#F8EBEA;color:#B3362E;border-radius:4px;font-size:12px">❌ ${data.message}</div>`;
                                 break;
                         }
                         document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
                     }
                 }
             } catch (e) {
-                agentDiv.innerHTML += `<div style="color:#c62828;font-size:12px;margin-top:8px">❌ 精简请求失败: ${e.message}</div>`;
+                agentDiv.innerHTML += `<div style="color:#B3362E;font-size:12px;margin-top:8px">❌ 精简请求失败: ${e.message}</div>`;
             } finally {
                 document.getElementById('summarizeBtn').disabled = false;
                 // 刷新状态以反映精简后的章节内容
@@ -2727,7 +2727,7 @@ function editAndResume() {
                 .replace(/\|(.+)\|/g, (match) => {
                     if (match.includes('---')) return '';
                     const cells = match.split('|').filter(c => c.trim());
-                    return '<br>' + cells.map(c => `<span style="padding:2px 8px;border:1px solid #ddd">${c.trim()}</span>`).join('') + '<br>';
+                    return '<br>' + cells.map(c => `<span style="padding:2px 8px;border:1px solid #D8DCD9">${c.trim()}</span>`).join('') + '<br>';
                 });
             // 恢复代码块内被保护的换行
             return html.replace(/\u0001/g, '\n');
@@ -2798,7 +2798,7 @@ function editAndResume() {
                 const { svg } = await mermaid.render(id, code);
                 box.innerHTML = svg;
             } catch (e) {
-                box.innerHTML = '<div style="color:#c00;padding:12px">mermaid 渲染失败，请检查源码语法</div>';
+                box.innerHTML = '<div style="color:#B3362E;padding:12px">mermaid 渲染失败，请检查源码语法</div>';
             }
         }
 
@@ -3797,7 +3797,7 @@ function editAndResume() {
             const overlay = document.getElementById('kbFilesDialog');
             overlay.classList.add('active');
             const content = document.getElementById('kbFilesContent');
-            content.innerHTML = '<p style="color:#999;text-align:center;padding:20px">加载中...</p>';
+            content.innerHTML = '<p style="color:#8A938F;text-align:center;padding:20px">加载中...</p>';
             try {
                 const resp = await fetch(AGENT_BASE + '/api/kb/files');
                 if (!resp.ok) {
@@ -3809,11 +3809,11 @@ function editAndResume() {
                     throw new Error(data.detail || '未知错误');
                 }
                 if (!data.files || data.files.length === 0) {
-                    content.innerHTML = '<p style="color:#999;text-align:center;padding:40px">知识库中暂无文件，请先上传。</p>';
+                    content.innerHTML = '<p style="color:#8A938F;text-align:center;padding:40px">知识库中暂无文件，请先上传。</p>';
                     return;
                 }
                 let html = '<table style="width:100%;border-collapse:collapse;font-size:13px">';
-                html += '<thead><tr style="border-bottom:2px solid #e0e0e0;text-align:left;color:#666">';
+                html += '<thead><tr style="border-bottom:2px solid #D8DCD9;text-align:left;color:#5A6663">';
                 html += '<th style="padding:8px;width:32px;text-align:center"><input type="checkbox" id="kbSelectAll" onchange="toggleKbSelectAll(this)" title="全选/取消全选"></th>';
                 html += '<th style="padding:8px">文件名</th>';
                 html += '<th style="padding:8px;width:80px;text-align:right">分块数</th>';
@@ -3822,22 +3822,22 @@ function editAndResume() {
                 for (const f of data.files) {
                     const hasOriginal = f.original_filename && f.original_filename !== f.source_file;
                     const displayName = hasOriginal ? f.original_filename : f.source_file;
-                    const note = hasOriginal ? '' : ' <span style="color:#ff9800;font-size:11px">(旧文件，原始文件名已丢失)</span>';
-                    html += '<tr style="border-bottom:1px solid #f0f0f0">';
+                    const note = hasOriginal ? '' : ' <span style="color:#B97A1F;font-size:11px">(旧文件，原始文件名已丢失)</span>';
+                    html += '<tr style="border-bottom:1px solid #EFF1EE">';
                     html += `<td style="padding:8px;text-align:center"><input type="checkbox" class="kb-file-check" data-source="${escapeHtml(f.source_file)}" data-file-id="${escapeHtml(f.file_id || '')}" data-name="${escapeHtml(displayName)}" onchange="updateKbSelectAllState()"></td>`;
                     html += `<td style="padding:8px;word-break:break-all"><span>${escapeHtml(displayName)}</span>${note}</td>`;
-                    html += `<td style="padding:8px;text-align:right;color:#888">${f.chunk_count}</td>`;
-                    html += `<td style="padding:8px;text-align:center;white-space:nowrap"><button style="border:1px solid #00897b;background:#fff;color:#00897b;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;margin-right:4px" data-source="${escapeHtml(f.source_file)}" data-file-id="${escapeHtml(f.file_id || '')}" data-name="${escapeHtml(displayName)}" onclick="addKbFileToAttachment(this)" title="将该文件加入当前会话附件">添加</button><button style="border:1px solid #e57373;background:#fff;color:#e53935;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer" data-source="${escapeHtml(f.source_file)}" data-name="${escapeHtml(displayName)}" onclick="deleteKbFile(this)" title="从知识库删除该文件">删除</button></td>`;
+                    html += `<td style="padding:8px;text-align:right;color:#8A938F">${f.chunk_count}</td>`;
+                    html += `<td style="padding:8px;text-align:center;white-space:nowrap"><button style="border:1px solid #2F7A6F;background:#fff;color:#2F7A6F;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;margin-right:4px" data-source="${escapeHtml(f.source_file)}" data-file-id="${escapeHtml(f.file_id || '')}" data-name="${escapeHtml(displayName)}" onclick="addKbFileToAttachment(this)" title="将该文件加入当前会话附件">添加</button><button style="border:1px solid #D9A09B;background:#fff;color:#B3362E;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer" data-source="${escapeHtml(f.source_file)}" data-name="${escapeHtml(displayName)}" onclick="deleteKbFile(this)" title="从知识库删除该文件">删除</button></td>`;
                     html += '</tr>';
                 }
                 html += '</tbody></table>';
-                html += `<p style="font-size:11px;color:#999;margin-top:8px;display:flex;align-items:center;gap:8px">`
+                html += `<p style="font-size:11px;color:#8A938F;margin-top:8px;display:flex;align-items:center;gap:8px">`
                     + `<span>共 ${data.files.length} 个文件，已选 <span id="kbSelectedCount">0</span> 个</span>`
-                    + `<button id="kbBatchAddBtn" onclick="addSelectedKbFiles()" style="border:none;background:#00897b;color:#fff;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer" title="将勾选的文件批量加入当前会话附件">批量添加到附件</button>`
+                    + `<button id="kbBatchAddBtn" onclick="addSelectedKbFiles()" style="border:none;background:#2F7A6F;color:#fff;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer" title="将勾选的文件批量加入当前会话附件">批量添加到附件</button>`
                     + `</p>`;
                 content.innerHTML = html;
             } catch (e) {
-                content.innerHTML = `<p style="color:#e53935;text-align:center;padding:20px">加载失败: ${escapeHtml(e.message)}</p>`;
+                content.innerHTML = `<p style="color:#B3362E;text-align:center;padding:20px">加载失败: ${escapeHtml(e.message)}</p>`;
             }
         }
 

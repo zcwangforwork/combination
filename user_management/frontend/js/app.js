@@ -8,6 +8,7 @@ const app = createApp({
         const isLoggedIn = ref(false);
         const loginLoading = ref(false);
         const loginError = ref('');
+        const loginSealed = ref(false);   // 登录成功「盖章」瞬间（印章动效触发）
         const loginForm = reactive({ username: '', password: '' });
         const loginRules = {
             username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -33,15 +34,22 @@ const app = createApp({
             employeesByRole: {}, employeesByDepartment: {}
         });
         const statCards = computed(() => [
-            { label: '员工总数', value: dashboardStats.value.totalEmployees, color: '#409eff',
+            { label: '员工总数', value: dashboardStats.value.totalEmployees, color: '#2F7A6F',
                 icon: 'UserFilled' },
-            { label: '在职员工', value: dashboardStats.value.activeEmployees, color: '#67c23a',
+            { label: '在职员工', value: dashboardStats.value.activeEmployees, color: '#25705F',
                 icon: 'User' },
-            { label: '部门数', value: dashboardStats.value.totalDepartments, color: '#e6a23c',
+            { label: '部门数', value: dashboardStats.value.totalDepartments, color: '#B97A1F',
                 icon: 'OfficeBuilding' },
-            { label: '角色数', value: dashboardStats.value.totalRoles, color: '#f56c6c',
+            { label: '角色数', value: dashboardStats.value.totalRoles, color: '#B3362E',
                 icon: 'Avatar' },
         ]);
+
+        // 台账头日期：YYYY年M月D日 周X（tabular 数字由 tokens.css 控制对齐）
+        const ledgerDate = computed(() => {
+            const d = new Date();
+            const wd = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+            return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 周${wd}`;
+        });
 
         // Employee list
         const employeeList = ref([]);
@@ -535,13 +543,16 @@ const app = createApp({
                     realName: data.realName, roleCode: data.roleCode, roleName: data.roleName
                 }));
 
-                isLoggedIn.value = true;
+                // 数据先就位，随后「盖章」再进入主界面（印章时刻——全站唯一装饰动效）
                 loginError.value = '';
                 loadDashboard();
                 loadEmployees();
                 loadDepartments();
                 loadRoles();
                 loadNotificationStats();
+                loginSealed.value = true;
+                await new Promise(r => setTimeout(r, 650));
+                isLoggedIn.value = true;
             } catch (e) {
                 loginError.value = e.response?.data?.message || '登录失败，请检查网络连接';
             } finally {
@@ -555,6 +566,7 @@ const app = createApp({
             currentRole.value = '';
             currentRoleName.value = '';
             isLoggedIn.value = false;
+            loginSealed.value = false;   // 复位，下次登录重新盖章
             activeMenu.value = 'dashboard';
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -2459,7 +2471,7 @@ const app = createApp({
             if (!total || total === 0) return 0;
             return Math.round((count / total) * 100);
         };
-        const getBarColor = () => '#409eff';
+        const getBarColor = () => '#2F7A6F';   // 青釉（--teal-glaze），运行时 prop 需字面量
 
         // ===== Init =====
         onMounted(() => {
@@ -2469,7 +2481,7 @@ const app = createApp({
         });
 
         return {
-            isLoggedIn, loginLoading, loginError, loginForm, loginRules,
+            isLoggedIn, loginLoading, loginError, loginSealed, loginForm, loginRules,
             currentUserName, currentRole, currentRoleName,
             activeMenu, pageTitle, searchKeyword,
             filterDepartmentId, filterRoleCode, filterEnabled,
@@ -2481,7 +2493,7 @@ const app = createApp({
             handleNotificationClick, handleMarkAllRead,
             openAnnounceDialog, handlePublishAnnouncement,
             notifTypeTag, formatDateTime,
-            dashboardStats, statCards,
+            dashboardStats, statCards, ledgerDate,
             employeeList, tableLoading, currentPage, pageSize, totalEmployees,
             dialogVisible, dialogTitle, isEdit, submitLoading, empForm, empRules,
             departments, roles, showDeptDialog, deptForm,

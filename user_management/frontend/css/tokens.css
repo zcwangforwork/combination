@@ -1,0 +1,133 @@
+/* ============================================================
+   tokens.css — 「受控档案 × 输注仪表」设计 token（唯一色彩来源）
+   方案：combination前端视觉优化设计方案_20261014.md
+   规则：后续样式只消费这里的变量，不再散写 hex。
+   ============================================================ */
+
+:root {
+    /* ── 色彩 token ── */
+    --paper: #F7F8F6;            /* 纸白：全局底色（冷调纸感） */
+    --ink-teal: #1E4B47;         /* 墨青：chrome / 标题墨色 */
+    --teal-glaze: #2F7A6F;       /* 青釉：交互色（链接/主按钮/选中/通过） */
+    --teal-glaze-deep: #25705F;  /* 青釉深一档：小字链接 / success 语义 */
+    --seal-vermilion: #B3362E;   /* 印章红：仅受控章/不合格/驳回/错误，绝不装饰 */
+    --amber: #B97A1F;            /* 琥珀：警示/待复核 */
+    --ink: #24312F;              /* 仪灰一级：正文 */
+    --ink-2: #5A6663;            /* 仪灰二级：次级文字 */
+    --ink-3: #8A938F;            /* 仪灰三级：弱化文字 */
+    --rule: #D8DCD9;             /* 规线：表格/分隔线 */
+    --surface: #FFFFFF;          /* 卡面 */
+    --surface-tint: #EFF1EE;     /* 轻填充 */
+
+    /* ── 字体 token（内网部署：不引外部 webfont）── */
+    --font-serif: "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+    --font-sans: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+
+    /* ── 圆角两档 ── */
+    --radius-ctl: 4px;
+    --radius-box: 6px;
+
+    /* ── Element Plus 变量覆盖（须在本文件于 EP index.css 之后引入时生效）── */
+    --el-color-primary: #2F7A6F;
+    --el-color-primary-light-3: #6DA29A;
+    --el-color-primary-light-5: #97BDB7;
+    --el-color-primary-light-7: #C1D7D4;
+    --el-color-primary-light-8: #D5E2E0;
+    --el-color-primary-light-9: #EAF0EF;
+    --el-color-primary-dark-2: #266259;
+
+    --el-color-success: #25705F;
+    --el-color-success-light-8: #D3E2DF;
+    --el-color-success-light-9: #E9F0EE;
+    --el-color-warning: #B97A1F;
+    --el-color-warning-light-8: #F1E4D2;
+    --el-color-warning-light-9: #F8F0E4;
+    --el-color-danger: #B3362E;
+    --el-color-danger-light-8: #F0D7D5;
+    --el-color-danger-light-9: #F8EBEA;
+    --el-color-error: #B3362E;
+    --el-color-error-light-8: #F0D7D5;
+    --el-color-error-light-9: #F8EBEA;
+    --el-color-info: #5A6663;
+    --el-color-info-light-8: #DEE0E0;
+    --el-color-info-light-9: #EFF0F0;
+
+    --el-text-color-primary: #24312F;
+    --el-text-color-regular: #3C4744;
+    --el-text-color-secondary: #5A6663;
+    --el-text-color-placeholder: #8A938F;
+    --el-border-color: #D8DCD9;
+    --el-border-color-light: #E3E6E3;
+    --el-border-color-lighter: #EBEDEB;
+    --el-fill-color: #EFF1EE;
+    --el-fill-color-light: #F2F4F1;
+    --el-fill-color-lighter: #F7F8F6;
+    --el-bg-color: #FFFFFF;
+    --el-bg-color-page: #F7F8F6;
+    --el-border-radius-base: 4px;
+    --el-border-radius-small: 3px;
+
+    --el-font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+/* ── 全局基础 ── */
+body {
+    font-family: var(--font-sans);
+    color: var(--ink);
+    background: var(--paper);
+}
+
+/* 标题走宋体（公文血统） */
+h1, h2, h3,
+.el-dialog__title,
+.el-card__header span,
+.drawer-title {
+    font-family: var(--font-serif);
+}
+
+/* 数据等宽：文档编号/版本/日期/统计 = 仪表读数 */
+.el-table,
+.ledger-stat-value,
+.chart-value,
+.el-pagination,
+.login-footer {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 键盘焦点可见 */
+:focus-visible {
+    outline: 2px solid var(--teal-glaze);
+    outline-offset: 2px;
+}
+
+/* ── 表格：受控台账语法 ── */
+.el-table {
+    --el-table-header-bg-color: var(--surface-tint);
+    --el-table-header-text-color: var(--ink-2);
+    --el-table-border-color: var(--rule);
+    --el-table-row-hover-bg-color: #F0F4F2;
+    font-size: 13px;
+}
+.el-table th.el-table__cell {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* ── 侧边栏菜单（墨青底，选中 = 左规线 + 提亮）── */
+.sidebar .el-menu {
+    --el-menu-hover-bg-color: rgba(255, 255, 255, 0.06);
+}
+.sidebar .el-menu-item.is-active {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #FFFFFF;
+    box-shadow: inset 3px 0 0 var(--teal-glaze);
+}
+
+/* ── 动效约束：非用户触发的动效仅登录印章一处；
+     reduced-motion 下全部降级为瞬时 ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
